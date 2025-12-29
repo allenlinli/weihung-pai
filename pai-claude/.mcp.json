@@ -3,7 +3,8 @@
     "pai": {
       "type": "stdio",
       "command": "bun",
-      "args": ["run", "/Users/weihung/weihung-pai/pai-mcp/src/index.ts"],
+      "args": ["run", "start"],
+      "cwd": "../pai-mcp",
       "env": {
         "PAI_BOT_API_URL": "http://localhost:3000"
       }
