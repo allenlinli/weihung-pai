@@ -1,11 +1,14 @@
 ---
 # Initialize pai user on remote server
-# Run this once with root: ansible-playbook playbooks/init-user.yml
+# Run once: ansible-playbook -i inventory playbooks/init/init-user.yml
+# Note: Uses root with local SSH key (~/.ssh/id_ed25519), not the wrapper
 
 - name: Initialize PAI Agent User
   hosts: pai-server
-  become: true
   vars:
+    ansible_user: root
+    ansible_ssh_private_key_file: "~/.ssh/id_ed25519"
+    ansible_python_interpreter: /usr/bin/python3.12
     agent_user: "{{ pai_agent_user }}"
     agent_ssh_public_key: "{{ pai_agent_ssh_public_key }}"
 
@@ -25,7 +28,13 @@
 
     - name: Setup passwordless sudo for pai user
       ansible.builtin.copy:
-        content: "{{ agent_user }} ALL=(ALL) NOPASSWD:ALL"
+        content: |
+          # PAI Agent - passwordless sudo for Ansible automation
+          # Security model:
+          #   - SSH key authentication only (no password)
+          #   - Key stored in encrypted Ansible Vault
+          #   - Limited to authorized operators
+          {{ agent_user }} ALL=(ALL) NOPASSWD:ALL
         dest: "/etc/sudoers.d/{{ agent_user }}"
         mode: "0440"
         validate: "visudo -cf %s"
