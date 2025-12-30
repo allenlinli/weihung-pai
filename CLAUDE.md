@@ -55,9 +55,10 @@ weihung-pai/
 ├── pai-bot/          # Telegram Bot (Bun + grammY)
 ├── pai-claude/       # Merlin VPS 運行配置
 │   ├── agents/       # Subagents
-│   ├── skills/       # 技能模組 (learning, daily, research, fabric, coding)
+│   ├── skills/       # 技能模組 (learning, daily, research, fabric, coding, google)
 │   ├── context/      # 身份與原則
-│   └── scripts/      # Hooks
+│   ├── scripts/      # Hooks
+│   └── .mcp.json     # MCP Server 設定
 ├── ansible/          # VPS 部署
 │   ├── playbooks/    # 部署劇本
 │   │   ├── init/     # 初始化 (provision, setup)
@@ -87,9 +88,14 @@ cd pai-bot && bun run dev
 # 日常部署（在 ansible 目錄下執行）
 ./scripts/ansible-wrapper.sh ansible-playbook -i inventory playbooks/deploy-bot.yml
 ./scripts/ansible-wrapper.sh ansible-playbook -i inventory playbooks/deploy-claude.yml
+./scripts/ansible-wrapper.sh ansible-playbook -i inventory playbooks/deploy-site.yml
+
+# 維護
+./scripts/ansible-wrapper.sh ansible-playbook -i inventory playbooks/clean-logs.yml
 
 # 初始化（僅首次）
 ./scripts/ansible-wrapper.sh ansible-playbook -i inventory playbooks/init/setup-vps.yml
+./scripts/ansible-wrapper.sh ansible-playbook -i inventory playbooks/init/setup-nginx.yml
 ```
 
 ## 敏感資料

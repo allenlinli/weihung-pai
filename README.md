@@ -36,7 +36,9 @@ weihung-pai/
 
 - **Telegram Bot** - 透過 Telegram 與 Merlin 對話
 - **Skills 系統** - 模組化技能：學習輔助、日常事務、研究調查、內容處理、程式碼撰寫
+- **Google 整合** - 透過 MCP 存取 Google Calendar、Drive、Gmail、Contacts
 - **Workspace** - Merlin 可自動建立腳本並保存到 GitHub private repo
+- **靜態網站** - nginx 託管隱私政策等頁面
 
 ## 快速開始
 
@@ -157,6 +159,13 @@ cd ansible
 |----------|------|
 | `deploy-bot.yml` | 部署 Telegram Bot |
 | `deploy-claude.yml` | 部署 Claude Code 配置 |
+| `deploy-site.yml` | 部署靜態網站 (docs/) |
+
+### 維護
+
+| Playbook | 說明 |
+|----------|------|
+| `clean-logs.yml` | 清理 VPS 上的 log 檔案 |
 
 ### 初始化 (init/)
 
@@ -164,7 +173,8 @@ cd ansible
 |----------|------|
 | `provision-vultr.yml` | 透過 Vultr API 建立 VPS |
 | `init-user.yml` | 初始化部署用戶 |
-| `setup-vps.yml` | VPS 環境設定（Bun, Claude, gh cli, workspace）|
+| `setup-vps.yml` | VPS 環境設定（Bun, Claude, gh cli, workspace, 防火牆）|
+| `setup-nginx.yml` | 設定 nginx 靜態網站 |
 
 ### Scripts
 
@@ -172,6 +182,7 @@ cd ansible
 |--------|------|
 | `ansible-wrapper.sh` | Ansible 執行包裝器（自動從 vault 取得 SSH key）|
 | `ssh-to-vps.sh` | SSH 快捷連線（用於 Claude 認證等互動操作）|
+| `google-auth.sh` | Google OAuth2 授權（取得 refresh token）|
 
 ## Bot 指令
 
