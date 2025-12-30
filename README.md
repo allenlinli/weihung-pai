@@ -21,7 +21,6 @@ weihung-pai/
 │   ├── agents/       # Subagents
 │   ├── skills/       # 領域知識技能
 │   └── scripts/      # 執行腳本
-├── pai-mcp/          # MCP Server (權限請求)
 ├── ansible/          # VPS 部署
 │   ├── playbooks/    # 部署劇本
 │   ├── roles/        # Ansible roles
@@ -34,7 +33,6 @@ weihung-pai/
 - **Telegram Bot** - 透過 Telegram 與 Merlin 對話
 - **Skills 系統** - 模組化領域知識
 - **Claude Slash Commands** - 透過 `/cc:` 前綴執行 Claude Code 指令
-- **MCP 權限系統** - 危險操作需透過 Telegram 授權
 
 ## 快速開始
 
@@ -43,7 +41,6 @@ weihung-pai/
 ```bash
 # 安裝依賴
 cd pai-bot && bun install
-cd pai-mcp && bun install
 
 # 設定環境變數
 cp .env.example .env
@@ -66,18 +63,22 @@ cp inventory/group_vars/all/vault.yml.example inventory/group_vars/all/vault.yml
 # 編輯以上檔案，並用 ansible-vault encrypt 加密 vault.yml
 
 # 部署流程 (所有 ansible 命令透過 wrapper 執行)
+
+# === 初始化 (僅首次設定需要) ===
 # 1. 建立 VPS (可選，若已有 VPS 則跳過)
-./scripts/ansible-wrapper.sh ansible-playbook playbooks/provision-vultr.yml
+./scripts/ansible-wrapper.sh ansible-playbook playbooks/init/provision-vultr.yml
 
 # 2. 初始化部署用戶
-./scripts/ansible-wrapper.sh ansible-playbook playbooks/init-user.yml
+./scripts/ansible-wrapper.sh ansible-playbook playbooks/init/init-user.yml
 
 # 3. VPS 基礎設定
-./scripts/ansible-wrapper.sh ansible-playbook playbooks/setup-vps.yml
+./scripts/ansible-wrapper.sh ansible-playbook playbooks/init/setup-vps.yml
 
-# 4. 設定 Claude 認證
-./scripts/ansible-wrapper.sh ansible-playbook playbooks/setup-claude-auth.yml
+# 4. Claude Code 認證 (SSH 進入 VPS 執行 setup-token)
+./scripts/ssh-to-vps.sh
+# 進入後執行: ~/.local/bin/claude setup-token
 
+# === 日常部署 ===
 # 5. 部署 Claude Code 配置
 ./scripts/ansible-wrapper.sh ansible-playbook playbooks/deploy-claude.yml
 
@@ -87,14 +88,27 @@ cp inventory/group_vars/all/vault.yml.example inventory/group_vars/all/vault.yml
 
 ## Ansible Playbooks
 
+### 日常部署
+
 | Playbook | 說明 |
 |----------|------|
-| `provision-vultr.yml` | 透過 Vultr API 建立 VPS |
-| `init-user.yml` | 初始化部署用戶 |
-| `setup-vps.yml` | VPS 基礎環境設定 |
-| `setup-claude-auth.yml` | 設定 Claude 認證 |
-| `deploy-claude.yml` | 部署 Claude Code 配置 |
 | `deploy-bot.yml` | 部署 Telegram Bot |
+| `deploy-claude.yml` | 部署 Claude Code 配置 |
+
+### 初始化 (init/)
+
+| Playbook | 說明 |
+|----------|------|
+| `init/provision-vultr.yml` | 透過 Vultr API 建立 VPS |
+| `init/init-user.yml` | 初始化部署用戶 |
+| `init/setup-vps.yml` | VPS 基礎環境設定 |
+
+### Scripts
+
+| Script | 說明 |
+|--------|------|
+| `scripts/ansible-wrapper.sh` | Ansible 執行包裝器 (自動從 vault 取得 SSH key) |
+| `scripts/ssh-to-vps.sh` | SSH 快捷連線 (用於 Claude 認證等互動操作) |
 
 ## Bot 指令
 
@@ -112,9 +126,8 @@ cp inventory/group_vars/all/vault.yml.example inventory/group_vars/all/vault.yml
 | Runtime | Bun |
 | Bot | grammY |
 | AI | Claude Code CLI (Headless) |
-| MCP | @modelcontextprotocol/sdk |
 | Database | SQLite (bun:sqlite) |
-| Deploy | Ansible + PM2 |
+| Deploy | Ansible + systemd |
 
 ## 參考
 

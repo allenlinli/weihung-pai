@@ -53,9 +53,12 @@ weihung-pai/
 │   ├── commands/     # Slash commands
 │   └── rules/        # 開發規範
 ├── pai-bot/          # Telegram Bot (Bun + grammY)
-├── pai-mcp/          # MCP Server (權限請求)
 ├── pai-claude/       # Merlin VPS 運行配置 (勿修改)
 ├── ansible/          # VPS 部署
+│   ├── playbooks/    # 部署劇本
+│   │   ├── init/     # 初始化腳本 (provision, setup)
+│   │   ├── deploy-bot.yml
+│   │   └── deploy-claude.yml
 │   └── scripts/      # 包含 ansible-wrapper.sh
 └── docs/             # 文件
 ```
@@ -66,7 +69,6 @@ weihung-pai/
 |------|------|
 | Runtime | Bun |
 | Bot | grammY |
-| MCP | @modelcontextprotocol/sdk |
 | Database | SQLite (bun:sqlite) |
 | Deploy | Ansible + PM2 |
 
@@ -76,11 +78,11 @@ weihung-pai/
 # pai-bot 開發
 cd pai-bot && bun run dev
 
-# pai-mcp 開發
-cd pai-mcp && bun run dev
-
-# 部署
+# 日常部署
 ./ansible/scripts/ansible-wrapper.sh ansible-playbook -i ansible/inventory ansible/playbooks/deploy-bot.yml
+
+# 初始化 (僅首次)
+./ansible/scripts/ansible-wrapper.sh ansible-playbook -i ansible/inventory ansible/playbooks/init/setup-vps.yml
 ```
 
 ## 注意事項

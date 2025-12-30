@@ -52,20 +52,6 @@
 
 ---
 
-## 階段四：MCP 擴展 ✅ 完成
-
-### MCP Server Tools（pai-mcp/src/index.ts）
-- [x] `get_history` - 讀取歷史記錄（sessions, learnings, research, decisions）
-- [x] `save_learning` - 保存學習成果
-- [x] `save_session` - 保存 Session 摘要
-- [x] `save_decision` - 保存決策記錄
-
-### 現有 Tools
-- [x] `request_permission` - 請求執行權限（透過 Telegram）
-- [x] `notify_user` - 發送通知（透過 Telegram）
-
----
-
 ## 優先順序
 
 | Phase | 項目 | 狀態 |
@@ -73,7 +59,6 @@
 | A | Context 系統 | ✅ 完成 |
 | B | Skills + History + Agents | ✅ 完成 |
 | C | Hook 系統 + 安全層 | ✅ 完成 |
-| D | MCP 擴展 | ✅ 完成 |
 
 ---
 
@@ -93,8 +78,6 @@ pai-claude/
 ├── scripts/               # 3 個 Hooks
 └── settings.json          # Hook 註冊
 
-pai-mcp/
-└── src/index.ts           # 6 個 MCP Tools
 ```
 
 ### 後續可選擴展
