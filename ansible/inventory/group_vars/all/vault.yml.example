@@ -26,3 +26,13 @@ github_username: "YOUR_GITHUB_USERNAME"
 
 # === Vultr API（可選，用於自動建立 VPS）===
 vultr_api_key: "YOUR_VULTR_API_KEY"
+
+# === Google OAuth2（用於 Calendar, Drive, Gmail, Contacts）===
+# 取得方式:
+#   1. 前往 https://console.cloud.google.com/
+#   2. 建立專案 → 啟用 API（Calendar, Drive, Gmail, People）
+#   3. 建立 OAuth 2.0 憑證（桌面應用程式）
+#   4. 執行 ./scripts/google-auth.sh 取得 refresh token
+vault_google_client_id: "YOUR_CLIENT_ID.apps.googleusercontent.com"
+vault_google_client_secret: "YOUR_CLIENT_SECRET"
+vault_google_refresh_token: "YOUR_REFRESH_TOKEN"

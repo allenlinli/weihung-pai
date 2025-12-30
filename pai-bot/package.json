@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@grammyjs/parse-mode": "^2.2.0",
+    "googleapis": "^169.0.0",
     "grammy": "^1.21.1",
     "pino": "^8.17.2",
     "pino-pretty": "^10.3.1"

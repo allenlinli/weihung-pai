@@ -13,7 +13,7 @@ export class ContextManager {
   getConversationContext(userId: number): string {
     const db = getDb();
     const messages = db
-      .query<Message, [number]>(
+      .query<Message, [number, number]>(
         `
         SELECT role, content, created_at
         FROM conversations

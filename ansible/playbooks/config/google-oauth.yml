@@ -1,0 +1,78 @@
+---
+# Google OAuth2 憑證設定 Playbook
+# 用法: ./scripts/ansible-wrapper.sh ansible-playbook playbooks/config/google-oauth.yml
+#
+# 環境變數:
+#   GOOGLE_CLIENT_ID     - OAuth2 Client ID
+#   GOOGLE_CLIENT_SECRET - OAuth2 Client Secret
+#   GOOGLE_REFRESH_TOKEN - OAuth2 Refresh Token (執行 google-auth.sh 取得)
+
+- name: 設定 Google OAuth2 憑證
+  hosts: localhost
+  connection: local
+  gather_facts: false
+
+  vars:
+    vault_file: "{{ playbook_dir }}/../../inventory/group_vars/all/vault.yml"
+    google_client_id: "{{ lookup('env', 'GOOGLE_CLIENT_ID') }}"
+    google_client_secret: "{{ lookup('env', 'GOOGLE_CLIENT_SECRET') }}"
+    google_refresh_token: "{{ lookup('env', 'GOOGLE_REFRESH_TOKEN') | default('') }}"
+
+  tasks:
+    - name: 驗證必要環境變數
+      ansible.builtin.assert:
+        that:
+          - google_client_id | length > 0
+          - google_client_secret | length > 0
+        fail_msg: |
+          請設定環境變數:
+            export GOOGLE_CLIENT_ID='your-client-id'
+            export GOOGLE_CLIENT_SECRET='your-client-secret'
+            export GOOGLE_REFRESH_TOKEN='your-refresh-token'  # 可選
+
+    - name: 讀取現有 vault 內容
+      ansible.builtin.command:
+        cmd: ansible-vault decrypt {{ vault_file }} --output=-
+      register: vault_content
+      changed_when: false
+      no_log: true
+
+    - name: 解析現有 vault
+      ansible.builtin.set_fact:
+        vault_data: "{{ vault_content.stdout | from_yaml }}"
+      no_log: true
+
+    - name: 更新 Google OAuth2 設定
+      ansible.builtin.set_fact:
+        vault_data: "{{ vault_data | combine(google_oauth_config) }}"
+      vars:
+        google_oauth_config:
+          vault_google_client_id: "{{ google_client_id }}"
+          vault_google_client_secret: "{{ google_client_secret }}"
+          vault_google_refresh_token: "{{ google_refresh_token if google_refresh_token else vault_data.vault_google_refresh_token | default('') }}"
+      no_log: true
+
+    - name: 建立暫存 vault 檔案
+      ansible.builtin.copy:
+        content: "{{ vault_data | to_nice_yaml }}"
+        dest: "{{ vault_file }}.tmp"
+        mode: "0600"
+      no_log: true
+
+    - name: 加密並取代 vault 檔案
+      ansible.builtin.command:
+        cmd: ansible-vault encrypt {{ vault_file }}.tmp --output={{ vault_file }}
+      no_log: true
+
+    - name: 清理暫存檔案
+      ansible.builtin.file:
+        path: "{{ vault_file }}.tmp"
+        state: absent
+
+    - name: 顯示結果
+      ansible.builtin.debug:
+        msg: |
+          ✓ Google OAuth2 憑證已更新到 vault
+
+          Client ID: {{ google_client_id[:20] }}...
+          Refresh Token: {{ '已設定' if google_refresh_token else '未設定 (稍後執行 google-auth.sh)' }}

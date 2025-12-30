@@ -33,6 +33,7 @@
 - `research` - 調查研究與資料收集
 - `fabric` - 內容處理（摘要、提取重點、分析）
 - `coding` - 程式碼撰寫與保存到 workspace
+- `google` - Google 服務（日曆、雲端硬碟、Gmail、聯絡人）
 
 ## Git Commit 規則
 

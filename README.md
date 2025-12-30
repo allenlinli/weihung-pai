@@ -67,8 +67,33 @@ ansible-vault encrypt vault.yml
 | `github_token` | GitHub PAT (scopes: repo, read:org, gist) |
 | `github_username` | GitHub 用戶名 |
 | `vultr_api_key` | Vultr API Key（可選）|
+| `vault_google_client_id` | Google OAuth2 Client ID |
+| `vault_google_client_secret` | Google OAuth2 Client Secret |
+| `vault_google_refresh_token` | Google OAuth2 Refresh Token |
 
-### 2. 設定 Inventory
+### 2. 設定 Google OAuth2（可選）
+
+讓 Merlin 存取你的 Google 日曆、雲端硬碟、Gmail、聯絡人：
+
+```bash
+cd ansible
+
+# 1. 建立 OAuth2 憑證
+#    前往 https://console.cloud.google.com/
+#    建立專案 → 啟用 API（Calendar, Drive, Gmail, People）
+#    建立 OAuth 2.0 憑證（桌面應用程式）
+#    OAuth consent screen → 加入測試用戶（你的 email）
+
+# 2. 存入 Client ID/Secret（只需首次）
+export GOOGLE_CLIENT_ID='your-client-id'
+export GOOGLE_CLIENT_SECRET='your-client-secret'
+./scripts/ansible-wrapper.sh ansible-playbook playbooks/config/google-oauth.yml
+
+# 3. 授權（會開瀏覽器，自動存入 refresh token）
+./scripts/google-auth.sh
+```
+
+### 3. 設定 Inventory
 
 ```bash
 cd ansible/inventory
