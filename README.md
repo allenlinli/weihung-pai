@@ -167,6 +167,24 @@ cd ansible
 | Database | SQLite (bun:sqlite) |
 | Deploy | Ansible + systemd |
 
+## GitHub Actions 自動部署
+
+推送到 `main` 分支時會自動部署（需先設定 GitHub Secrets）。
+
+### 設定 GitHub Secrets
+
+到 repo Settings → Secrets and variables → Actions，新增：
+
+| Secret | 說明 |
+|--------|------|
+| `ANSIBLE_VAULT_PASSWORD` | 你的 ansible-vault 密碼 |
+
+Workflow 會自動從 vault 解密 SSH key 並執行部署。
+
+### 手動觸發
+
+也可以在 Actions 頁面手動觸發 `Deploy to VPS` workflow。
+
 ## 參考
 
 - [Claude Code Best Practices](https://www.anthropic.com/engineering/claude-code-best-practices)

@@ -1,0 +1,77 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check if vault exists
+        id: check_vault
+        run: |
+          if [ -f "ansible/inventory/group_vars/all/vault.yml" ]; then
+            echo "vault_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "vault_exists=false" >> $GITHUB_OUTPUT
+            echo "::warning::Vault file not found, skipping deployment"
+          fi
+
+      - name: Install Ansible
+        if: steps.check_vault.outputs.vault_exists == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ansible
+
+      - name: Create vault password file
+        if: steps.check_vault.outputs.vault_exists == 'true'
+        run: |
+          echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > ~/.vault_pass
+          chmod 600 ~/.vault_pass
+
+      - name: Extract SSH key from vault
+        if: steps.check_vault.outputs.vault_exists == 'true'
+        run: |
+          cd ansible
+          ansible-vault decrypt inventory/group_vars/all/vault.yml --output=/tmp/vault_plain.yml --vault-password-file=~/.vault_pass
+          grep -A10 "pai_agent_ssh_private_key:" /tmp/vault_plain.yml | tail -n +2 | sed 's/^  //' > ~/.ssh_key
+          chmod 600 ~/.ssh_key
+          rm /tmp/vault_plain.yml
+
+      - name: Setup SSH known hosts
+        if: steps.check_vault.outputs.vault_exists == 'true'
+        run: |
+          mkdir -p ~/.ssh
+          cd ansible
+          SERVER_IP=$(ansible-vault decrypt inventory/group_vars/all/vault.yml --output=- --vault-password-file=~/.vault_pass | grep 'vault_server_ip:' | sed 's/.*"\(.*\)".*/\1/')
+          ssh-keyscan -H "$SERVER_IP" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy Claude configuration
+        if: steps.check_vault.outputs.vault_exists == 'true'
+        run: |
+          cd ansible
+          export ANSIBLE_HOST_KEY_CHECKING=False
+          ansible-playbook -i inventory playbooks/deploy-claude.yml \
+            --vault-password-file=~/.vault_pass \
+            --private-key=~/.ssh_key
+
+      - name: Deploy Bot
+        if: steps.check_vault.outputs.vault_exists == 'true'
+        run: |
+          cd ansible
+          export ANSIBLE_HOST_KEY_CHECKING=False
+          ansible-playbook -i inventory playbooks/deploy-bot.yml \
+            --vault-password-file=~/.vault_pass \
+            --private-key=~/.ssh_key
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f ~/.vault_pass ~/.ssh_key
