@@ -33,14 +33,14 @@ jobs:
       - name: Create vault password file
         if: steps.check_vault.outputs.vault_exists == 'true'
         run: |
-          echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > ~/.vault_pass
-          chmod 600 ~/.vault_pass
+          echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > ~/.vault_pass_pai
+          chmod 600 ~/.vault_pass_pai
 
       - name: Extract SSH key from vault
         if: steps.check_vault.outputs.vault_exists == 'true'
         run: |
           cd ansible
-          ansible-vault decrypt inventory/group_vars/all/vault.yml --output=/tmp/vault_plain.yml --vault-password-file=~/.vault_pass
+          ansible-vault decrypt inventory/group_vars/all/vault.yml --output=/tmp/vault_plain.yml --vault-password-file=~/.vault_pass_pai
           grep -A10 "pai_agent_ssh_private_key:" /tmp/vault_plain.yml | tail -n +2 | sed 's/^  //' > ~/.ssh_key
           chmod 600 ~/.ssh_key
           rm /tmp/vault_plain.yml
@@ -50,28 +50,26 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           cd ansible
-          SERVER_IP=$(ansible-vault decrypt inventory/group_vars/all/vault.yml --output=- --vault-password-file=~/.vault_pass | grep 'vault_server_ip:' | sed 's/.*"\(.*\)".*/\1/')
+          SERVER_IP=$(ansible-vault decrypt inventory/group_vars/all/vault.yml --output=- --vault-password-file=~/.vault_pass_pai | grep 'vault_server_ip:' | sed 's/.*"\(.*\)".*/\1/')
           ssh-keyscan -H "$SERVER_IP" >> ~/.ssh/known_hosts 2>/dev/null
 
       - name: Deploy Claude configuration
         if: steps.check_vault.outputs.vault_exists == 'true'
+        env:
+          PAI_SSH_KEY_FILE: ~/.ssh_key
         run: |
           cd ansible
-          export ANSIBLE_HOST_KEY_CHECKING=False
-          ansible-playbook -i inventory playbooks/deploy-claude.yml \
-            --vault-password-file=~/.vault_pass \
-            --private-key=~/.ssh_key
+          ansible-playbook -i inventory playbooks/deploy-claude.yml
 
       - name: Deploy Bot
         if: steps.check_vault.outputs.vault_exists == 'true'
+        env:
+          PAI_SSH_KEY_FILE: ~/.ssh_key
         run: |
           cd ansible
-          export ANSIBLE_HOST_KEY_CHECKING=False
-          ansible-playbook -i inventory playbooks/deploy-bot.yml \
-            --vault-password-file=~/.vault_pass \
-            --private-key=~/.ssh_key
+          ansible-playbook -i inventory playbooks/deploy-bot.yml
 
       - name: Cleanup
         if: always()
         run: |
-          rm -f ~/.vault_pass ~/.ssh_key
+          rm -f ~/.vault_pass_pai ~/.ssh_key
