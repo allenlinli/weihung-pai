@@ -9,6 +9,15 @@ import {
   handleMessage,
 } from "./handlers";
 
+export async function setupBotCommands(bot: Bot): Promise<void> {
+  await bot.api.setMyCommands([
+    { command: "start", description: "啟動 Merlin" },
+    { command: "clear", description: "清除對話歷史" },
+    { command: "status", description: "查看狀態" },
+  ]);
+  logger.info("Bot commands registered");
+}
+
 export function createTelegramBot(): Bot {
   const bot = new Bot(config.telegram.token);
 
@@ -22,7 +31,7 @@ export function createTelegramBot(): Bot {
     }
 
     if (!isAuthorized(userId)) {
-      await ctx.reply("⛔ 你沒有使用此 Bot 的權限");
+      await ctx.reply("你沒有使用此 Bot 的權限");
       return;
     }
 

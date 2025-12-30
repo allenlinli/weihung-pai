@@ -1,6 +1,6 @@
 import { config, validateConfig } from "./config";
 import { logger } from "./utils/logger";
-import { createTelegramBot } from "./platforms/telegram/bot";
+import { createTelegramBot, setupBotCommands } from "./platforms/telegram/bot";
 import { getDb, closeDb } from "./storage/db";
 import { startApiServer, setTelegramBot } from "./api/server";
 
@@ -42,6 +42,9 @@ async function main() {
 
     process.on("SIGINT", shutdown);
     process.on("SIGTERM", shutdown);
+
+    // Register bot commands
+    await setupBotCommands(bot);
 
     // Start bot
     logger.info("Starting Telegram bot...");
