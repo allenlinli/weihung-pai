@@ -7,10 +7,19 @@
       ansible.posix.synchronize:
         src: ../../pai-claude/
         dest: "/home/{{ ansible_user }}/.claude/"
-        delete: true
+        delete: false
         rsync_opts:
           - "--exclude=data/"
           - "--exclude=*.db"
+          - "--exclude=statsig/"
+          - "--exclude=projects/"
+          - "--exclude=todos/"
+          - "--exclude=debug/"
+          - "--exclude=shell-snapshots/"
+          - "--exclude=.credentials"
+          - "--exclude=credentials.json"
+          - "--exclude=settings.json"
+          - "--exclude=settings.local.json"
 
     - name: Ensure data directories exist
       ansible.builtin.file:

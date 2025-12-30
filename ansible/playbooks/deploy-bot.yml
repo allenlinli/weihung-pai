@@ -5,20 +5,6 @@
     - ../inventory/group_vars/all/vault.yml
 
   tasks:
-    - name: Sync pai-claude source code
-      ansible.posix.synchronize:
-        src: ../../pai-claude/
-        dest: "/home/{{ ansible_user }}/pai-claude/"
-        delete: true
-        rsync_opts:
-          - "--exclude=node_modules/"
-          - "--exclude=.git/"
-          - "--exclude=statsig/"
-          - "--exclude=debug/"
-          - "--exclude=todos/"
-          - "--exclude=shell-snapshots/"
-          - "--exclude=projects/"
-
     - name: Sync bot source code
       ansible.posix.synchronize:
         src: ../../pai-bot/
@@ -33,13 +19,10 @@
 
     - name: Fix ownership of synced files
       ansible.builtin.file:
-        path: "/home/{{ ansible_user }}/{{ item }}"
+        path: "/home/{{ ansible_user }}/pai-bot"
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
         recurse: true
-      loop:
-        - pai-bot
-        - pai-claude
 
     - name: Ensure logs directory exists
       ansible.builtin.file:

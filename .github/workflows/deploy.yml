@@ -13,6 +13,27 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Detect changes
+        id: changes
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -q '^pai-bot/'; then
+            echo "bot=true" >> $GITHUB_OUTPUT
+          else
+            echo "bot=false" >> $GITHUB_OUTPUT
+          fi
+          if git diff --name-only HEAD~1 HEAD | grep -q '^pai-claude/'; then
+            echo "claude=true" >> $GITHUB_OUTPUT
+          else
+            echo "claude=false" >> $GITHUB_OUTPUT
+          fi
+          if git diff --name-only HEAD~1 HEAD | grep -q '^ansible/'; then
+            echo "ansible=true" >> $GITHUB_OUTPUT
+          else
+            echo "ansible=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Check if vault exists
         id: check_vault
@@ -54,7 +75,7 @@ jobs:
           ssh-keyscan -H "$SERVER_IP" >> ~/.ssh/known_hosts 2>/dev/null
 
       - name: Deploy Claude configuration
-        if: steps.check_vault.outputs.vault_exists == 'true'
+        if: steps.check_vault.outputs.vault_exists == 'true' && (steps.changes.outputs.claude == 'true' || steps.changes.outputs.ansible == 'true')
         env:
           PAI_SSH_KEY_FILE: ~/.ssh_key
         run: |
@@ -62,7 +83,7 @@ jobs:
           ansible-playbook -i inventory playbooks/deploy-claude.yml
 
       - name: Deploy Bot
-        if: steps.check_vault.outputs.vault_exists == 'true'
+        if: steps.check_vault.outputs.vault_exists == 'true' && (steps.changes.outputs.bot == 'true' || steps.changes.outputs.ansible == 'true')
         env:
           PAI_SSH_KEY_FILE: ~/.ssh_key
         run: |
