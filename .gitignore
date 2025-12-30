@@ -27,7 +27,6 @@ logs/
 .DS_Store
 
 # ===== Ansible =====
-ansible/inventory/group_vars/all/vault.yml
 *.retry
 
 # ===== Claude Code =====
