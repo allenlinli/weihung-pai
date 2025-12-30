@@ -38,6 +38,11 @@ Personal AI Infrastructure - Merlin 專案開發環境。
 - 使用 Bun 而非 Node.js
 - `bun run` 取代 `npm run`
 - `bun install` 取代 `npm install`
+
+**Law 9: Ansible Wrapper**
+- 所有 ansible 命令必須透過 `./ansible/scripts/ansible-wrapper.sh` 執行
+- 範例：`./ansible/scripts/ansible-wrapper.sh ansible-playbook playbooks/deploy-bot.yml`
+- 此 wrapper 會自動從 vault 解密 SSH key
 </law>
 
 ## 專案結構
@@ -71,7 +76,7 @@ cd pai-bot && bun run dev
 cd pai-mcp && bun run dev
 
 # 部署
-cd ansible && ansible-playbook playbooks/deploy-bot.yml
+./ansible/scripts/ansible-wrapper.sh ansible-playbook -i ansible/inventory ansible/playbooks/deploy-bot.yml
 ```
 
 ## 注意事項
