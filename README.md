@@ -49,6 +49,9 @@ cd pai-mcp && bun install
 cp .env.example .env
 # 編輯 .env
 
+# 初始化資料庫
+cd pai-bot && bun run db:init
+
 # 啟動開發
 cd pai-bot && bun run dev
 ```
@@ -60,11 +63,25 @@ cd pai-bot && bun run dev
 cd ansible
 cp inventory/hosts.yml.example inventory/hosts.yml
 cp inventory/group_vars/all/vault.yml.example inventory/group_vars/all/vault.yml
-# 編輯以上檔案
+# 編輯以上檔案，並用 ansible-vault encrypt 加密 vault.yml
 
-# 部署 (所有 ansible 命令透過 wrapper 執行)
+# 部署流程 (所有 ansible 命令透過 wrapper 執行)
+# 1. 建立 VPS (可選，若已有 VPS 則跳過)
+./scripts/ansible-wrapper.sh ansible-playbook playbooks/provision-vultr.yml
+
+# 2. 初始化部署用戶
+./scripts/ansible-wrapper.sh ansible-playbook playbooks/init-user.yml
+
+# 3. VPS 基礎設定
 ./scripts/ansible-wrapper.sh ansible-playbook playbooks/setup-vps.yml
+
+# 4. 設定 Claude 認證
+./scripts/ansible-wrapper.sh ansible-playbook playbooks/setup-claude-auth.yml
+
+# 5. 部署 Claude Code 配置
 ./scripts/ansible-wrapper.sh ansible-playbook playbooks/deploy-claude.yml
+
+# 6. 部署 Bot
 ./scripts/ansible-wrapper.sh ansible-playbook playbooks/deploy-bot.yml
 ```
 
@@ -72,10 +89,12 @@ cp inventory/group_vars/all/vault.yml.example inventory/group_vars/all/vault.yml
 
 | Playbook | 說明 |
 |----------|------|
+| `provision-vultr.yml` | 透過 Vultr API 建立 VPS |
+| `init-user.yml` | 初始化部署用戶 |
 | `setup-vps.yml` | VPS 基礎環境設定 |
+| `setup-claude-auth.yml` | 設定 Claude 認證 |
 | `deploy-claude.yml` | 部署 Claude Code 配置 |
 | `deploy-bot.yml` | 部署 Telegram Bot |
-| `setup-claude-auth.yml` | 設定 Claude 認證 |
 
 ## Bot 指令
 
