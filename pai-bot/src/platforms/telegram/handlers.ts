@@ -56,7 +56,7 @@ export async function handleStart(ctx: Context): Promise<void> {
   if (!userId) return;
 
   await ctx.reply(
-    `🧙 Merlin 已甦醒
+    `Merlin 已甦醒
 
 可用指令：
 • \`/clear\` \\- 清除對話歷史
@@ -74,7 +74,7 @@ export async function handleClear(ctx: Context): Promise<void> {
   if (!userId) return;
 
   contextManager.clearHistory(userId);
-  await ctx.reply("✅ 對話歷史已清除");
+  await ctx.reply("對話歷史已清除");
 }
 
 // Handle /status command
@@ -85,7 +85,7 @@ export async function handleStatus(ctx: Context): Promise<void> {
   const messageCount = contextManager.getMessageCount(userId);
 
   await ctx.reply(
-    `📊 狀態
+    `狀態
 
 • User ID: \`${userId}\`
 • 對話訊息數: ${messageCount}`,
@@ -169,6 +169,6 @@ export async function handleMessage(ctx: Context): Promise<void> {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
     logger.error({ error: errorMessage, stack: errorStack, userId }, "Failed to process message");
-    await ctx.reply("❌ 魔法失效了，請稍後再試");
+    await ctx.reply("發生錯誤，請稍後再試");
   }
 }
