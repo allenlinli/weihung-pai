@@ -10,6 +10,9 @@ telegram_allowed_user_ids: "YOUR_TELEGRAM_USER_ID"
 vault_server_ip: "YOUR_VPS_IP"
 pai_agent_user: "pai"
 
+# === 網站設定 ===
+vault_site_domain: "YOUR_DOMAIN"
+
 # === SSH Key（用於 Ansible 部署）===
 # 產生方式: ssh-keygen -t ed25519 -C "pai-agent"
 pai_agent_ssh_private_key: |

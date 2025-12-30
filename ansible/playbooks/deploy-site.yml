@@ -1,0 +1,52 @@
+---
+# 部署靜態網站內容
+# 用法: ./scripts/ansible-wrapper.sh ansible-playbook -i inventory playbooks/deploy-site.yml
+
+- name: Deploy static site
+  hosts: pai-server
+  become: true
+
+  vars:
+    webroot: /var/www/merlin
+
+  tasks:
+    - name: Sync docs to webroot
+      ansible.posix.synchronize:
+        src: ../../docs/
+        dest: "{{ webroot }}/"
+        delete: true
+      notify: Set permissions
+
+    - name: Convert markdown to HTML
+      ansible.builtin.shell: |
+        set -o pipefail
+        for f in *.md; do
+          if [ -f "$f" ]; then
+            name="${f%.md}"
+            {
+              echo "<!DOCTYPE html><html><head><meta charset='utf-8'><title>$name</title><style>body{font-family:system-ui;max-width:800px;margin:40px auto;padding:0 20px;line-height:1.6}</style></head><body>"
+              sed 's/^# \(.*\)/<h1>\1<\/h1>/;s/^## \(.*\)/<h2>\1<\/h2>/;s/^- \(.*\)/<li>\1<\/li>/;s/^\*\*\(.*\)\*\*/<strong>\1<\/strong>/;s/^$/\n<p>/;' "$f"
+              echo "</body></html>"
+            } > "${name}.html"
+          fi
+        done
+      args:
+        chdir: "{{ webroot }}"
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Deploy index.html
+      ansible.builtin.template:
+        src: ../templates/index.html.j2
+        dest: "{{ webroot }}/index.html"
+        mode: "0644"
+        owner: www-data
+        group: www-data
+
+  handlers:
+    - name: Set permissions
+      ansible.builtin.file:
+        path: "{{ webroot }}"
+        owner: www-data
+        group: www-data
+        recurse: true
