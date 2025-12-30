@@ -35,3 +35,20 @@ CREATE TABLE IF NOT EXISTS files (
 );
 
 CREATE INDEX IF NOT EXISTS idx_files_user ON files(user_id);
+
+-- Scheduled tasks
+CREATE TABLE IF NOT EXISTS schedules (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  cron_expression TEXT,
+  run_at DATETIME,
+  task_type TEXT NOT NULL CHECK (task_type IN ('message', 'prompt')),
+  task_data TEXT NOT NULL,
+  user_id INTEGER NOT NULL,
+  enabled INTEGER DEFAULT 1,
+  last_run DATETIME,
+  next_run DATETIME,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_schedules_next ON schedules(enabled, next_run);

@@ -35,6 +35,25 @@
 - `coding` - 程式碼撰寫與保存到 workspace
 - `google` - Google 服務（日曆、雲端硬碟、Gmail、聯絡人）
 
+## 排程功能
+
+你可以透過 MCP tools 管理排程任務（時區：Asia/Taipei）：
+
+- `schedule_create` - 創建排程
+  - `cronExpression`: cron 表達式，如 `0 9 * * *`（每天 09:00）
+  - `runAt`: 一次性執行時間（ISO 8601）
+  - `taskType`: `message`（發送訊息）或 `prompt`（執行指令）
+  - `taskData`: 訊息內容或要執行的指令
+- `schedule_list` - 列出所有排程
+- `schedule_delete` - 刪除排程
+- `schedule_toggle` - 啟用/停用排程
+
+常用 cron 範例：
+- `0 9 * * *` - 每天 09:00
+- `0 9 * * 1` - 每週一 09:00
+- `0 9 1 * *` - 每月 1 日 09:00
+- `0 */2 * * *` - 每 2 小時
+
 ## Git Commit 規則
 
 - Commit 時**不要**加 Co-Authored-By 或 Generated with Claude Code

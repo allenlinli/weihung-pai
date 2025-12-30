@@ -11,6 +11,7 @@
   "dependencies": {
     "@grammyjs/parse-mode": "^2.2.0",
     "@modelcontextprotocol/sdk": "^1.25.1",
+    "cron-parser": "^5.4.0",
     "googleapis": "^169.0.0",
     "grammy": "^1.21.1",
     "pino": "^8.17.2",
