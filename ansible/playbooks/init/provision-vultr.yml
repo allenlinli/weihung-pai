@@ -50,9 +50,9 @@
       delay: 10
 
     - name: Display instance info
-      debug:
+      ansible.builtin.debug:
         msg: |
-          ✅ Instance created!
+          Instance created!
 
           Label: {{ instance_info.vultr_instance.label }}
           IP: {{ instance_info.vultr_instance.main_ip }}
@@ -66,7 +66,7 @@
           4. Run: ansible-playbook playbooks/deploy-bot.yml
 
     - name: Update inventory file
-      blockinfile:
+      ansible.builtin.blockinfile:
         path: "{{ playbook_dir }}/../inventory/hosts.yml"
         marker: "# {mark} VULTR MANAGED BLOCK"
         block: |
@@ -75,5 +75,6 @@
               pai-server:
                 ansible_host: {{ instance_info.vultr_instance.main_ip }}
                 ansible_user: root
-        create: yes
+        create: true
+        mode: "0644"
       when: instance_info.vultr_instance.main_ip is defined

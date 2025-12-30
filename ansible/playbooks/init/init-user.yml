@@ -4,34 +4,34 @@
 
 - name: Initialize PAI Agent User
   hosts: pai-server
-  become: yes
+  become: true
   vars:
     agent_user: "{{ pai_agent_user }}"
     agent_ssh_public_key: "{{ pai_agent_ssh_public_key }}"
 
   tasks:
     - name: Create pai user
-      user:
+      ansible.builtin.user:
         name: "{{ agent_user }}"
         shell: /bin/bash
-        create_home: yes
+        create_home: true
         state: present
 
     - name: Add pai user to sudo group
-      user:
+      ansible.builtin.user:
         name: "{{ agent_user }}"
         groups: sudo
-        append: yes
+        append: true
 
     - name: Setup passwordless sudo for pai user
-      copy:
+      ansible.builtin.copy:
         content: "{{ agent_user }} ALL=(ALL) NOPASSWD:ALL"
         dest: "/etc/sudoers.d/{{ agent_user }}"
         mode: "0440"
         validate: "visudo -cf %s"
 
     - name: Create .ssh directory
-      file:
+      ansible.builtin.file:
         path: "/home/{{ agent_user }}/.ssh"
         state: directory
         owner: "{{ agent_user }}"
@@ -39,20 +39,20 @@
         mode: "0700"
 
     - name: Add SSH public key to authorized_keys
-      authorized_key:
+      ansible.posix.authorized_key:
         user: "{{ agent_user }}"
         key: "{{ agent_ssh_public_key }}"
         state: present
 
     - name: Verify user setup
-      command: id {{ agent_user }}
+      ansible.builtin.command: id {{ agent_user }}
       register: user_info
       changed_when: false
 
     - name: Display result
-      debug:
+      ansible.builtin.debug:
         msg: |
-          ✅ User '{{ agent_user }}' created!
+          User '{{ agent_user }}' created!
           {{ user_info.stdout }}
 
           Next: Update inventory to use this user, then run setup-vps.yml

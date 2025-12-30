@@ -1,20 +1,23 @@
 ---
 - name: Setup PAI VPS
   hosts: pai-server
-  become: yes
+  become: true
 
   vars:
     app_user: "{{ ansible_user }}"
     home_dir: "/home/{{ app_user }}"
 
+  vars_files:
+    - ../../inventory/group_vars/all/vault.yml
+
   tasks:
     - name: Update apt cache
-      apt:
-        update_cache: yes
+      ansible.builtin.apt:
+        update_cache: true
         cache_valid_time: 3600
 
     - name: Install system dependencies
-      apt:
+      ansible.builtin.apt:
         name:
           - curl
           - unzip
@@ -23,50 +26,109 @@
         state: present
 
     - name: Check if Bun is installed
-      stat:
+      ansible.builtin.stat:
         path: "{{ home_dir }}/.bun/bin/bun"
       register: bun_installed
 
     - name: Install Bun
-      shell: curl -fsSL https://bun.sh/install | bash
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          curl -fsSL https://bun.sh/install | bash
+        executable: /bin/bash
+      become: true
       become_user: "{{ app_user }}"
       when: not bun_installed.stat.exists
+      changed_when: true
 
     - name: Add Bun to PATH in .bashrc
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: "{{ home_dir }}/.bashrc"
         line: 'export PATH="$HOME/.bun/bin:$PATH"'
         state: present
-        create: yes
+        create: true
+        mode: "0644"
+      become: true
       become_user: "{{ app_user }}"
 
     - name: Check if Claude Code is installed
-      stat:
+      ansible.builtin.stat:
         path: "{{ home_dir }}/.local/bin/claude"
       register: claude_installed
 
     - name: Install Claude Code CLI
-      shell: curl -fsSL https://claude.ai/install.sh | bash
-      become_user: "{{ app_user }}"
-      args:
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          curl -fsSL https://claude.ai/install.sh | bash
         executable: /bin/bash
+      become: true
+      become_user: "{{ app_user }}"
       when: not claude_installed.stat.exists
+      changed_when: true
 
     - name: Add Claude to PATH in .bashrc
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: "{{ home_dir }}/.bashrc"
         line: 'export PATH="$HOME/.local/bin:$PATH"'
         state: present
+      become: true
       become_user: "{{ app_user }}"
 
     - name: Install pm2 globally via bun
-      shell: "{{ home_dir }}/.bun/bin/bun install -g pm2"
-      become_user: "{{ app_user }}"
-      args:
+      ansible.builtin.command:
+        cmd: "{{ home_dir }}/.bun/bin/bun install -g pm2"
         creates: "{{ home_dir }}/.bun/bin/pm2"
+      become: true
+      become_user: "{{ app_user }}"
+
+    - name: Download GitHub CLI apt key
+      ansible.builtin.get_url:
+        url: https://cli.github.com/packages/githubcli-archive-keyring.gpg
+        dest: /usr/share/keyrings/githubcli-archive-keyring.gpg
+        mode: "0644"
+
+    - name: Add GitHub CLI repository
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main"
+        state: present
+        filename: github-cli
+
+    - name: Install GitHub CLI
+      ansible.builtin.apt:
+        name: gh
+        state: present
+        update_cache: true
+
+    - name: Configure git user name
+      community.general.git_config:
+        name: user.name
+        value: Merlin
+        scope: global
+      become: true
+      become_user: "{{ app_user }}"
+
+    - name: Configure git user email
+      community.general.git_config:
+        name: user.email
+        value: merlin@pai.local
+        scope: global
+      become: true
+      become_user: "{{ app_user }}"
+
+    - name: Authenticate GitHub CLI
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          echo "{{ github_token }}" | gh auth login --with-token
+        executable: /bin/bash
+      become: true
+      become_user: "{{ app_user }}"
+      no_log: true
+      changed_when: true
 
     - name: Create application directories
-      file:
+      ansible.builtin.file:
         path: "{{ item }}"
         state: directory
         owner: "{{ app_user }}"
@@ -77,9 +139,52 @@
         - "{{ home_dir }}/pai-bot/data"
         - "{{ home_dir }}/pai-bot/logs"
         - "{{ home_dir }}/pai-claude"
+        - "{{ home_dir }}/merlin-workspace"
+
+    - name: Check if merlin-workspace is a git repo
+      ansible.builtin.stat:
+        path: "{{ home_dir }}/merlin-workspace/.git"
+      register: workspace_git
+
+    - name: Initialize merlin-workspace git repo
+      ansible.builtin.shell:
+        cmd: |
+          cd {{ home_dir }}/merlin-workspace
+          git init
+          echo "# Merlin Workspace" > README.md
+          echo "" >> README.md
+          echo "Merlin 的工作空間，存放腳本和自動化工具。" >> README.md
+          git add .
+          git commit -m "init: merlin workspace"
+        executable: /bin/bash
+      become: true
+      become_user: "{{ app_user }}"
+      when: not workspace_git.stat.exists
+      changed_when: true
+
+    - name: Check if merlin-workspace remote exists
+      ansible.builtin.command:
+        cmd: git remote get-url origin
+        chdir: "{{ home_dir }}/merlin-workspace"
+      become: true
+      become_user: "{{ app_user }}"
+      register: workspace_remote
+      ignore_errors: true
+      changed_when: false
+
+    - name: Create and push merlin-workspace to GitHub
+      ansible.builtin.shell:
+        cmd: |
+          cd {{ home_dir }}/merlin-workspace
+          gh repo create wayne930242/merlin-workspace --private --source=. --push
+        executable: /bin/bash
+      become: true
+      become_user: "{{ app_user }}"
+      when: workspace_remote.rc != 0
+      changed_when: true
 
     - name: Print next steps
-      debug:
+      ansible.builtin.debug:
         msg: |
           VPS setup complete!
 

@@ -38,3 +38,4 @@ pai-claude/*.db
 tmp/
 temp/
 *.tmp
+.ansible/

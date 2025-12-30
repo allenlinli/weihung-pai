@@ -1,7 +1,58 @@
 import { Context } from "grammy";
-import { callClaude } from "../../claude/client";
+import { streamClaude } from "../../claude/client";
 import { contextManager } from "../../context/manager";
 import { logger } from "../../utils/logger";
+
+// Telegram rate limit for message edits (roughly 1 per second per chat)
+const EDIT_THROTTLE_MS = 1000;
+
+// Escape special characters for MarkdownV2
+// Characters that need escaping: _ * [ ] ( ) ~ ` > # + - = | { } . !
+function escapeMarkdownV2(text: string): string {
+  return text.replace(/([_*\[\]()~`>#+\-=|{}.!\\])/g, "\\$1");
+}
+
+// Convert Claude's markdown to Telegram MarkdownV2
+function toMarkdownV2(text: string): string {
+  // First, protect code blocks and inline code
+  const codeBlocks: string[] = [];
+  const inlineCodes: string[] = [];
+
+  // Extract and protect code blocks
+  let result = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
+    const idx = codeBlocks.length;
+    codeBlocks.push(`\`\`\`${lang}\n${code}\`\`\``);
+    return `__CODE_BLOCK_${idx}__`;
+  });
+
+  // Extract and protect inline code
+  result = result.replace(/`([^`]+)`/g, (_, code) => {
+    const idx = inlineCodes.length;
+    inlineCodes.push(`\`${code}\``);
+    return `__INLINE_CODE_${idx}__`;
+  });
+
+  // Escape special characters in regular text
+  result = escapeMarkdownV2(result);
+
+  // Convert markdown syntax to MarkdownV2
+  // Bold: **text** or __text__ -> *text*
+  result = result.replace(/\\\*\\\*(.+?)\\\*\\\*/g, "*$1*");
+  result = result.replace(/\\_\\_(.+?)\\_\\_/g, "*$1*");
+
+  // Italic: *text* or _text_ -> _text_
+  result = result.replace(/(?<!\\\*)\\\*([^*]+)\\\*(?!\\\*)/g, "_$1_");
+
+  // Restore code blocks and inline code
+  codeBlocks.forEach((code, idx) => {
+    result = result.replace(`\\_\\_CODE\\_BLOCK\\_${idx}\\_\\_`, code);
+  });
+  inlineCodes.forEach((code, idx) => {
+    result = result.replace(`\\_\\_INLINE\\_CODE\\_${idx}\\_\\_`, code);
+  });
+
+  return result;
+}
 
 // Handle /start command
 export async function handleStart(ctx: Context): Promise<void> {
@@ -9,13 +60,15 @@ export async function handleStart(ctx: Context): Promise<void> {
   if (!userId) return;
 
   await ctx.reply(
-    "🧙 Merlin 已甦醒\n\n" +
-      "可用指令：\n" +
-      "• <code>/clear</code> - 清除對話歷史\n" +
-      "• <code>/status</code> - 查看狀態\n" +
-      "• <code>/cc:&lt;command&gt;</code> - 執行 Claude slash command\n\n" +
-      "直接輸入訊息即可與我對話。",
-    { parse_mode: "HTML" }
+    `🧙 Merlin 已甦醒
+
+可用指令：
+• \`/clear\` \\- 清除對話歷史
+• \`/status\` \\- 查看狀態
+• \`/cc:<command>\` \\- 執行 Claude slash command
+
+直接輸入訊息即可與我對話。`,
+    { parse_mode: "MarkdownV2" }
   );
 }
 
@@ -36,31 +89,28 @@ export async function handleStatus(ctx: Context): Promise<void> {
   const messageCount = contextManager.getMessageCount(userId);
 
   await ctx.reply(
-    `📊 狀態\n\n` +
-      `• User ID: \`${userId}\`\n` +
-      `• 對話訊息數: ${messageCount}`,
-    { parse_mode: "Markdown" }
+    `📊 狀態
+
+• User ID: \`${userId}\`
+• 對話訊息數: ${messageCount}`,
+    { parse_mode: "MarkdownV2" }
   );
 }
 
-// Handle regular messages
+// Handle regular messages with streaming
 export async function handleMessage(ctx: Context): Promise<void> {
   const userId = ctx.from?.id;
   const text = ctx.message?.text;
+  const chatId = ctx.chat?.id;
 
-  if (!userId || !text) return;
+  if (!userId || !text || !chatId) return;
 
   // 處理 /cc: Claude slash command
   let prompt = text;
   if (text.startsWith("/cc:")) {
-    // /cc:commit -> 執行 /commit
-    // /cc:commit message -> 執行 /commit message
-    const commandPart = text.slice(4); // 移除 "/cc:"
+    const commandPart = text.slice(4);
     prompt = `/${commandPart}`;
   }
-
-  // Show typing indicator
-  await ctx.replyWithChatAction("typing");
 
   try {
     // Save user message
@@ -69,75 +119,132 @@ export async function handleMessage(ctx: Context): Promise<void> {
     // Get conversation context
     const history = contextManager.getConversationContext(userId);
 
-    // Call Claude
-    const result = await callClaude(prompt, {
-      conversationHistory: history,
+    // Send initial message
+    const msg = await ctx.api.sendMessage(chatId, "🔮 _施法中\\.\\.\\._", {
+      parse_mode: "MarkdownV2",
     });
+    const messageId = msg.message_id;
 
-    // Save assistant response
-    contextManager.saveMessage(userId, "assistant", result.response);
+    let currentThinking = "";
+    let currentText = "";
+    let lastEditTime = 0;
+    let pendingEdit: ReturnType<typeof setTimeout> | null = null;
+    let lastContent = "";
 
-    // Send response
-    await sendFormattedReply(ctx, result.response);
+    // Throttled edit function
+    const editMessage = async (content: string) => {
+      // Skip if content hasn't changed
+      if (content === lastContent) return;
+      lastContent = content;
+
+      const now = Date.now();
+      const timeSinceLastEdit = now - lastEditTime;
+
+      if (timeSinceLastEdit < EDIT_THROTTLE_MS) {
+        // Schedule a pending edit if not already scheduled
+        if (!pendingEdit) {
+          pendingEdit = setTimeout(async () => {
+            pendingEdit = null;
+            await doEdit(content);
+          }, EDIT_THROTTLE_MS - timeSinceLastEdit);
+        }
+        return;
+      }
+
+      await doEdit(content);
+    };
+
+    const doEdit = async (content: string) => {
+      try {
+        lastEditTime = Date.now();
+        await ctx.api.editMessageText(chatId, messageId, content, {
+          parse_mode: "MarkdownV2",
+        });
+      } catch (error) {
+        // Ignore "message not modified" errors
+        const errStr = String(error);
+        if (!errStr.includes("message is not modified")) {
+          logger.warn({ error }, "Failed to edit message");
+          // Try sending without parse_mode as fallback
+          try {
+            await ctx.api.editMessageText(
+              chatId,
+              messageId,
+              content.replace(/\\/g, "")
+            );
+          } catch {
+            // Ignore fallback errors
+          }
+        }
+      }
+    };
+
+    // Build display content
+    const buildContent = () => {
+      if (currentThinking && !currentText) {
+        // Show thinking only
+        const thinkingPreview =
+          currentThinking.length > 300
+            ? currentThinking.slice(0, 300) + "..."
+            : currentThinking;
+        return `💭 _${escapeMarkdownV2(thinkingPreview)}_
+
+🔮 _思考中\\.\\.\\._`;
+      }
+
+      if (currentThinking && currentText) {
+        // Show both thinking and text
+        const thinkingPreview =
+          currentThinking.length > 200
+            ? currentThinking.slice(0, 200) + "..."
+            : currentThinking;
+        return `💭 _${escapeMarkdownV2(thinkingPreview)}_
+
+${toMarkdownV2(currentText)}`;
+      }
+
+      if (currentText) {
+        return toMarkdownV2(currentText);
+      }
+
+      return "🔮 _施法中\\.\\.\\._";
+    };
+
+    // Stream the response
+    for await (const event of streamClaude(prompt, {
+      conversationHistory: history,
+    })) {
+      if (event.type === "thinking") {
+        currentThinking = event.content;
+        await editMessage(buildContent());
+      } else if (event.type === "text") {
+        currentText = event.content;
+        await editMessage(buildContent());
+      } else if (event.type === "done") {
+        // Final update with complete response
+        currentText = event.content || currentText;
+      } else if (event.type === "error") {
+        throw new Error(event.content);
+      }
+    }
+
+    // Cancel any pending edit
+    if (pendingEdit) {
+      clearTimeout(pendingEdit);
+    }
+
+    // Final edit with complete content (no thinking shown in final)
+    const finalContent = currentText.trim();
+    if (finalContent) {
+      // Wait a bit to ensure we don't hit rate limit
+      await Bun.sleep(EDIT_THROTTLE_MS);
+      await doEdit(toMarkdownV2(finalContent));
+
+      // Save assistant response
+      contextManager.saveMessage(userId, "assistant", finalContent);
+    }
   } catch (error) {
     logger.error({ error, userId }, "Failed to process message");
     await ctx.reply("❌ 魔法失效了，請稍後再試");
   }
-}
-
-// 轉換 Markdown 到 HTML（簡易版）
-function markdownToHtml(text: string): string {
-  return text
-    // Code blocks (must be first)
-    .replace(/```(\w*)\n([\s\S]*?)```/g, "<pre><code>$2</code></pre>")
-    // Inline code
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
-    // Bold
-    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
-    // Italic
-    .replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, "<i>$1</i>")
-    // Escape HTML special chars in remaining text (but not in tags we just added)
-    .replace(/&(?!amp;|lt;|gt;)/g, "&amp;")
-    .replace(/<(?!\/?(b|i|code|pre)[ >])/g, "&lt;");
-}
-
-// 發送格式化的回覆
-async function sendFormattedReply(ctx: Context, text: string): Promise<void> {
-  const html = markdownToHtml(text);
-
-  if (html.length > 4096) {
-    const chunks = splitMessage(html, 4096);
-    for (const chunk of chunks) {
-      await ctx.reply(chunk, { parse_mode: "HTML" });
-    }
-  } else {
-    await ctx.reply(html, { parse_mode: "HTML" });
-  }
-}
-
-// Split long messages
-function splitMessage(text: string, maxLength: number): string[] {
-  const chunks: string[] = [];
-  let remaining = text;
-
-  while (remaining.length > 0) {
-    if (remaining.length <= maxLength) {
-      chunks.push(remaining);
-      break;
-    }
-
-    // Find a good break point
-    let breakPoint = remaining.lastIndexOf("\n", maxLength);
-    if (breakPoint === -1 || breakPoint < maxLength / 2) {
-      breakPoint = remaining.lastIndexOf(" ", maxLength);
-    }
-    if (breakPoint === -1 || breakPoint < maxLength / 2) {
-      breakPoint = maxLength;
-    }
-
-    chunks.push(remaining.slice(0, breakPoint));
-    remaining = remaining.slice(breakPoint).trimStart();
-  }
-
-  return chunks;
 }

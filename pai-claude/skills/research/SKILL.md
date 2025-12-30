@@ -1,11 +1,11 @@
 ---
 name: research
-description: 技術調研與資料收集。USE WHEN 使用者提到 research, 調查, 研究, 比較, 評估, 分析, investigate, explore, 探索。
+description: 調查研究與資料收集。USE WHEN 使用者提到 research, 調查, 研究, 比較, 評估, 分析, investigate, explore, 探索, 找資料, 查詢。
 ---
 
 # Research Skill
 
-技術調研和資料收集的專業技能。
+調查研究和資料收集的專業技能。
 
 ## Workflow Routing
 

@@ -4,16 +4,16 @@
 
   tasks:
     - name: Sync Claude configuration
-      synchronize:
+      ansible.posix.synchronize:
         src: ../../pai-claude/
         dest: "/home/{{ ansible_user }}/.claude/"
-        delete: yes
+        delete: true
         rsync_opts:
           - "--exclude=data/"
           - "--exclude=*.db"
 
     - name: Ensure data directories exist
-      file:
+      ansible.builtin.file:
         path: "{{ item }}"
         state: directory
         owner: "{{ ansible_user }}"
@@ -26,11 +26,11 @@
         - "/home/{{ ansible_user }}/.claude/data/history/learnings"
 
     - name: Verify Claude configuration
-      stat:
+      ansible.builtin.stat:
         path: "/home/{{ ansible_user }}/.claude/CLAUDE.md"
       register: claude_config
 
     - name: Print deployment status
-      debug:
+      ansible.builtin.debug:
         msg: "Claude configuration deployed successfully"
       when: claude_config.stat.exists
