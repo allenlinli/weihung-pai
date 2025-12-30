@@ -162,15 +162,16 @@
       when: not workspace_git.stat.exists
       changed_when: true
 
-    - name: Check if merlin-workspace remote exists
-      ansible.builtin.command:
-        cmd: git remote get-url origin
-        chdir: "{{ home_dir }}/merlin-workspace"
+    - name: Read git config to check remote
+      ansible.builtin.slurp:
+        src: "{{ home_dir }}/merlin-workspace/.git/config"
+      register: git_config
       become: true
       become_user: "{{ app_user }}"
-      register: workspace_remote
-      ignore_errors: true
-      changed_when: false
+
+    - name: Check if origin remote exists
+      ansible.builtin.set_fact:
+        workspace_remote_exists: "{{ '[remote \"origin\"]' in (git_config.content | b64decode) }}"
 
     - name: Create and push merlin-workspace to GitHub
       ansible.builtin.shell:
@@ -180,7 +181,7 @@
         executable: /bin/bash
       become: true
       become_user: "{{ app_user }}"
-      when: workspace_remote.rc != 0
+      when: not workspace_remote_exists
       changed_when: true
 
     - name: Print next steps
