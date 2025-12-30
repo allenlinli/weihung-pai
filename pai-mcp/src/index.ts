@@ -1,14 +1,17 @@
 #!/usr/bin/env bun
 /**
  * PAI MCP Server
- * 提供 Merlin 與 Telegram 互動的工具
+ * 提供 Merlin 與外部系統互動的工具
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
+import { join } from "node:path";
 
 const BOT_API_URL = process.env.PAI_BOT_API_URL || "http://localhost:3000";
+const PAI_CLAUDE_ROOT = process.env.PAI_CLAUDE_ROOT || join(import.meta.dir, "../../pai-claude");
 
 const server = new McpServer({
   name: "pai-mcp",
@@ -115,6 +118,234 @@ server.tool(
           {
             type: "text",
             text: `通知發送失敗：${error instanceof Error ? error.message : "未知錯誤"}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+/**
+ * 讀取歷史記錄
+ */
+server.tool(
+  "get_history",
+  "讀取 PAI 歷史記錄（sessions, learnings, research, decisions）",
+  {
+    type: z
+      .enum(["sessions", "learnings", "research", "decisions"])
+      .describe("歷史記錄類型"),
+    limit: z.number().optional().describe("返回數量限制（預設 10）"),
+  },
+  async ({ type, limit = 10 }) => {
+    try {
+      const historyDir = join(PAI_CLAUDE_ROOT, "history", type);
+      const files = await readdir(historyDir);
+      const mdFiles = files
+        .filter((f) => f.endsWith(".md"))
+        .sort()
+        .reverse()
+        .slice(0, limit);
+
+      if (mdFiles.length === 0) {
+        return {
+          content: [{ type: "text", text: `No ${type} found.` }],
+        };
+      }
+
+      const results: string[] = [];
+      for (const file of mdFiles) {
+        const content = await readFile(join(historyDir, file), "utf-8");
+        results.push(`## ${file}\n\n${content}\n---\n`);
+      }
+
+      return {
+        content: [{ type: "text", text: results.join("\n") }],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `無法讀取 ${type}：${error instanceof Error ? error.message : "未知錯誤"}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+/**
+ * 保存學習成果
+ */
+server.tool(
+  "save_learning",
+  "保存一個學習成果到 history/learnings/",
+  {
+    category: z.string().describe("分類（如 typescript, infrastructure, debugging）"),
+    title: z.string().describe("標題"),
+    content: z.string().describe("學習內容（Markdown 格式）"),
+  },
+  async ({ category, title, content }) => {
+    try {
+      const categoryDir = join(PAI_CLAUDE_ROOT, "history", "learnings", category);
+      await mkdir(categoryDir, { recursive: true });
+
+      const date = new Date().toISOString().split("T")[0];
+      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 50);
+      const filename = `${date}-${slug}.md`;
+      const filepath = join(categoryDir, filename);
+
+      const fullContent = `# ${title}
+
+Date: ${date}
+Category: ${category}
+
+${content}
+`;
+
+      await writeFile(filepath, fullContent, "utf-8");
+
+      return {
+        content: [{ type: "text", text: `✅ 已保存：learnings/${category}/${filename}` }],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `保存失敗：${error instanceof Error ? error.message : "未知錯誤"}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+/**
+ * 保存 Session 摘要
+ */
+server.tool(
+  "save_session",
+  "保存當前 Session 的摘要到 history/sessions/",
+  {
+    topic: z.string().describe("Session 主題"),
+    summary: z.string().describe("摘要（1-3 句）"),
+    keyActions: z.array(z.string()).describe("關鍵動作列表"),
+    learnings: z.array(z.string()).optional().describe("學習成果列表"),
+    followUps: z.array(z.string()).optional().describe("後續待辦事項"),
+    durationMinutes: z.number().optional().describe("Session 時長（分鐘）"),
+  },
+  async ({ topic, summary, keyActions, learnings = [], followUps = [], durationMinutes }) => {
+    try {
+      const sessionsDir = join(PAI_CLAUDE_ROOT, "history", "sessions");
+      await mkdir(sessionsDir, { recursive: true });
+
+      const now = new Date();
+      const date = now.toISOString().split("T")[0];
+      const time = now.toTimeString().split(" ")[0].replace(/:/g, "");
+      const slug = topic.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30);
+      const filename = `${date}-${time}-${slug}.md`;
+      const filepath = join(sessionsDir, filename);
+
+      const content = `# Session: ${topic}
+
+Date: ${date}
+Duration: ${durationMinutes ? `${durationMinutes} minutes` : "unknown"}
+
+## Summary
+
+${summary}
+
+## Key Actions
+
+${keyActions.map((a) => `- ${a}`).join("\n")}
+
+## Learnings
+
+${learnings.length > 0 ? learnings.map((l) => `- ${l}`).join("\n") : "- (none)"}
+
+## Follow-ups
+
+${followUps.length > 0 ? followUps.map((f) => `- [ ] ${f}`).join("\n") : "- [ ] (none)"}
+`;
+
+      await writeFile(filepath, content, "utf-8");
+
+      return {
+        content: [{ type: "text", text: `✅ Session 已保存：sessions/${filename}` }],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `保存失敗：${error instanceof Error ? error.message : "未知錯誤"}`,
+          },
+        ],
+      };
+    }
+  }
+);
+
+/**
+ * 保存決策記錄
+ */
+server.tool(
+  "save_decision",
+  "保存一個重要決策到 history/decisions/",
+  {
+    title: z.string().describe("決策標題"),
+    context: z.string().describe("背景說明"),
+    options: z.array(z.object({
+      name: z.string(),
+      prosAndCons: z.string(),
+    })).describe("考慮的選項"),
+    decision: z.string().describe("最終決策"),
+    rationale: z.string().describe("決策理由"),
+  },
+  async ({ title, context, options, decision, rationale }) => {
+    try {
+      const decisionsDir = join(PAI_CLAUDE_ROOT, "history", "decisions");
+      await mkdir(decisionsDir, { recursive: true });
+
+      const date = new Date().toISOString().split("T")[0];
+      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 50);
+      const filename = `${date}-${slug}.md`;
+      const filepath = join(decisionsDir, filename);
+
+      const content = `# Decision: ${title}
+
+Date: ${date}
+
+## Context
+
+${context}
+
+## Options Considered
+
+${options.map((o, i) => `${i + 1}. **${o.name}** - ${o.prosAndCons}`).join("\n")}
+
+## Decision
+
+${decision}
+
+## Rationale
+
+${rationale}
+`;
+
+      await writeFile(filepath, content, "utf-8");
+
+      return {
+        content: [{ type: "text", text: `✅ 決策已保存：decisions/${filename}` }],
+      };
+    } catch (error) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `保存失敗：${error instanceof Error ? error.message : "未知錯誤"}`,
           },
         ],
       };
