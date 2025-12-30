@@ -49,11 +49,15 @@ Personal AI Infrastructure - Merlin 專案開發環境。
 
 ```
 weihung-pai/
-├── pai-bot/      # Telegram Bot (Bun + grammY)
-├── pai-mcp/      # MCP Server (權限請求)
-├── pai-claude/   # Merlin 運行配置 (勿修改)
-├── ansible/      # VPS 部署腳本
-└── docs/         # 文件
+├── .claude/          # 開發環境配置
+│   ├── commands/     # Slash commands
+│   └── rules/        # 開發規範
+├── pai-bot/          # Telegram Bot (Bun + grammY)
+├── pai-mcp/          # MCP Server (權限請求)
+├── pai-claude/       # Merlin VPS 運行配置 (勿修改)
+├── ansible/          # VPS 部署
+│   └── scripts/      # 包含 ansible-wrapper.sh
+└── docs/             # 文件
 ```
 
 ## 技術棧
