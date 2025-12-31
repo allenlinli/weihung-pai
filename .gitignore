@@ -28,6 +28,7 @@ logs/
 
 # ===== Ansible =====
 *.retry
+ansible/inventory/group_vars/all/vault.yml
 
 # ===== Claude Code =====
 # Don't commit runtime data
