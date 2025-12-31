@@ -63,4 +63,4 @@
           User '{{ agent_user }}' created!
           {{ user_info.stdout }}
 
-          Next: Update inventory to use this user, then run setup-vps.yml
+          Next: Update inventory to use this user, then run playbooks/init/setup-vps.yml

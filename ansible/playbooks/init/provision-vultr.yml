@@ -61,7 +61,7 @@
 
           Next steps:
           1. Update inventory/hosts.yml with IP: {{ instance_info.vultr_instance.main_ip }}
-          2. Run: ansible-playbook playbooks/setup-vps.yml
+          2. Run: ansible-playbook playbooks/init/setup-vps.yml
           3. SSH and run: claude login
           4. Run: ansible-playbook playbooks/deploy-bot.yml
 
