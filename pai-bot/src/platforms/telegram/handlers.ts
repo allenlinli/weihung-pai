@@ -10,7 +10,9 @@ function escapeMarkdownV2(text: string): string {
 
 // Convert Claude's markdown to Telegram MarkdownV2
 function toMarkdownV2(text: string): string {
-  // First, protect code blocks and inline code
+  // Use unique placeholders that won't be affected by escaping
+  const CODE_BLOCK_PREFIX = "\u0000CB";
+  const INLINE_CODE_PREFIX = "\u0000IC";
   const codeBlocks: string[] = [];
   const inlineCodes: string[] = [];
 
@@ -18,14 +20,14 @@ function toMarkdownV2(text: string): string {
   let result = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
     const idx = codeBlocks.length;
     codeBlocks.push(`\`\`\`${lang}\n${code}\`\`\``);
-    return `__CODE_BLOCK_${idx}__`;
+    return `${CODE_BLOCK_PREFIX}${idx}\u0000`;
   });
 
   // Extract and protect inline code
   result = result.replace(/`([^`]+)`/g, (_, code) => {
     const idx = inlineCodes.length;
     inlineCodes.push(`\`${code}\``);
-    return `__INLINE_CODE_${idx}__`;
+    return `${INLINE_CODE_PREFIX}${idx}\u0000`;
   });
 
   // Escape special characters in regular text
@@ -41,10 +43,10 @@ function toMarkdownV2(text: string): string {
 
   // Restore code blocks and inline code
   codeBlocks.forEach((code, idx) => {
-    result = result.replace(`\\_\\_CODE\\_BLOCK\\_${idx}\\_\\_`, code);
+    result = result.replace(`${CODE_BLOCK_PREFIX}${idx}\u0000`, code);
   });
   inlineCodes.forEach((code, idx) => {
-    result = result.replace(`\\_\\_INLINE\\_CODE\\_${idx}\\_\\_`, code);
+    result = result.replace(`${INLINE_CODE_PREFIX}${idx}\u0000`, code);
   });
 
   return result;
