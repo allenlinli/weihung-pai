@@ -38,7 +38,8 @@ weihung-pai/
 - **Skills 系統** - 模組化技能：學習輔助、日常事務、研究調查、內容處理、程式碼撰寫
 - **Google 整合** - 透過 MCP 存取 Google Calendar、Drive、Gmail、Contacts
 - **Workspace** - Merlin 可自動建立腳本並保存到 GitHub private repo
-- **靜態網站** - nginx 託管隱私政策等頁面
+- **Fabric AI** - 透過 Fabric patterns 處理內容（摘要、分析）
+- **靜態網站** - Caddy 託管隱私政策等頁面（自動 HTTPS）
 
 ## 快速開始
 
@@ -69,6 +70,7 @@ ansible-vault encrypt vault.yml
 | `github_token` | GitHub PAT (scopes: repo, read:org, gist) |
 | `github_username` | GitHub 用戶名 |
 | `vultr_api_key` | Vultr API Key（僅使用 Vultr 自動建立時需要）|
+| `vault_anthropic_api_key` | Anthropic API Key（用於 Fabric AI）|
 | `vault_google_client_id` | Google OAuth2 Client ID |
 | `vault_google_client_secret` | Google OAuth2 Client Secret |
 | `vault_google_refresh_token` | Google OAuth2 Refresh Token |
@@ -163,6 +165,7 @@ cd ansible
 |----------|------|
 | `deploy-bot.yml` | 部署 Telegram Bot |
 | `deploy-claude.yml` | 部署 Claude Code 配置 |
+| `deploy-fabric.yml` | 部署 Fabric AI |
 | `deploy-site.yml` | 部署靜態網站 (docs/) |
 
 ### 維護
@@ -178,7 +181,7 @@ cd ansible
 | `provision-vultr.yml` | （可選）透過 Vultr API 自動建立 VPS，使用其他廠商請手動建立 |
 | `init-user.yml` | 初始化部署用戶 |
 | `setup-vps.yml` | VPS 環境設定（Bun, Claude, gh cli, workspace, 防火牆）|
-| `setup-nginx.yml` | 設定 nginx 靜態網站 |
+| `setup-caddy.yml` | 設定 Caddy 靜態網站（自動 HTTPS）|
 
 ### Scripts
 
