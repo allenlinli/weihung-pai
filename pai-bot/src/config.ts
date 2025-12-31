@@ -9,14 +9,17 @@ export const config = {
       .map((id) => parseInt(id, 10)),
   },
   claude: {
-    /** Claude 配置目錄（VPS 上是 ~/.claude，本地開發用 ../pai-claude） */
+    /** Claude 專案目錄（VPS 上是 ~/merlin，本地開發用 ../pai-claude） */
     projectDir: process.env.CLAUDE_PROJECT_DIR ||
-      (process.env.HOME ? `${process.env.HOME}/.claude` : "../pai-claude"),
+      (process.env.HOME ? `${process.env.HOME}/merlin` : "../pai-claude"),
+    /** Claude 執行檔路徑 */
+    bin: process.env.CLAUDE_BIN ||
+      (process.env.HOME ? `${process.env.HOME}/.local/bin/claude` : "claude"),
   },
   workspace: {
     /** 下載檔案存放目錄 */
     downloadsDir: process.env.WORKSPACE_DOWNLOADS_DIR ||
-      (process.env.HOME ? `${process.env.HOME}/.claude/workspace/data` : "../pai-claude/workspace/data"),
+      (process.env.HOME ? `${process.env.HOME}/merlin/workspace/data` : "../pai-claude/workspace/data"),
   },
   database: {
     path: process.env.DATABASE_PATH || "./data/pai.db",

@@ -10,7 +10,7 @@
 
   vars:
     domain: "{{ vault_site_domain }}"
-    webroot: /home/pai/.claude/workspace/site
+    webroot: /home/pai/merlin/workspace/site
 
   tasks:
     - name: Stop and disable nginx if exists

@@ -10,7 +10,7 @@
   tasks:
     - name: Generate Merlin config from vault
       ansible.builtin.copy:
-        dest: "/home/{{ ansible_user }}/.claude/merlin-config.json"
+        dest: "/home/{{ ansible_user }}/merlin/merlin-config.json"
         content: |
           {
             "site_domain": "{{ vault_site_domain }}",
@@ -23,7 +23,7 @@
     - name: Sync Claude configuration
       ansible.posix.synchronize:
         src: ../../pai-claude/
-        dest: "/home/{{ ansible_user }}/.claude/"
+        dest: "/home/{{ ansible_user }}/merlin/"
         delete: false
         rsync_opts:
           # Claude 內部目錄
@@ -43,10 +43,12 @@
           - "--exclude=bun.lock"
           # 資料庫
           - "--exclude=*.db"
+          # Mutagen 同步的目錄（避免重複）
+          - "--exclude=workspace/.claude/"
 
     - name: Fix ownership after sync
       ansible.builtin.file:
-        path: "/home/{{ ansible_user }}/.claude"
+        path: "/home/{{ ansible_user }}/merlin"
         state: directory
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
@@ -60,19 +62,50 @@
         group: "{{ ansible_user }}"
         mode: "0755"
       loop:
-        - "/home/{{ ansible_user }}/.claude/workspace"
-        - "/home/{{ ansible_user }}/.claude/workspace/site"
-        - "/home/{{ ansible_user }}/.claude/workspace/projects"
-        - "/home/{{ ansible_user }}/.claude/workspace/scripts"
-        - "/home/{{ ansible_user }}/.claude/workspace/tools"
-        - "/home/{{ ansible_user }}/.claude/workspace/data"
+        - "/home/{{ ansible_user }}/merlin/workspace"
+        - "/home/{{ ansible_user }}/merlin/workspace/site"
+        - "/home/{{ ansible_user }}/merlin/workspace/projects"
+        - "/home/{{ ansible_user }}/merlin/workspace/scripts"
+        - "/home/{{ ansible_user }}/merlin/workspace/tools"
+        - "/home/{{ ansible_user }}/merlin/workspace/data"
+
+    - name: Fix site files permissions for Caddy
+      ansible.builtin.shell:
+        cmd: find /home/{{ ansible_user }}/merlin/workspace/site -type f -exec chmod 644 {} \;
+      changed_when: true
 
     - name: Verify Claude configuration
       ansible.builtin.stat:
-        path: "/home/{{ ansible_user }}/.claude/CLAUDE.md"
+        path: "/home/{{ ansible_user }}/merlin/CLAUDE.md"
       register: claude_config
+
+    - name: Update Caddy config to use new path
+      become: true
+      ansible.builtin.copy:
+        dest: /etc/caddy/Caddyfile
+        content: |
+          {{ vault_site_domain }} {
+              root * /home/{{ ansible_user }}/merlin/workspace/site
+              file_server
+
+              header {
+                  X-Frame-Options "SAMEORIGIN"
+                  X-Content-Type-Options "nosniff"
+              }
+          }
+        mode: "0644"
+        owner: root
+        group: root
+      notify: Reload caddy
 
     - name: Print deployment status
       ansible.builtin.debug:
         msg: "Claude configuration deployed successfully"
       when: claude_config.stat.exists
+
+  handlers:
+    - name: Reload caddy
+      become: true
+      ansible.builtin.systemd:
+        name: caddy
+        state: reloaded

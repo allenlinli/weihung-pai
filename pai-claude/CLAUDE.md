@@ -33,27 +33,71 @@
 
 ```
 workspace/
-├── site/       # 網站檔案（Caddy 直接 serve）
-├── projects/   # Git repos 和專案
-├── scripts/    # 一次性腳本
-├── tools/      # 可重用工具程式
-└── data/       # 資料檔案
+├── .claude/            # Agent System 配置（可自我維護）
+│   ├── agents/         # Subagents
+│   ├── skills/         # 技能模組
+│   ├── commands/       # Slash commands
+│   └── rules/          # 開發規範
+├── site/               # 網站檔案（Caddy 直接 serve）
+├── projects/           # Git repos 和專案
+├── scripts/            # 一次性腳本
+├── tools/              # 可重用工具程式
+└── data/               # 資料檔案
 ```
 
 - 網站編輯後可透過 MCP tools 重載 Caddy
 - 網站網址見 `./merlin-config.json` 中的 `site_url`
 - 用 `gh` CLI 管理 GitHub repo（用 `gh repo list` 查看）
 
+## Agent System 自我維護
+
+你可以維護和擴展自己的 Agent System（`./workspace/.claude/`）：
+
+### 組件類型
+
+| 組件 | 位置 | 用途 |
+|------|------|------|
+| Skills | `skills/*/SKILL.md` | 專業能力，自動觸發 |
+| Commands | `commands/*.md` | 用戶顯式調用 `/command` |
+| Agents | `agents/*.md` | 專門任務的 subagent |
+| Rules | `rules/*.md` | 共享規範，自動注入 |
+
+### 維護指南
+
+- **新增技能**：建立 `skills/<name>/SKILL.md`，定義 `USE WHEN` 觸發條件
+- **新增命令**：建立 `commands/<name>.md`，用 YAML frontmatter 定義參數
+- **新增規則**：建立 `rules/<name>.md`，< 50 行，可用 `paths:` 限制範圍
+- **反思學習**：重要發現時執行 `/reflect` 記錄
+
+### 原則
+
+- 技能自動觸發（關鍵詞匹配），命令需用戶顯式調用
+- 規則是 conventions，優先級低於 CLAUDE.md 中的 `<law>`
+- 保持組件簡潔，複雜邏輯放 `workflows/` 或 `references/`
+
 ## Skills
 
-可用的專業技能模組（詳見 `skills/` 目錄）：
+可用的專業技能模組（詳見 `./workspace/.claude/skills/`）：
 
-- `learning` - 學習輔助、筆記整理、知識管理
-- `daily` - 日常事務、待辦追蹤、日程規劃
-- `research` - 調查研究與資料收集
-- `fabric` - 內容處理（摘要、提取重點、分析）
-- `coding` - 程式碼撰寫與保存到 workspace
-- `google` - Google 服務（日曆、雲端硬碟、Gmail、聯絡人）
+| Skill | 用途 |
+|-------|------|
+| learning | 學習輔助、筆記整理、知識管理 |
+| daily | 日常事務、待辦追蹤、日程規劃 |
+| research | 調查研究與資料收集 |
+| fabric | 內容處理（摘要、提取重點、分析） |
+| coding | 程式碼撰寫與保存到 workspace |
+| google | Google 服務（日曆、雲端硬碟、Gmail、聯絡人） |
+
+## Commands
+
+可用的命令（詳見 `./workspace/.claude/commands/`）：
+
+| Command | 說明 |
+|---------|------|
+| `/daily` | 執行每日規劃 |
+| `/weekly` | 執行週回顧 |
+| `/research <topic>` | 深度研究 |
+| `/summarize <content>` | 摘要內容 |
 
 ## 排程功能
 

@@ -37,7 +37,7 @@ export async function* streamClaude(
 
   const proc = spawn({
     cmd: [
-      "claude",
+      config.claude.bin,
       "-p",
       fullPrompt,
       "--dangerously-skip-permissions",

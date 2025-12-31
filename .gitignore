@@ -30,20 +30,6 @@ logs/
 *.retry
 ansible/inventory/group_vars/all/vault.yml
 
-# ===== Claude Code =====
-# Don't commit runtime data
-pai-claude/data/
-pai-claude/*.db
-pai-claude/.credentials.json
-pai-claude/stats-cache.json
-pai-claude/merlin-config.json
-
-# Workspace - only track site/, ignore runtime directories
-pai-claude/workspace/projects/
-pai-claude/workspace/scripts/
-pai-claude/workspace/tools/
-pai-claude/workspace/data/
-
 # ===== Mutagen =====
 mutagen.yml.lock
 

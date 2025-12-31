@@ -176,13 +176,13 @@
         - "{{ home_dir }}/pai-bot"
         - "{{ home_dir }}/pai-bot/data"
         - "{{ home_dir }}/pai-bot/logs"
-        - "{{ home_dir }}/.claude"
-        - "{{ home_dir }}/.claude/workspace"
-        - "{{ home_dir }}/.claude/workspace/site"
-        - "{{ home_dir }}/.claude/workspace/projects"
-        - "{{ home_dir }}/.claude/workspace/scripts"
-        - "{{ home_dir }}/.claude/workspace/tools"
-        - "{{ home_dir }}/.claude/workspace/data"
+        - "{{ home_dir }}/merlin"
+        - "{{ home_dir }}/merlin/workspace"
+        - "{{ home_dir }}/merlin/workspace/site"
+        - "{{ home_dir }}/merlin/workspace/projects"
+        - "{{ home_dir }}/merlin/workspace/scripts"
+        - "{{ home_dir }}/merlin/workspace/tools"
+        - "{{ home_dir }}/merlin/workspace/data"
 
     - name: Print next steps
       ansible.builtin.debug:

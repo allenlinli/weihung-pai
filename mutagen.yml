@@ -13,27 +13,10 @@
 sync:
   pai-claude:
     alpha: "./pai-claude"
-    beta: "pai-server:~/.claude"
+    beta: "pai-server:~/merlin"
     mode: "two-way-resolved"
     ignore:
-      paths:
-        # Claude 內部目錄
-        - "projects/"
-        - "todos/"
-        - "statsig/"
-        - "debug/"
-        - "shell-snapshots/"
-        # 本地設定（不同步）
-        - "settings.json"
-        - "settings.local.json"
-        - ".mcp.json"
-        - ".credentials"
-        - "credentials.json"
-        # Node
-        - "node_modules/"
-        - "bun.lock"
-        # 資料檔案（VPS 產生，不覆蓋）
-        - "data/*.db"
+      vcs: true
     permissions:
       defaultFileMode: 0644
       defaultDirectoryMode: 0755
