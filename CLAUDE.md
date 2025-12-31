@@ -95,7 +95,7 @@ cd pai-bot && bun run dev
 
 # 初始化（僅首次）
 ./scripts/ansible-wrapper.sh ansible-playbook -i inventory playbooks/init/setup-vps.yml
-./scripts/ansible-wrapper.sh ansible-playbook -i inventory playbooks/init/setup-nginx.yml
+./scripts/ansible-wrapper.sh ansible-playbook -i inventory playbooks/init/setup-caddy.yml
 ```
 
 ## 敏感資料

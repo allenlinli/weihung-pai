@@ -40,13 +40,13 @@
         src: ../templates/index.html.j2
         dest: "{{ webroot }}/index.html"
         mode: "0644"
-        owner: www-data
-        group: www-data
+        owner: caddy
+        group: caddy
 
   handlers:
     - name: Set permissions
       ansible.builtin.file:
         path: "{{ webroot }}"
-        owner: www-data
-        group: www-data
+        owner: caddy
+        group: caddy
         recurse: true
