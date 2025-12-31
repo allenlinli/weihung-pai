@@ -53,20 +53,18 @@ weihung-pai/
 │   ├── commands/     # Slash commands
 │   └── rules/        # 開發規範
 ├── pai-bot/          # Telegram Bot (Bun + grammY)
-├── pai-claude/       # Merlin VPS 運行配置
+├── pai-claude/       # Merlin VPS 運行配置 (↔ ~/.claude/)
 │   ├── agents/       # Subagents
-│   ├── skills/       # 技能模組 (learning, daily, research, fabric, coding, google)
+│   ├── skills/       # 技能模組
 │   ├── context/      # 身份與原則
-│   ├── scripts/      # Hooks
-│   └── .mcp.json     # MCP Server 設定
+│   ├── workspace/    # 工作區（網站、腳本等）
+│   │   └── site/     # 網站檔案（Caddy serve）
+│   └── scripts/      # Hooks
 ├── ansible/          # VPS 部署
 │   ├── playbooks/    # 部署劇本
-│   │   ├── init/     # 初始化 (provision, setup)
-│   │   ├── deploy-bot.yml
-│   │   └── deploy-claude.yml
 │   ├── inventory/    # 主機清單與 vault
 │   └── scripts/      # ansible-wrapper.sh, ssh-to-vps.sh
-└── docs/             # 文件
+└── mutagen.yml       # 雙向同步配置
 ```
 
 ## 技術棧
@@ -85,10 +83,15 @@ weihung-pai/
 # pai-bot 開發
 cd pai-bot && bun run dev
 
+# 同步 pai-claude ↔ VPS ~/.claude/
+./scripts/sync.sh start   # 啟動同步
+./scripts/sync.sh stop    # 停止同步
+./scripts/sync.sh status  # 查看狀態
+./scripts/sync.sh flush   # 強制同步
+
 # 日常部署（在 ansible 目錄下執行）
 ./scripts/ansible-wrapper.sh ansible-playbook -i inventory playbooks/deploy-bot.yml
 ./scripts/ansible-wrapper.sh ansible-playbook -i inventory playbooks/deploy-claude.yml
-./scripts/ansible-wrapper.sh ansible-playbook -i inventory playbooks/deploy-site.yml
 
 # 維護
 ./scripts/ansible-wrapper.sh ansible-playbook -i inventory playbooks/clean-logs.yml

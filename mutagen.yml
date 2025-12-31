@@ -1,0 +1,39 @@
+# Mutagen 同步配置
+# 使用方式：
+#   brew install mutagen-io/mutagen/mutagen
+#   mutagen project start
+#   mutagen project terminate
+#
+# 前置條件：在 ~/.ssh/config 中設定 pai-server：
+#   Host pai-server
+#     HostName <your-vps-ip>
+#     User pai
+#     IdentityFile ~/.ssh/your-key
+
+sync:
+  pai-claude:
+    alpha: "./pai-claude"
+    beta: "pai-server:~/.claude"
+    mode: "two-way-resolved"
+    ignore:
+      paths:
+        # Claude 內部目錄
+        - "projects/"
+        - "todos/"
+        - "statsig/"
+        - "debug/"
+        - "shell-snapshots/"
+        # 本地設定（不同步）
+        - "settings.json"
+        - "settings.local.json"
+        - ".mcp.json"
+        - ".credentials"
+        - "credentials.json"
+        # Node
+        - "node_modules/"
+        - "bun.lock"
+        # 資料檔案（VPS 產生，不覆蓋）
+        - "data/*.db"
+    permissions:
+      defaultFileMode: 0644
+      defaultDirectoryMode: 0755

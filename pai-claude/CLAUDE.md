@@ -29,9 +29,20 @@
 
 ## Workspace
 
-如果需要撰寫程式碼或腳本，保存到 `~/merlin-workspace/`：
+所有工作檔案保存在 `./workspace/`：
+
+```
+workspace/
+├── site/       # 網站檔案（Caddy 直接 serve）
+├── projects/   # Git repos 和專案
+├── scripts/    # 一次性腳本
+├── tools/      # 可重用工具程式
+└── data/       # 資料檔案
+```
+
+- 網站編輯後可透過 MCP tools 重載 Caddy
+- 網站網址見 `./merlin-config.json` 中的 `site_url`
 - 用 `gh` CLI 管理 GitHub repo（用 `gh repo list` 查看）
-- 寫完後記得 `git add . && git commit && git push`
 
 ## Skills
 

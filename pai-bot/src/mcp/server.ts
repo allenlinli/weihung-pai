@@ -389,6 +389,90 @@ server.registerTool(
   }
 );
 
+// === System Tools ===
+
+server.registerTool(
+  "system_reload_caddy",
+  {
+    title: "Reload Caddy",
+    description: "重載 Caddy 網頁伺服器配置",
+    inputSchema: {},
+  },
+  async () => {
+    return withErrorHandling("system_reload_caddy", async () => {
+      const proc = Bun.spawn(["sudo", "systemctl", "reload", "caddy"], {
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const exitCode = await proc.exited;
+      const stderr = await new Response(proc.stderr).text();
+
+      if (exitCode !== 0) {
+        return {
+          content: [{ type: "text", text: `重載失敗: ${stderr}` }],
+        };
+      }
+      return {
+        content: [{ type: "text", text: "Caddy 已重載" }],
+      };
+    });
+  }
+);
+
+server.registerTool(
+  "system_service_status",
+  {
+    title: "Service Status",
+    description: "查看系統服務狀態",
+    inputSchema: {
+      service: z.enum(["caddy", "pai-bot"]).describe("服務名稱"),
+    },
+  },
+  async ({ service }) => {
+    return withErrorHandling("system_service_status", async () => {
+      const proc = Bun.spawn(["systemctl", "status", service, "--no-pager"], {
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      await proc.exited;
+      const stdout = await new Response(proc.stdout).text();
+      return {
+        content: [{ type: "text", text: stdout }],
+      };
+    });
+  }
+);
+
+server.registerTool(
+  "system_restart_service",
+  {
+    title: "Restart Service",
+    description: "重啟系統服務（僅限 pai-bot）",
+    inputSchema: {
+      service: z.enum(["pai-bot"]).describe("服務名稱"),
+    },
+  },
+  async ({ service }) => {
+    return withErrorHandling("system_restart_service", async () => {
+      const proc = Bun.spawn(["sudo", "systemctl", "restart", service], {
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const exitCode = await proc.exited;
+      const stderr = await new Response(proc.stderr).text();
+
+      if (exitCode !== 0) {
+        return {
+          content: [{ type: "text", text: `重啟失敗: ${stderr}` }],
+        };
+      }
+      return {
+        content: [{ type: "text", text: `${service} 已重啟` }],
+      };
+    });
+  }
+);
+
 // Start server
 log.info("Connecting to transport...");
 const transport = new StdioServerTransport();

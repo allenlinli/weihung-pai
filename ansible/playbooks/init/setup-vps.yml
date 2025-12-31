@@ -110,6 +110,16 @@
       become: true
       become_user: "{{ app_user }}"
 
+    - name: Configure sudoers for MCP system tools
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/pai-mcp
+        content: |
+          # Allow pai user to manage services without password
+          pai ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload caddy
+          pai ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart pai-bot
+        mode: "0440"
+        validate: /usr/sbin/visudo -cf %s
+
     - name: Download GitHub CLI apt key
       ansible.builtin.get_url:
         url: https://cli.github.com/packages/githubcli-archive-keyring.gpg
@@ -166,51 +176,13 @@
         - "{{ home_dir }}/pai-bot"
         - "{{ home_dir }}/pai-bot/data"
         - "{{ home_dir }}/pai-bot/logs"
-        - "{{ home_dir }}/pai-claude"
-        - "{{ home_dir }}/merlin-workspace"
-
-    - name: Check if merlin-workspace is a git repo
-      ansible.builtin.stat:
-        path: "{{ home_dir }}/merlin-workspace/.git"
-      register: workspace_git
-
-    - name: Initialize merlin-workspace git repo
-      ansible.builtin.shell:
-        cmd: |
-          cd {{ home_dir }}/merlin-workspace
-          git init
-          echo "# Merlin Workspace" > README.md
-          echo "" >> README.md
-          echo "Merlin 的工作空間，存放腳本和自動化工具。" >> README.md
-          git add .
-          git commit -m "init: merlin workspace"
-        executable: /bin/bash
-      become: true
-      become_user: "{{ app_user }}"
-      when: not workspace_git.stat.exists
-      changed_when: true
-
-    - name: Read git config to check remote
-      ansible.builtin.slurp:
-        src: "{{ home_dir }}/merlin-workspace/.git/config"
-      register: git_config
-      become: true
-      become_user: "{{ app_user }}"
-
-    - name: Check if origin remote exists
-      ansible.builtin.set_fact:
-        workspace_remote_exists: "{{ '[remote \"origin\"]' in (git_config.content | b64decode) }}"
-
-    - name: Create and push merlin-workspace to GitHub
-      ansible.builtin.shell:
-        cmd: |
-          cd {{ home_dir }}/merlin-workspace
-          gh repo create {{ github_username }}/merlin-workspace --private --source=. --push
-        executable: /bin/bash
-      become: true
-      become_user: "{{ app_user }}"
-      when: not workspace_remote_exists
-      changed_when: true
+        - "{{ home_dir }}/.claude"
+        - "{{ home_dir }}/.claude/workspace"
+        - "{{ home_dir }}/.claude/workspace/site"
+        - "{{ home_dir }}/.claude/workspace/projects"
+        - "{{ home_dir }}/.claude/workspace/scripts"
+        - "{{ home_dir }}/.claude/workspace/tools"
+        - "{{ home_dir }}/.claude/workspace/data"
 
     - name: Print next steps
       ansible.builtin.debug:

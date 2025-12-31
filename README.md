@@ -15,21 +15,21 @@ weihung-pai/
 │   └── src/
 │       ├── api/      # HTTP API server
 │       ├── claude/   # Claude Code client
+│       ├── mcp/      # MCP Server (Google + System tools)
 │       ├── platforms/# Telegram handlers
 │       └── storage/  # SQLite 儲存
-├── pai-claude/       # Merlin VPS 運行配置
+├── pai-claude/       # Merlin VPS 運行配置 (↔ ~/.claude/)
 │   ├── agents/       # Subagents (Engineer, Architect, etc.)
 │   ├── skills/       # 技能模組 (learning, daily, research, fabric, coding)
 │   ├── context/      # 身份與原則
+│   ├── workspace/    # 工作區
+│   │   └── site/     # 網站檔案（Caddy serve）
 │   └── scripts/      # Hooks
 ├── ansible/          # VPS 部署
 │   ├── playbooks/    # 部署劇本
-│   │   ├── init/     # 初始化 (provision, setup)
-│   │   ├── deploy-bot.yml
-│   │   └── deploy-claude.yml
 │   ├── inventory/    # 主機清單與 vault
-│   └── scripts/      # ansible-wrapper.sh, ssh-to-vps.sh
-└── docs/             # 文件
+│   └── scripts/      # ansible-wrapper.sh, setup-ssh-config.sh
+└── mutagen.yml       # 雙向同步配置
 ```
 
 ## 功能
@@ -37,9 +37,11 @@ weihung-pai/
 - **Telegram Bot** - 透過 Telegram 與 Merlin 對話
 - **Skills 系統** - 模組化技能：學習輔助、日常事務、研究調查、內容處理、程式碼撰寫
 - **Google 整合** - 透過 MCP 存取 Google Calendar、Drive、Gmail、Contacts
-- **Workspace** - Merlin 可自動建立腳本並保存到 GitHub private repo
+- **System MCP** - 系統管理工具（重載 Caddy、服務狀態）
+- **雙向同步** - 本地 ↔ VPS 透過 Mutagen 即時同步
+- **Workspace** - Merlin 可直接編輯網站、建立腳本
 - **Fabric AI** - 透過 Fabric patterns 處理內容（摘要、分析）
-- **靜態網站** - Caddy 託管隱私政策等頁面（自動 HTTPS）
+- **靜態網站** - Caddy 託管（自動 HTTPS，Merlin 可直接編輯）
 
 ## 快速開始
 
@@ -105,7 +107,23 @@ cp hosts.yml.example hosts.yml
 # 編輯 hosts.yml，設定 VPS IP 和用戶
 ```
 
-### 3. 本地開發
+### 3. 設定 SSH 和 Mutagen 同步
+
+```bash
+cd ansible
+
+# 從 vault 提取 SSH 設定（自動設定 ~/.ssh/config）
+./scripts/setup-ssh-config.sh
+
+# 安裝 Mutagen
+brew install mutagen-io/mutagen/mutagen
+
+# 啟動雙向同步（pai-claude/ ↔ VPS ~/.claude/）
+cd ..
+./scripts/sync.sh start
+```
+
+### 4. 本地開發
 
 ```bash
 # 安裝依賴
@@ -122,7 +140,7 @@ bun run db:init
 bun run dev
 ```
 
-### 4. VPS 部署
+### 5. VPS 部署
 
 **VPS 廠商不限** - 專案不綁定 Vultr，可使用任何 VPS（Linode、DigitalOcean、Hetzner 等），只要是 Ubuntu Linux 即可。
 
@@ -164,9 +182,8 @@ cd ansible
 | Playbook | 說明 |
 |----------|------|
 | `deploy-bot.yml` | 部署 Telegram Bot |
-| `deploy-claude.yml` | 部署 Claude Code 配置 |
+| `deploy-claude.yml` | 部署 Claude Code 配置（備用，正常使用 Mutagen 同步）|
 | `deploy-fabric.yml` | 部署 Fabric AI |
-| `deploy-site.yml` | 部署靜態網站 (docs/) |
 
 ### 維護
 
@@ -188,6 +205,7 @@ cd ansible
 | Script | 說明 |
 |--------|------|
 | `ansible-wrapper.sh` | Ansible 執行包裝器（自動從 vault 取得 SSH key）|
+| `setup-ssh-config.sh` | 設定 SSH config 和 Mutagen（從 vault 提取）|
 | `ssh-to-vps.sh` | SSH 快捷連線（用於 Claude 認證等互動操作）|
 | `google-auth.sh` | Google OAuth2 授權（取得 refresh token）|
 

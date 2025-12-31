@@ -13,17 +13,15 @@ description: 程式碼撰寫與自動化。USE WHEN 使用者提到 寫程式, c
 
 ## Workspace 結構
 
-所有程式碼保存在 `~/merlin-workspace/`：
+所有程式碼保存在 `./workspace/`：
 
 ```
-~/merlin-workspace/
+./workspace/
+├── site/           # 網站檔案（可直接編輯，Caddy serve）
+├── projects/       # Git repos 和專案
 ├── scripts/        # 一次性或簡單腳本
 ├── tools/          # 可重用的工具程式
-├── automations/    # 自動化流程
-├── crawlers/       # 資料爬取
-├── data/           # 資料檔案
-├── learning/       # 學習相關筆記和程式
-└── daily/          # 日常事務相關
+└── data/           # 資料檔案
 ```
 
 ## 適用場景
@@ -76,36 +74,26 @@ description: 程式碼撰寫與自動化。USE WHEN 使用者提到 寫程式, c
 
 ### 3. 實作
 ```bash
-# 建立腳本
-cd ~/merlin-workspace
-mkdir -p scripts
-cat > scripts/my-script.ts << 'EOF'
+mkdir -p ./workspace/scripts
+cat > ./workspace/scripts/my-script.ts << 'EOF'
 #!/usr/bin/env bun
 // 腳本內容
 EOF
-chmod +x scripts/my-script.ts
+chmod +x ./workspace/scripts/my-script.ts
 ```
 
 ### 4. 測試
 ```bash
-bun run scripts/my-script.ts
+bun run ./workspace/scripts/my-script.ts
 ```
 
-### 5. 保存到 GitHub
+### 5. 保存（選擇性）
+如果需要版本控制，可在 `projects/` 建立 git repo：
 ```bash
-cd ~/merlin-workspace
-git add .
-git commit -m "add: description"
-git push origin main
+cd ./workspace/projects/my-project
+git init && git add . && git commit -m "init"
+gh repo create --private --source=. --push
 ```
-
-## Repo 資訊
-
-- **本地路徑**: `~/merlin-workspace/`
-- **查看 remote**: `cd ~/merlin-workspace && git remote -v`
-- **查看所有 repo**: `gh repo list`
-
-> Repo 已在 VPS 初始化時建立，直接使用即可。
 
 ## 程式碼風格
 

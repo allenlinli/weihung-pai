@@ -10,7 +10,7 @@
 
   vars:
     domain: "{{ vault_site_domain }}"
-    webroot: /var/www/merlin
+    webroot: /home/pai/.claude/workspace/site
 
   tasks:
     - name: Stop and disable nginx if exists
@@ -50,13 +50,19 @@
         state: present
         update_cache: true
 
-    - name: Create webroot directory
+    - name: Ensure webroot directory exists with correct permissions
       ansible.builtin.file:
         path: "{{ webroot }}"
         state: directory
-        owner: caddy
-        group: caddy
+        owner: pai
+        group: pai
         mode: "0755"
+
+    - name: Add caddy user to pai group for read access
+      ansible.builtin.user:
+        name: caddy
+        groups: pai
+        append: true
 
     - name: Configure Caddyfile
       ansible.builtin.copy:

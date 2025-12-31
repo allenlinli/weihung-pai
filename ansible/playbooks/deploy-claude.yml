@@ -1,27 +1,58 @@
 ---
+# 單向部署（備用方案，正常使用 mutagen 雙向同步）
+# 用法: ./scripts/ansible-wrapper.sh ansible-playbook -i inventory playbooks/deploy-claude.yml
 - name: Deploy Claude Configuration
   hosts: pai-server
 
+  vars_files:
+    - ../inventory/group_vars/all/vault.yml
+
   tasks:
+    - name: Generate Merlin config from vault
+      ansible.builtin.copy:
+        dest: "/home/{{ ansible_user }}/.claude/merlin-config.json"
+        content: |
+          {
+            "site_domain": "{{ vault_site_domain }}",
+            "site_url": "https://{{ vault_site_domain }}"
+          }
+        mode: "0644"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
     - name: Sync Claude configuration
       ansible.posix.synchronize:
         src: ../../pai-claude/
         dest: "/home/{{ ansible_user }}/.claude/"
         delete: false
         rsync_opts:
-          - "--exclude=data/"
-          - "--exclude=*.db"
-          - "--exclude=statsig/"
+          # Claude 內部目錄
           - "--exclude=projects/"
           - "--exclude=todos/"
+          - "--exclude=statsig/"
           - "--exclude=debug/"
           - "--exclude=shell-snapshots/"
-          - "--exclude=.credentials"
-          - "--exclude=credentials.json"
+          # 本地設定
           - "--exclude=settings.json"
           - "--exclude=settings.local.json"
+          - "--exclude=.mcp.json"
+          - "--exclude=.credentials"
+          - "--exclude=credentials.json"
+          # Node
+          - "--exclude=node_modules/"
+          - "--exclude=bun.lock"
+          # 資料庫
+          - "--exclude=*.db"
 
-    - name: Ensure data directories exist
+    - name: Fix ownership after sync
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user }}/.claude"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        recurse: true
+
+    - name: Ensure workspace directories exist
       ansible.builtin.file:
         path: "{{ item }}"
         state: directory
@@ -29,10 +60,12 @@
         group: "{{ ansible_user }}"
         mode: "0755"
       loop:
-        - "/home/{{ ansible_user }}/.claude/data"
-        - "/home/{{ ansible_user }}/.claude/data/history"
-        - "/home/{{ ansible_user }}/.claude/data/history/sessions"
-        - "/home/{{ ansible_user }}/.claude/data/history/learnings"
+        - "/home/{{ ansible_user }}/.claude/workspace"
+        - "/home/{{ ansible_user }}/.claude/workspace/site"
+        - "/home/{{ ansible_user }}/.claude/workspace/projects"
+        - "/home/{{ ansible_user }}/.claude/workspace/scripts"
+        - "/home/{{ ansible_user }}/.claude/workspace/tools"
+        - "/home/{{ ansible_user }}/.claude/workspace/data"
 
     - name: Verify Claude configuration
       ansible.builtin.stat:
