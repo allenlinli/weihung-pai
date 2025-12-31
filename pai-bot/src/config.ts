@@ -19,7 +19,7 @@ export const config = {
   workspace: {
     /** 下載檔案存放目錄 */
     downloadsDir: process.env.WORKSPACE_DOWNLOADS_DIR ||
-      (process.env.HOME ? `${process.env.HOME}/merlin/workspace/data` : "../pai-claude/workspace/data"),
+      (process.env.HOME ? `${process.env.HOME}/merlin/workspace/downloads` : "../pai-claude/workspace/downloads"),
   },
   database: {
     path: process.env.DATABASE_PATH || "./data/pai.db",

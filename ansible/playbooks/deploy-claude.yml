@@ -68,6 +68,7 @@
         - "/home/{{ ansible_user }}/merlin/workspace/scripts"
         - "/home/{{ ansible_user }}/merlin/workspace/tools"
         - "/home/{{ ansible_user }}/merlin/workspace/data"
+        - "/home/{{ ansible_user }}/merlin/workspace/downloads"
 
     - name: Fix site files permissions for Caddy
       ansible.builtin.shell:

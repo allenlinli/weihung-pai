@@ -20,5 +20,8 @@ bun.lock
 # 資料檔案
 data/*.db
 
+# 下載檔案
+workspace/downloads/
+
 merlin-config.json
 stats-cache.json
