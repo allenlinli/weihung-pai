@@ -12,6 +12,10 @@ export const config = {
     /** pai-claude 專案目錄，Claude 會讀取這裡的 CLAUDE.md 和 Skills */
     projectDir: process.env.CLAUDE_PROJECT_DIR || "../pai-claude",
   },
+  workspace: {
+    /** 下載檔案存放目錄 */
+    downloadsDir: process.env.WORKSPACE_DOWNLOADS_DIR || "../pai-claude/downloads",
+  },
   database: {
     path: process.env.DATABASE_PATH || "./data/pai.db",
   },

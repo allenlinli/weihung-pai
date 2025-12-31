@@ -7,6 +7,8 @@ import {
   handleClear,
   handleStatus,
   handleMessage,
+  handleDocument,
+  handlePhoto,
 } from "./handlers";
 
 export async function setupBotCommands(bot: Bot): Promise<void> {
@@ -54,6 +56,12 @@ export function createTelegramBot(): Bot {
 
     await handleMessage(ctx);
   });
+
+  // Document handler
+  bot.on("message:document", handleDocument);
+
+  // Photo handler
+  bot.on("message:photo", handlePhoto);
 
   // Error handler
   bot.catch((err) => {

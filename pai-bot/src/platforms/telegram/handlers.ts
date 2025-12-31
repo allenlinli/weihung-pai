@@ -2,6 +2,9 @@ import { Context } from "grammy";
 import { streamClaude } from "../../claude/client";
 import { contextManager } from "../../context/manager";
 import { logger } from "../../utils/logger";
+import { config } from "../../config";
+import { mkdir } from "node:fs/promises";
+import { join, resolve } from "node:path";
 
 // Characters that need escaping: _ * [ ] ( ) ~ ` > # + - = | { } . !
 function escapeMarkdownV2(text: string): string {
@@ -172,5 +175,98 @@ export async function handleMessage(ctx: Context): Promise<void> {
     const errorStack = error instanceof Error ? error.stack : undefined;
     logger.error({ error: errorMessage, stack: errorStack, userId }, "Failed to process message");
     await ctx.reply("發生錯誤，請稍後再試");
+  }
+}
+
+// Handle document/file attachments
+export async function handleDocument(ctx: Context): Promise<void> {
+  const userId = ctx.from?.id;
+  const chatId = ctx.chat?.id;
+  const document = ctx.message?.document;
+
+  if (!userId || !chatId || !document) return;
+
+  try {
+    const file = await ctx.getFile();
+    const filePath = file.file_path;
+
+    if (!filePath) {
+      await ctx.reply("無法取得檔案路徑");
+      return;
+    }
+
+    // Ensure downloads directory exists
+    const downloadsDir = resolve(config.workspace.downloadsDir);
+    await mkdir(downloadsDir, { recursive: true });
+
+    // Download file
+    const fileUrl = `https://api.telegram.org/file/bot${config.telegram.token}/${filePath}`;
+    const response = await fetch(fileUrl);
+
+    if (!response.ok) {
+      throw new Error(`Failed to download file: ${response.status}`);
+    }
+
+    // Save with original filename
+    const fileName = document.file_name || `file_${Date.now()}`;
+    const localPath = join(downloadsDir, fileName);
+
+    await Bun.write(localPath, response);
+
+    logger.info({ userId, fileName, localPath }, "File downloaded");
+
+    await ctx.reply(`已下載至 \`${localPath}\``, { parse_mode: "MarkdownV2" });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error({ error: errorMessage, userId }, "Failed to download file");
+    await ctx.reply("下載檔案失敗，請稍後再試");
+  }
+}
+
+// Handle photo attachments
+export async function handlePhoto(ctx: Context): Promise<void> {
+  const userId = ctx.from?.id;
+  const chatId = ctx.chat?.id;
+  const photos = ctx.message?.photo;
+
+  if (!userId || !chatId || !photos || photos.length === 0) return;
+
+  try {
+    // Get the largest photo (last in array)
+    const photo = photos[photos.length - 1];
+    const file = await ctx.api.getFile(photo.file_id);
+    const filePath = file.file_path;
+
+    if (!filePath) {
+      await ctx.reply("無法取得圖片路徑");
+      return;
+    }
+
+    // Ensure downloads directory exists
+    const downloadsDir = resolve(config.workspace.downloadsDir);
+    await mkdir(downloadsDir, { recursive: true });
+
+    // Download file
+    const fileUrl = `https://api.telegram.org/file/bot${config.telegram.token}/${filePath}`;
+    const response = await fetch(fileUrl);
+
+    if (!response.ok) {
+      throw new Error(`Failed to download photo: ${response.status}`);
+    }
+
+    // Save with timestamp filename
+    const ext = filePath.split(".").pop() || "jpg";
+    const fileName = `photo_${Date.now()}.${ext}`;
+    const localPath = join(downloadsDir, fileName);
+
+    await Bun.write(localPath, response);
+
+    logger.info({ userId, fileName, localPath }, "Photo downloaded");
+
+    await ctx.reply(`已下載至 \`${localPath}\``, { parse_mode: "MarkdownV2" });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error({ error: errorMessage, userId }, "Failed to download photo");
+    await ctx.reply("下載圖片失敗，請稍後再試");
   }
 }
