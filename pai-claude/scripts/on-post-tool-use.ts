@@ -4,11 +4,38 @@
  * PostToolUse Hook - 工具執行完成後通知
  */
 
-import { notify, formatToolName } from "./lib/notify";
+import { notify } from "./lib/notify";
+import { basename } from "node:path";
 
 interface ToolUseInput {
   tool_name: string;
-  tool_input: Record<string, unknown>;
+  tool_input: {
+    file_path?: string;
+    command?: string;
+    description?: string;
+    pattern?: string;
+    query?: string;
+    url?: string;
+    [key: string]: unknown;
+  };
+}
+
+function getToolDetail(tool: string, input: ToolUseInput["tool_input"]): string {
+  switch (tool) {
+    case "Edit":
+    case "Write":
+      return input.file_path ? basename(input.file_path) : "";
+    case "Bash":
+      return input.description || input.command?.slice(0, 40) || "";
+    case "WebFetch":
+      return input.url ? new URL(input.url).hostname : "";
+    case "WebSearch":
+      return input.query?.slice(0, 30) || "";
+    case "Task":
+      return input.description || "";
+    default:
+      return "";
+  }
 }
 
 async function main() {
@@ -20,11 +47,12 @@ async function main() {
     const tool = data.tool_name;
 
     // 過濾掉太頻繁的工具
-    const quietTools = ["Read", "Glob", "Grep"];
+    const quietTools = ["Read", "Glob", "Grep", "TodoWrite"];
     if (quietTools.includes(tool)) return;
 
-    const icon = formatToolName(tool);
-    await notify(`[${icon}] ${tool} completed`, "info");
+    const detail = getToolDetail(tool, data.tool_input);
+    const message = detail ? `${tool}: ${detail}` : tool;
+    await notify(`✅ ${message}`, "info");
   } catch {
     // 忽略解析錯誤
   }

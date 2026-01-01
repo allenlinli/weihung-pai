@@ -7,8 +7,12 @@
 import { notify } from "./lib/notify";
 
 interface SubagentStopInput {
-  agent_name?: string;
+  subagent_type?: string;
   task_description?: string;
+  tool_input?: {
+    description?: string;
+    prompt?: string;
+  };
   [key: string]: unknown;
 }
 
@@ -18,9 +22,13 @@ async function main() {
 
   try {
     const data: SubagentStopInput = JSON.parse(input);
-    const name = data.agent_name || "Subagent";
-    const task = data.task_description ? `: ${data.task_description.slice(0, 50)}` : "";
-    await notify(`[Agent] ${name} 完成${task}`, "success");
+    const type = data.subagent_type || "Agent";
+    const desc = data.tool_input?.description ||
+                 data.task_description ||
+                 data.tool_input?.prompt?.slice(0, 60) ||
+                 "";
+    const message = desc ? `${type}: ${desc}` : `${type} 完成`;
+    await notify(`✅ ${message}`, "success");
   } catch {
     // 忽略解析錯誤
   }
