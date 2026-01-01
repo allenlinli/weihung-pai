@@ -1,0 +1,16 @@
+# ===== AI Generated Content =====
+
+# Sites (保留核心檔案)
+site/*
+!site/index.html
+!site/privacy-policy.md
+!site/terms-of-service.md
+
+# Skills (保留核心 skills)
+.claude/skills/*
+!.claude/skills/coding/
+!.claude/skills/daily/
+!.claude/skills/fabric/
+!.claude/skills/google/
+!.claude/skills/learning/
+!.claude/skills/research/
