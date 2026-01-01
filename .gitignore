@@ -32,7 +32,6 @@ logs/
 
 # ===== Ansible =====
 *.retry
-ansible/inventory/group_vars/all/vault.yml
 .vault_password
 .setup_state.json
 
