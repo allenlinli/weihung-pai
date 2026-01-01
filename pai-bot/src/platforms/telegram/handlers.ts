@@ -280,7 +280,12 @@ export async function handleMessage(ctx: Context): Promise<void> {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
     logger.error({ error: errorMessage, stack: errorStack, userId }, "Failed to process message");
-    await ctx.reply("發生錯誤，請稍後再試");
+
+    // 提供更有資訊的錯誤訊息
+    const shortError = errorMessage.length > 100
+      ? errorMessage.substring(0, 100) + "..."
+      : errorMessage;
+    await ctx.reply(`❌ 發生錯誤：${shortError}`);
   }
 }
 
