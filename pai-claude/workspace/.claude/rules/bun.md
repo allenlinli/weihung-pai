@@ -2,10 +2,10 @@
 paths: "**/*.{ts,js,json}"
 ---
 
-# Bun 優先
+# Bun Runtime
 
-- 使用 `bun` 而非 `node`
-- 使用 `bun run` 而非 `npm run`
-- 使用 `bun install` 而非 `npm install`
-- 使用 `bun test` 執行測試
-- Shebang 使用 `#!/usr/bin/env bun`
+- Use `bun` instead of `node`
+- Use `bun run` instead of `npm run`
+- Use `bun install` instead of `npm install`
+- Use `bun test` for testing
+- Shebang: `#!/usr/bin/env bun`
