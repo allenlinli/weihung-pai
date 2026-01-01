@@ -9,8 +9,8 @@ export const CONSOLIDATION_THRESHOLD = 30;
 /** Maximum L2 distance for deduplication (lower = stricter) */
 export const DEDUP_MAX_DISTANCE = 8.0;
 
-/** Days until memory expires if not accessed */
-export const EXPIRY_DAYS = 90;
+/** Days until memory expires if not accessed (0 = never expire) */
+export const EXPIRY_DAYS = 0;
 
 /** Minimum memories to keep even if expired */
 export const MIN_MEMORIES_TO_KEEP = 10;

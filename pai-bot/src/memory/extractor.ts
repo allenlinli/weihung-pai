@@ -1,6 +1,8 @@
-import { callClaude } from "../claude/client";
+import Anthropic from "@anthropic-ai/sdk";
 import { logger } from "../utils/logger";
 import { memoryManager } from "./manager";
+
+const anthropic = new Anthropic();
 
 interface ExtractedFact {
   content: string;
@@ -31,12 +33,22 @@ export async function extractAndSaveMemories(
   try {
     const conversation = `用戶: ${userMessage}\n助手: ${assistantMessage}`;
 
-    const result = await callClaude(EXTRACTION_PROMPT + conversation, {
-      userId,
+    const response = await anthropic.messages.create({
+      model: "claude-haiku-4-5-20250109",
+      max_tokens: 512,
+      messages: [
+        {
+          role: "user",
+          content: EXTRACTION_PROMPT + conversation,
+        },
+      ],
     });
 
+    const responseText =
+      response.content[0].type === "text" ? response.content[0].text : "";
+
     // Parse JSON from response
-    const jsonMatch = result.response.match(/\[[\s\S]*\]/);
+    const jsonMatch = responseText.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
       logger.debug({ userId }, "No facts extracted");
       return 0;
