@@ -27,6 +27,8 @@ def main() -> None:
         sys.exit(run_ansible(args))
     elif command == "ssh":
         run_ssh_command(args)
+    elif command == "bot":
+        run_bot_command(args)
     elif command == "google":
         run_google_command(args)
     else:
@@ -51,6 +53,37 @@ def run_ssh_command(args: list[str]) -> None:
         sys.exit(ssh_to_vps(remote_cmd))
     elif subcommand == "setup":
         sys.exit(setup_ssh_config())
+    else:
+        print(f"未知子命令: {subcommand}")
+        sys.exit(1)
+
+
+def run_bot_command(args: list[str]) -> None:
+    from .bot import logs, restart, status
+
+    if not args:
+        print("用法: uv run pai bot <subcommand>")
+        print("  status           查看 bot 狀態")
+        print("  logs [-n NUM]    查看日誌（預設 50 行）")
+        print("  logs -f          持續追蹤日誌")
+        print("  restart          重啟 bot")
+        sys.exit(1)
+
+    subcommand = args[0]
+    if subcommand == "status":
+        sys.exit(status())
+    elif subcommand == "logs":
+        follow = "-f" in args
+        lines = 50
+        if "-n" in args:
+            try:
+                idx = args.index("-n")
+                lines = int(args[idx + 1])
+            except (IndexError, ValueError):
+                pass
+        sys.exit(logs(lines=lines, follow=follow))
+    elif subcommand == "restart":
+        sys.exit(restart())
     else:
         print(f"未知子命令: {subcommand}")
         sys.exit(1)
@@ -84,12 +117,16 @@ def print_help() -> None:
     print("  ansible <args...>     執行 ansible 命令（自動解密 SSH key）")
     print("  ssh connect [cmd]     SSH 連線到 VPS")
     print("  ssh setup             設定 SSH config")
+    print("  bot status            查看 bot 狀態")
+    print("  bot logs [-n N] [-f]  查看 bot 日誌")
+    print("  bot restart           重啟 bot")
     print("  google auth           執行 Google OAuth2 授權")
     print("  google token          取得 Google access token")
     print()
     print("範例:")
     print("  uv run pai ansible ansible-playbook ansible/playbooks/deploy-bot.yml")
     print("  uv run pai ssh connect")
+    print("  uv run pai bot status")
     print("  uv run pai google auth")
 
 
