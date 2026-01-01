@@ -9,6 +9,11 @@ import { logger } from "../../utils/logger";
 import { config } from "../../config";
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import {
+  memoryManager,
+  extractAndSaveMemories,
+  formatMemoriesForPrompt,
+} from "../../memory";
 
 // Characters that need escaping: _ * [ ] ( ) ~ ` > # + - = | { } . !
 function escapeMarkdownV2(text: string): string {
@@ -69,6 +74,8 @@ export async function handleStart(ctx: Context): Promise<void> {
 
 可用指令：
 • \`/clear\` \\- 清除對話歷史
+• \`/memory\` \\- 查看長期記憶
+• \`/forget\` \\- 清除長期記憶
 • \`/status\` \\- 查看狀態
 • \`/stop\` \\- 中斷當前任務
 • \`/cc:<command>\` \\- 執行 Claude slash command
@@ -120,6 +127,38 @@ export async function handleStop(ctx: Context): Promise<void> {
   }
 }
 
+// Handle /memory command - view long-term memories
+export async function handleMemory(ctx: Context): Promise<void> {
+  const userId = ctx.from?.id;
+  if (!userId) return;
+
+  const memories = memoryManager.getRecent(userId, 20);
+  const count = memoryManager.count(userId);
+
+  if (memories.length === 0) {
+    await ctx.reply("目前沒有長期記憶");
+    return;
+  }
+
+  const lines = [`長期記憶 \\(共 ${count} 條\\)：\n`];
+  for (const m of memories) {
+    const category = escapeMarkdownV2(m.category);
+    const content = escapeMarkdownV2(m.content);
+    lines.push(`• \\[${category}\\] ${content}`);
+  }
+
+  await ctx.reply(lines.join("\n"), { parse_mode: "MarkdownV2" });
+}
+
+// Handle /forget command - clear long-term memories
+export async function handleForget(ctx: Context): Promise<void> {
+  const userId = ctx.from?.id;
+  if (!userId) return;
+
+  const deleted = memoryManager.deleteByUser(userId);
+  await ctx.reply(`已清除 ${deleted} 條長期記憶`);
+}
+
 // Handle regular messages with streaming
 export async function handleMessage(ctx: Context): Promise<void> {
   const userId = ctx.from?.id;
@@ -149,6 +188,24 @@ export async function handleMessage(ctx: Context): Promise<void> {
     // Get conversation context
     const history = contextManager.getConversationContext(userId);
 
+    // Search for relevant memories
+    let memoryContext = "";
+    try {
+      const memories = await memoryManager.search(userId, text, 5);
+      if (memories.length > 0) {
+        memoryContext = formatMemoriesForPrompt(memories);
+        logger.debug({ userId, memoryCount: memories.length }, "Retrieved memories");
+      }
+    } catch (error) {
+      // Memory search is optional, don't fail the request
+      logger.warn({ error, userId }, "Memory search failed");
+    }
+
+    // Combine memory context with conversation history
+    const fullHistory = memoryContext
+      ? `${memoryContext}\n\n${history}`
+      : history;
+
     // Show typing indicator during processing
     let isProcessing = true;
     const typingInterval = setInterval(async () => {
@@ -169,7 +226,7 @@ export async function handleMessage(ctx: Context): Promise<void> {
     try {
       // Stream the response (collect without editing)
       for await (const event of streamClaude(prompt, {
-        conversationHistory: history,
+        conversationHistory: fullHistory,
         userId,
       })) {
         if (event.type === "text") {
@@ -199,6 +256,11 @@ export async function handleMessage(ctx: Context): Promise<void> {
 
       // Save assistant response
       contextManager.saveMessage(userId, "assistant", finalContent);
+
+      // Extract and save memories asynchronously (don't block response)
+      extractAndSaveMemories(userId, text, finalContent).catch((error) => {
+        logger.warn({ error, userId }, "Memory extraction failed");
+      });
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

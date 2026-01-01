@@ -7,6 +7,8 @@ import {
   handleClear,
   handleStatus,
   handleStop,
+  handleMemory,
+  handleForget,
   handleMessage,
   handleDocument,
   handlePhoto,
@@ -16,6 +18,8 @@ export async function setupBotCommands(bot: Bot): Promise<void> {
   await bot.api.setMyCommands([
     { command: "start", description: "啟動 Merlin" },
     { command: "clear", description: "清除對話歷史" },
+    { command: "memory", description: "查看長期記憶" },
+    { command: "forget", description: "清除長期記憶" },
     { command: "status", description: "查看狀態" },
     { command: "stop", description: "中斷當前任務" },
   ]);
@@ -45,6 +49,8 @@ export function createTelegramBot(): Bot {
   // Command handlers (using / prefix)
   bot.command("start", handleStart);
   bot.command("clear", handleClear);
+  bot.command("memory", handleMemory);
+  bot.command("forget", handleForget);
   bot.command("status", handleStatus);
   bot.command("stop", handleStop);
 
