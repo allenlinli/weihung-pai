@@ -2,7 +2,7 @@ import CronExpressionParser from "cron-parser";
 import { getDb } from "../storage/db";
 import { logger } from "../utils/logger";
 
-const TIMEZONE = "Asia/Taipei";
+const TIMEZONE = process.env.TIMEZONE || "Asia/Taipei";
 const CHECK_INTERVAL_MS = 60 * 1000; // 每分鐘檢查
 
 // 設定環境時區

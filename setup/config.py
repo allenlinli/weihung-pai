@@ -30,6 +30,12 @@ REQUIRED_VARS: list[VarDef] = [
         "default": "pai",
     },
     {
+        "key": "vault_timezone",
+        "prompt": "時區",
+        "help": "VPS 和排程使用的時區（例如：Asia/Taipei, America/New_York）",
+        "default": "Asia/Taipei",
+    },
+    {
         "key": "vault_local_ssh_key_path",
         "prompt": "本地 SSH Key 路徑",
         "help": "用於初始連接 VPS root 的 SSH 私鑰",
