@@ -31,25 +31,23 @@ def collect_required_vars(state: SetupState) -> bool:
             variables[key] = value
 
     # 產生 SSH Key
+    if "pai_agent_ssh_private_key" in variables and state.ssh_key_generated:
+        ui.success("SSH Key 已產生")
+        if ui.ask_yes_no("是否要重新產生？", default=False):
+            del variables["pai_agent_ssh_private_key"]
+            del variables["pai_agent_ssh_public_key"]
+            state.ssh_key_generated = False
+
     if "pai_agent_ssh_private_key" not in variables:
         print("\n需要產生用於 Ansible 部署的 SSH Key")
-
-        if state.ssh_key_generated and "pai_agent_ssh_private_key" in variables:
-            ui.success("SSH Key 已產生")
-            if not ui.ask_yes_no("是否要重新產生？", default=False):
-                pass
-            else:
-                state.ssh_key_generated = False
-
-        if not state.ssh_key_generated:
-            private_key, public_key = generate_ssh_key()
-            if not private_key:
-                ui.error("SSH Key 產生失敗")
-                return False
-            variables["pai_agent_ssh_private_key"] = private_key
-            variables["pai_agent_ssh_public_key"] = public_key
-            state.ssh_key_generated = True
-            ui.success("SSH Key 已產生")
+        private_key, public_key = generate_ssh_key()
+        if not private_key:
+            ui.error("SSH Key 產生失敗")
+            return False
+        variables["pai_agent_ssh_private_key"] = private_key
+        variables["pai_agent_ssh_public_key"] = public_key
+        state.ssh_key_generated = True
+        ui.success("SSH Key 已產生")
 
     state.variables = variables
     state.save()

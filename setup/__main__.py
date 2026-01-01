@@ -65,16 +65,15 @@ def main():
                 sys.exit(1)
 
     except KeyboardInterrupt:
-        print("\n\n中斷。進度已儲存，可以使用 python -m setup 繼續。")
+        print("\n\n中斷。進度已儲存，可以使用 uv run pai-setup 繼續。")
         sys.exit(0)
 
     ui.header("設定完成！")
     print("所有設定已完成。")
     print("\n常用指令：")
-    print("  ./sync.py start                 # 啟動同步")
-    print("  ./ansible/scripts/ansible-wrapper.sh ansible-playbook \\")
-    print("      -i ansible/inventory ansible/playbooks/deploy-bot.yml")
-    print("\n如需重新設定，執行 uv run python -m setup")
+    print("  ./sync.py start                                              # 啟動同步")
+    print("  uv run pai ansible ansible-playbook ansible/playbooks/deploy-bot.yml")
+    print("\n如需重新設定，執行 uv run pai-setup")
 
 
 if __name__ == "__main__":
