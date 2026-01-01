@@ -66,7 +66,7 @@ export function startApiServer(port = 3000) {
             info: "ℹ️",
             warning: "⚠️",
             error: "❌",
-            success: "✅",
+            success: "➡️",
           };
 
           const icon = icons[level] || icons.info;
