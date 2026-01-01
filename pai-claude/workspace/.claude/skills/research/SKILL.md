@@ -1,57 +1,57 @@
 ---
 name: research
-description: 調查研究與資料收集。USE WHEN 使用者提到 research, 調查, 研究, 比較, 評估, 分析, investigate, explore, 探索, 找資料, 查詢。
+description: Research and information gathering. Use when user mentions research, investigate, compare, evaluate, analyze, explore, find info, query.
 ---
 
 # Research Skill
 
-調查研究和資料收集的專業技能。
+Research and information gathering.
 
 ## Workflow Routing
 
-- 深度研究 → [workflows/deep-research.md](workflows/deep-research.md)
+- Deep research → [workflows/deep-research.md](workflows/deep-research.md)
 
-## 研究方法
+## Research Method
 
-### 1. 定義問題
-- 明確研究目標
-- 確定評估標準
-- 設定時間範圍
+### 1. Define Problem
+- Clarify research objectives
+- Determine evaluation criteria
+- Set time scope
 
-### 2. 資料收集
-- 官方文檔
-- GitHub 專案
-- 技術部落格
-- 論文/報告
+### 2. Gather Data
+- Official documentation
+- GitHub projects
+- Technical blogs
+- Papers / Reports
 
-### 3. 分析比較
-- 建立比較矩陣
-- 權衡優缺點
-- 考慮長期維護
+### 3. Analyze & Compare
+- Build comparison matrix
+- Weigh pros and cons
+- Consider long-term maintenance
 
-### 4. 結論建議
-- 提供明確建議
-- 說明理由
-- 列出風險
+### 4. Conclusions
+- Provide clear recommendation
+- State reasoning
+- List risks
 
-## 輸出格式
+## Output Format
 
 ```markdown
-## 研究主題：[主題]
+## Research Topic: [Topic]
 
-### 背景
-[為什麼需要研究這個問題]
+### Background
+[Why research this problem]
 
-### 選項分析
-| 選項 | 優點 | 缺點 | 適用場景 |
-|------|------|------|----------|
-| A    | ...  | ...  | ...      |
-| B    | ...  | ...  | ...      |
+### Option Analysis
+| Option | Pros | Cons | Use Case |
+|--------|------|------|----------|
+| A      | ...  | ...  | ...      |
+| B      | ...  | ...  | ...      |
 
-### 建議
-[最終建議及理由]
+### Recommendation
+[Final recommendation and reasoning]
 
-### 參考資料
-- [連結1]
-- [連結2]
+### References
+- [Link 1]
+- [Link 2]
 ```

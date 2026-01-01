@@ -1,51 +1,67 @@
 ---
 name: google
-description: Google 服務整合。USE WHEN 使用者提到 日曆, calendar, 行程, 會議, 雲端硬碟, drive, 檔案, gmail, 郵件, email, 寄信, 聯絡人, contacts, 通訊錄。
+description: Google services integration. Use when user mentions calendar, schedule, meeting, drive, files, gmail, email, contacts, tasks, todo, task list.
 ---
 
 # Google Skill
 
-存取 Wei-Hung 的 Google 服務：日曆、雲端硬碟、Gmail、聯絡人。
+Access Wei-Hung's Google services: Calendar, Drive, Gmail, Contacts, Tasks.
 
-## 使用方式
+## Usage
 
-透過 MCP（Model Context Protocol）自動呼叫，不需要手動執行指令。
+Automatically invoked via MCP (Model Context Protocol). No manual commands needed.
 
-## 可用工具
+## Available Tools
 
-### 日曆 (Calendar)
+### Calendar
 
-| 工具 | 說明 |
-|------|------|
-| `google_calendar_list` | 列出所有日曆 |
-| `google_calendar_events` | 列出行程（可指定時間範圍、搜尋） |
-| `google_calendar_create_event` | 建立新行程 |
+| Tool | Description |
+|------|-------------|
+| `google_calendar_list` | List all calendars |
+| `google_calendar_events` | List events (with time range, search) |
+| `google_calendar_create_event` | Create new event |
 
-### 雲端硬碟 (Drive)
+### Drive
 
-| 工具 | 說明 |
-|------|------|
-| `google_drive_list` | 列出檔案 |
-| `google_drive_search` | 搜尋檔案 |
-| `google_drive_get_file` | 取得檔案資訊或內容 |
+| Tool | Description |
+|------|-------------|
+| `google_drive_list` | List files |
+| `google_drive_search` | Search files |
+| `google_drive_get_file` | Get file info or content |
 
 ### Gmail
 
-| 工具 | 說明 |
-|------|------|
-| `google_gmail_list` | 列出郵件 |
-| `google_gmail_get` | 讀取郵件內容 |
-| `google_gmail_send` | 寄送郵件 |
+| Tool | Description |
+|------|-------------|
+| `google_gmail_list` | List emails |
+| `google_gmail_get` | Read email content |
+| `google_gmail_send` | Send email |
 
-### 聯絡人 (Contacts)
+### Contacts
 
-| 工具 | 說明 |
-|------|------|
-| `google_contacts_list` | 列出聯絡人 |
-| `google_contacts_search` | 搜尋聯絡人 |
+| Tool | Description |
+|------|-------------|
+| `google_contacts_list` | List contacts |
+| `google_contacts_search` | Search contacts |
 
-## 注意事項
+### Tasks
 
-1. 寄送郵件前請確認收件人和內容
-2. 時間格式使用 ISO 8601（如 `2024-01-15T10:00:00+08:00`）
-3. 搜尋 Gmail 可用 Gmail 搜尋語法（如 `from:someone@example.com`）
+| Tool | Description |
+|------|-------------|
+| `google_tasks_list_tasklists` | List all task lists |
+| `google_tasks_list` | List tasks in a task list |
+| `google_tasks_create` | Create new task |
+| `google_tasks_complete` | Mark task as completed |
+| `google_tasks_delete` | Delete task |
+
+**Task parameters**:
+- `taskListId`: Task list ID (default: `@default`)
+- `due`: Due date in RFC 3339 format (e.g., `2024-01-15T00:00:00Z`)
+- `showCompleted`: Whether to show completed tasks
+
+## Notes
+
+1. Confirm recipient and content before sending emails
+2. Use ISO 8601 format for calendar times (e.g., `2024-01-15T10:00:00+08:00`)
+3. Use RFC 3339 format for task due dates (e.g., `2024-01-15T00:00:00Z`)
+4. Gmail search supports Gmail syntax (e.g., `from:someone@example.com`)
