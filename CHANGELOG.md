@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v1.5.13 (2026-01-01)
+
+### Bug Fixes
+
+- Use @grammyjs/parse-mode for proper MarkdownV2 escaping
+  ([`312f4cf`](https://github.com/wayne930242/weihung-pai/commit/312f4cfc8f5197963f6b7643e4fed25662858963))
+
+### Refactoring
+
+- Remove misclassified agents, merge into coding skill
+  ([`55511e2`](https://github.com/wayne930242/weihung-pai/commit/55511e2136d15ea50858dad50177102263b50895))
+
+- Rewrite commands and rules in English
+  ([`567e032`](https://github.com/wayne930242/weihung-pai/commit/567e0324943789b5aaba9be68b5eaba63d0e9880))
+
+
 ## v1.5.12 (2026-01-01)
 
 ### Bug Fixes
