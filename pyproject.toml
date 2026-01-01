@@ -49,5 +49,9 @@ commit_parser = "conventional"
 [tool.semantic_release.remote]
 type = "github"
 
+[tool.semantic_release.changelog.default_templates]
+changelog_file = "CHANGELOG.md"
+output_format = "md"
+
 [tool.semantic_release.publish]
 upload_to_vcs_release = true
