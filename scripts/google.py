@@ -27,7 +27,7 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
 
     auth_code: str | None = None
 
-    def do_GET(self):
+    def do_GET(self) -> None:
         query = urllib.parse.urlparse(self.path).query
         params = urllib.parse.parse_qs(query)
 
@@ -55,9 +55,7 @@ def wait_for_callback() -> str | None:
     return OAuthCallbackHandler.auth_code
 
 
-def exchange_code_for_tokens(
-    client_id: str, client_secret: str, auth_code: str
-) -> dict:
+def exchange_code_for_tokens(client_id: str, client_secret: str, auth_code: str) -> dict[str, Any]:
     """用 authorization code 交換 tokens"""
     data = urllib.parse.urlencode(
         {
@@ -78,12 +76,11 @@ def exchange_code_for_tokens(
     import json
 
     with urllib.request.urlopen(req) as response:
-        return json.loads(response.read().decode())
+        result: dict[str, Any] = json.loads(response.read().decode())
+        return result
 
 
-def refresh_access_token(
-    client_id: str, client_secret: str, refresh_token: str
-) -> str:
+def refresh_access_token(client_id: str, client_secret: str, refresh_token: str) -> str:
     """用 refresh token 取得新的 access token"""
     data = urllib.parse.urlencode(
         {
@@ -103,8 +100,9 @@ def refresh_access_token(
     import json
 
     with urllib.request.urlopen(req) as response:
-        result = json.loads(response.read().decode())
-        return result["access_token"]
+        result: dict[str, Any] = json.loads(response.read().decode())
+        token: str = result["access_token"]
+        return token
 
 
 def update_vault_refresh_token(refresh_token: str) -> None:
@@ -239,7 +237,7 @@ def do_token() -> int:
         return 1
 
 
-def main():
+def main() -> None:
     """CLI 入口點"""
     import argparse
 

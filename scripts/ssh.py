@@ -38,7 +38,7 @@ def ssh_to_vps(command: str | None = None) -> int:
         os.close(fd)
         os.chmod(key_file, 0o600)
 
-        def cleanup():
+        def cleanup() -> None:
             try:
                 os.unlink(key_file)
             except OSError:
@@ -122,7 +122,7 @@ Host pai-server
     return 0
 
 
-def main():
+def main() -> None:
     """CLI 入口點"""
     import argparse
 

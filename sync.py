@@ -30,9 +30,7 @@ def check_mutagen() -> bool:
         if sys.platform == "darwin":
             print("請執行: brew install mutagen-io/mutagen/mutagen")
         elif sys.platform == "win32":
-            print(
-                "請從 https://mutagen.io/documentation/introduction/installation 下載安裝"
-            )
+            print("請從 https://mutagen.io/documentation/introduction/installation 下載安裝")
         else:
             print("請參考: https://mutagen.io/documentation/introduction/installation")
         return False

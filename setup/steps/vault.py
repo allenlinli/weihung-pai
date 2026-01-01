@@ -48,11 +48,16 @@ def create_vault_file(state: SetupState) -> bool:
 
     # 如果已加密，先解密
     if state.vault_encrypted and VAULT_FILE.exists():
-        result = run_command([
-            "ansible-vault", "decrypt",
-            str(VAULT_FILE),
-            "--vault-password-file", str(VAULT_PASSWORD_FILE),
-        ], cwd=ROOT_DIR)
+        result = run_command(
+            [
+                "ansible-vault",
+                "decrypt",
+                str(VAULT_FILE),
+                "--vault-password-file",
+                str(VAULT_PASSWORD_FILE),
+            ],
+            cwd=ROOT_DIR,
+        )
         if result and result.returncode == 0:
             state.vault_encrypted = False
 
@@ -67,11 +72,16 @@ def create_vault_file(state: SetupState) -> bool:
 
     # 加密
     print("\n加密 vault.yml...")
-    result = run_command([
-        "ansible-vault", "encrypt",
-        str(VAULT_FILE),
-        "--vault-password-file", str(VAULT_PASSWORD_FILE),
-    ], cwd=ROOT_DIR)
+    result = run_command(
+        [
+            "ansible-vault",
+            "encrypt",
+            str(VAULT_FILE),
+            "--vault-password-file",
+            str(VAULT_PASSWORD_FILE),
+        ],
+        cwd=ROOT_DIR,
+    )
 
     if not result or result.returncode != 0:
         ui.error("加密失敗")

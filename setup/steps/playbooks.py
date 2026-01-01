@@ -1,5 +1,7 @@
 """Playbook 執行"""
 
+from typing import Any
+
 from .. import ui
 from ..config import PLAYBOOKS, ROOT_DIR
 from ..state import SetupState
@@ -10,14 +12,14 @@ def run_playbooks(state: SetupState) -> bool:
     """執行初始化 Playbooks"""
     ui.header("執行初始化 Playbooks")
 
-    completed = state.playbooks_completed
-    variables = state.variables
+    completed: list[str] = state.playbooks_completed
+    variables: dict[str, Any] = state.variables
     total = len(PLAYBOOKS)
 
     for i, pb in enumerate(PLAYBOOKS, 1):
-        name = pb["name"]
-        path = pb["path"]
-        desc = pb["description"]
+        name: str = pb["name"]
+        path: str = pb["path"]
+        desc: str = pb["description"]
 
         print(f"\n[{i}/{total}] {desc}")
 
@@ -44,10 +46,11 @@ def run_playbooks(state: SetupState) -> bool:
                 return False
 
         # 執行
+        use_wrapper: bool = pb["use_wrapper"]
         success = run_playbook(
             playbook_path=path,
             root_dir=ROOT_DIR,
-            use_wrapper=pb["use_wrapper"],
+            use_wrapper=use_wrapper,
         )
 
         if not success:

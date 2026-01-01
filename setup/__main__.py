@@ -18,7 +18,7 @@ from .steps import (
 )
 
 
-def show_progress(state: SetupState):
+def show_progress(state: SetupState) -> None:
     """顯示進度"""
     summary = state.summary()
     print("偵測到先前的設定進度")
@@ -28,7 +28,7 @@ def show_progress(state: SetupState):
     print(f"  - 已完成 Playbooks: {summary['playbooks_count']}")
 
 
-def main():
+def main() -> None:
     ui.header("PAI Infrastructure Setup Wizard")
 
     # 檢查 ansible 目錄

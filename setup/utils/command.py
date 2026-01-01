@@ -5,11 +5,11 @@ from pathlib import Path
 
 
 def run_command(
-    cmd: list,
+    cmd: list[str],
     cwd: Path | None = None,
     capture: bool = True,
     check: bool = False,
-) -> subprocess.CompletedProcess | None:
+) -> subprocess.CompletedProcess[str] | None:
     """
     執行命令
 

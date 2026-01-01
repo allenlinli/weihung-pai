@@ -1,32 +1,33 @@
 """使用者介面工具"""
 
 from getpass import getpass
+from typing import Any
 
 
-def header(text: str):
+def header(text: str) -> None:
     """印出標題"""
     print(f"\n{'='*60}")
     print(f"  {text}")
     print(f"{'='*60}\n")
 
 
-def step(current: int, total: int, text: str):
+def step(current: int, total: int, text: str) -> None:
     """印出步驟"""
     print(f"\n[{current}/{total}] {text}")
     print("-" * 40)
 
 
-def success(text: str):
+def success(text: str) -> None:
     """成功訊息"""
     print(f"✓ {text}")
 
 
-def error(text: str):
+def error(text: str) -> None:
     """錯誤訊息"""
     print(f"✗ {text}")
 
 
-def skip(text: str):
+def skip(text: str) -> None:
     """跳過訊息"""
     print(f"⊘ {text}")
 
@@ -60,7 +61,7 @@ def get_input(prompt: str, default: str | None = None, secret: bool = False) -> 
     return value if value else default
 
 
-def show_var(var: dict, value: str | None = None):
+def show_var(var: dict[str, Any], value: str | None = None) -> None:
     """顯示變數說明"""
     print(f"\n{var['prompt']}")
     print(f"  說明: {var['help']}")

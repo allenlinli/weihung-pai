@@ -34,7 +34,7 @@ def run_ansible(args: list[str]) -> int:
         os.chmod(key_file, 0o600)
 
         # 註冊清理
-        def cleanup():
+        def cleanup() -> None:
             try:
                 os.unlink(key_file)
             except OSError:
@@ -58,7 +58,7 @@ def run_ansible(args: list[str]) -> int:
             pass
 
 
-def main():
+def main() -> None:
     """CLI 入口點"""
     if len(sys.argv) < 2:
         print("用法: uv run python -m scripts.ansible <ansible-command> [args...]")

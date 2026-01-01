@@ -1,5 +1,7 @@
 """變數收集"""
 
+from typing import Any
+
 from .. import ui
 from ..config import OPTIONAL_FEATURES, REQUIRED_VARS
 from ..state import SetupState
@@ -10,11 +12,11 @@ def collect_required_vars(state: SetupState) -> bool:
     """收集必要變數"""
     ui.step(2, 4, "設定必要變數")
 
-    variables = state.variables
+    variables: dict[str, Any] = state.variables
 
     for var in REQUIRED_VARS:
-        key = var["key"]
-        current = variables.get(key)
+        key: str = var["key"]
+        current: str | None = variables.get(key)
 
         if current:
             display = "********" if var.get("secret") else current
@@ -58,11 +60,11 @@ def collect_optional_vars(state: SetupState) -> bool:
     """收集可選變數"""
     ui.step(3, 4, "設定可選功能")
 
-    variables = state.variables
+    variables: dict[str, Any] = state.variables
 
     for feature in OPTIONAL_FEATURES:
-        desc = feature["description"]
-        feature_vars = feature["vars"]
+        desc: str = feature["description"]
+        feature_vars: list[dict[str, Any]] = feature["vars"]
 
         # 檢查是否已設定
         all_set = all(variables.get(v["key"]) for v in feature_vars)

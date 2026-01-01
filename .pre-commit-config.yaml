@@ -1,0 +1,36 @@
+repos:
+  # Conventional commits
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.0.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+
+  # Python linting and formatting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # Python type checking
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: uv run mypy
+        language: system
+        types: [python]
+        args: [--ignore-missing-imports]
+        files: ^(scripts|setup)/
+
+  # Bun/TypeScript type checking
+  - repo: local
+    hooks:
+      - id: bun-typecheck-bot
+        name: bun typecheck (pai-bot)
+        entry: bash -c 'cd pai-bot && bun run typecheck'
+        language: system
+        files: ^pai-bot/.*\.(ts|tsx)$
+        pass_filenames: false

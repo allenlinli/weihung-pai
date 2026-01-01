@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "bun run --watch src/index.ts",
     "start": "bun run src/index.ts",
-    "db:init": "bun run src/storage/init-db.ts"
+    "db:init": "bun run src/storage/init-db.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@grammyjs/parse-mode": "^2.2.0",

@@ -1,7 +1,9 @@
 """YAML 工具"""
 
+from typing import Any
 
-def build_vault_yaml(variables: dict) -> str:
+
+def build_vault_yaml(variables: dict[str, Any]) -> str:
     """建立 vault.yml 內容"""
     lines = [
         "# Ansible Vault - 自動產生",
@@ -18,11 +20,14 @@ def build_vault_yaml(variables: dict) -> str:
         ("GitHub", ["github_token", "github_username"]),
         ("Vultr API（可選）", ["vultr_api_key"]),
         ("Anthropic API（可選）", ["vault_anthropic_api_key"]),
-        ("Google OAuth（可選）", [
-            "vault_google_client_id",
-            "vault_google_client_secret",
-            "vault_google_refresh_token",
-        ]),
+        (
+            "Google OAuth（可選）",
+            [
+                "vault_google_client_id",
+                "vault_google_client_secret",
+                "vault_google_refresh_token",
+            ],
+        ),
     ]
 
     for section_name, keys in sections:
@@ -41,8 +46,23 @@ def build_vault_yaml(variables: dict) -> str:
             else:
                 # 對於包含特殊字元的值，使用雙引號
                 special_chars = (
-                    '"', "'", ":", "#", "{", "}", "[", "]",
-                    ",", "&", "*", "!", "|", ">", "%", "@", "`"
+                    '"',
+                    "'",
+                    ":",
+                    "#",
+                    "{",
+                    "}",
+                    "[",
+                    "]",
+                    ",",
+                    "&",
+                    "*",
+                    "!",
+                    "|",
+                    ">",
+                    "%",
+                    "@",
+                    "`",
                 )
                 if any(c in value for c in special_chars):
                     escaped = value.replace("\\", "\\\\").replace('"', '\\"')

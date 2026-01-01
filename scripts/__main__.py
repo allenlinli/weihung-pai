@@ -7,7 +7,7 @@ PAI Infrastructure Scripts
 import sys
 
 
-def main():
+def main() -> None:
     if len(sys.argv) < 2:
         print_help()
         sys.exit(1)
@@ -36,7 +36,7 @@ def main():
         sys.exit(1)
 
 
-def run_ssh_command(args: list[str]):
+def run_ssh_command(args: list[str]) -> None:
     from .ssh import setup_ssh_config, ssh_to_vps
 
     if not args:
@@ -56,7 +56,7 @@ def run_ssh_command(args: list[str]):
         sys.exit(1)
 
 
-def run_google_command(args: list[str]):
+def run_google_command(args: list[str]) -> None:
     from .google import do_auth, do_token
 
     if not args:
@@ -75,7 +75,7 @@ def run_google_command(args: list[str]):
         sys.exit(1)
 
 
-def print_help():
+def print_help() -> None:
     print("PAI Infrastructure Scripts")
     print()
     print("用法: uv run pai <command> [args...]")

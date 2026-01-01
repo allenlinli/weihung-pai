@@ -1,6 +1,12 @@
 """路徑和變數定義"""
 
 from pathlib import Path
+from typing import Any
+
+# 類型別名
+VarDef = dict[str, Any]
+FeatureDef = dict[str, Any]
+PlaybookDef = dict[str, Any]
 
 # 路徑（對應 ansible.cfg 設定）
 ROOT_DIR = Path(__file__).parent.parent
@@ -11,7 +17,7 @@ VAULT_PASSWORD_FILE = Path.home() / ".vault_pass_pai"  # ansible.cfg: vault_pass
 STATE_FILE = ROOT_DIR / ".setup_state.json"
 
 # 必要變數
-REQUIRED_VARS = [
+REQUIRED_VARS: list[VarDef] = [
     {
         "key": "vault_server_ip",
         "prompt": "VPS IP 位址",
@@ -59,7 +65,7 @@ REQUIRED_VARS = [
 ]
 
 # 可選變數（依功能分組）
-OPTIONAL_FEATURES = [
+OPTIONAL_FEATURES: list[FeatureDef] = [
     {
         "name": "vultr",
         "description": "Vultr 自動建立 VPS",
@@ -110,7 +116,7 @@ OPTIONAL_FEATURES = [
 ]
 
 # Playbooks
-PLAYBOOKS = [
+PLAYBOOKS: list[PlaybookDef] = [
     {
         "name": "init-user",
         "path": "playbooks/init/init-user.yml",
