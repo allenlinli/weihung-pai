@@ -1,5 +1,9 @@
 import { Context } from "grammy";
-import { streamClaude } from "../../claude/client";
+import {
+  streamClaude,
+  abortUserProcess,
+  hasActiveProcess,
+} from "../../claude/client";
 import { contextManager } from "../../context/manager";
 import { logger } from "../../utils/logger";
 import { config } from "../../config";
@@ -66,9 +70,10 @@ export async function handleStart(ctx: Context): Promise<void> {
 可用指令：
 • \`/clear\` \\- 清除對話歷史
 • \`/status\` \\- 查看狀態
+• \`/stop\` \\- 中斷當前任務
 • \`/cc:<command>\` \\- 執行 Claude slash command
 
-直接輸入訊息即可與我對話。`,
+發送任何訊息會自動中斷進行中的任務。`,
     { parse_mode: "MarkdownV2" }
   );
 }
@@ -88,14 +93,31 @@ export async function handleStatus(ctx: Context): Promise<void> {
   if (!userId) return;
 
   const messageCount = contextManager.getMessageCount(userId);
+  const isProcessing = hasActiveProcess(userId);
 
   await ctx.reply(
     `狀態
 
 • User ID: \`${userId}\`
-• 對話訊息數: ${messageCount}`,
+• 對話訊息數: ${messageCount}
+• 處理中: ${isProcessing ? "是" : "否"}`,
     { parse_mode: "MarkdownV2" }
   );
+}
+
+// Handle /stop command - abort current task
+export async function handleStop(ctx: Context): Promise<void> {
+  const userId = ctx.from?.id;
+  if (!userId) return;
+
+  const wasAborted = abortUserProcess(userId);
+
+  if (wasAborted) {
+    await ctx.reply("已中斷當前任務");
+    logger.info({ userId }, "User manually stopped task");
+  } else {
+    await ctx.reply("目前沒有進行中的任務");
+  }
 }
 
 // Handle regular messages with streaming
@@ -105,6 +127,13 @@ export async function handleMessage(ctx: Context): Promise<void> {
   const chatId = ctx.chat?.id;
 
   if (!userId || !text || !chatId) return;
+
+  // Auto-abort any existing task when user sends a new message
+  if (hasActiveProcess(userId)) {
+    abortUserProcess(userId);
+    logger.info({ userId }, "Auto-aborted previous task due to new message");
+    await ctx.reply("已自動中斷前一個任務");
+  }
 
   // 處理 /cc: Claude slash command
   let prompt = text;
@@ -141,6 +170,7 @@ export async function handleMessage(ctx: Context): Promise<void> {
       // Stream the response (collect without editing)
       for await (const event of streamClaude(prompt, {
         conversationHistory: history,
+        userId,
       })) {
         if (event.type === "text") {
           currentText = event.content;

@@ -2,6 +2,22 @@ import { spawn } from "bun";
 import { resolve } from "path";
 import { config } from "../config";
 import { logger } from "../utils/logger";
+import { processManager } from "./process-manager";
+
+/**
+ * Abort any active Claude process for a user
+ * Returns true if a process was aborted
+ */
+export function abortUserProcess(userId: number): boolean {
+  return processManager.abort(userId);
+}
+
+/**
+ * Check if user has an active Claude process
+ */
+export function hasActiveProcess(userId: number): boolean {
+  return processManager.hasActiveProcess(userId);
+}
 
 export interface ClaudeResult {
   response: string;
@@ -15,6 +31,8 @@ export interface StreamEvent {
 
 interface ClaudeOptions {
   conversationHistory?: string;
+  userId?: number;
+  signal?: AbortSignal;
 }
 
 // Streaming version - yields events as they come
@@ -50,6 +68,22 @@ export async function* streamClaude(
     stderr: "pipe",
   });
 
+  // Create abort controller for this process
+  const abortController = new AbortController();
+
+  // Register process if userId is provided
+  if (options?.userId) {
+    processManager.register(options.userId, proc, abortController);
+  }
+
+  // Link external signal to our abort controller
+  if (options?.signal) {
+    options.signal.addEventListener("abort", () => {
+      abortController.abort();
+      proc.kill();
+    });
+  }
+
   const decoder = new TextDecoder();
   let buffer = "";
   let lastThinking = "";
@@ -57,6 +91,11 @@ export async function* streamClaude(
 
   try {
     for await (const chunk of proc.stdout) {
+      // Check if aborted
+      if (abortController.signal.aborted) {
+        yield { type: "error", content: "任務已中斷" };
+        return;
+      }
       buffer += decoder.decode(chunk, { stream: true });
 
       // Process complete JSON lines
@@ -95,7 +134,7 @@ export async function* streamClaude(
     }
 
     const exitCode = await proc.exited;
-    if (exitCode !== 0) {
+    if (exitCode !== 0 && !abortController.signal.aborted) {
       const stderr = await new Response(proc.stderr).text();
       throw new Error(`Claude exited with code ${exitCode}: ${stderr}`);
     }
@@ -104,6 +143,11 @@ export async function* streamClaude(
     const errorStack = error instanceof Error ? error.stack : undefined;
     logger.error({ error: errorMessage, stack: errorStack }, "Stream error");
     yield { type: "error", content: errorMessage };
+  } finally {
+    // Unregister process when done
+    if (options?.userId) {
+      processManager.unregister(options.userId);
+    }
   }
 }
 
