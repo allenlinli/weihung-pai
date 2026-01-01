@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.5.6 (2026-01-01)
+
+### Bug Fixes
+
+- Correct SSH key extraction in deploy workflow
+  ([`3c2ab03`](https://github.com/wayne930242/weihung-pai/commit/3c2ab037a03d6585bdc83f05d51a40728206118f))
+
+
 ## v1.5.5 (2026-01-01)
 
 ### Bug Fixes
