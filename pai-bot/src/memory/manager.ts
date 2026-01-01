@@ -113,14 +113,14 @@ export class MemoryManager {
     const maxDistance = 2 * (1 - threshold);
 
     const result = db
-      .query<Memory, [Uint8Array, number, number]>(
+      .query<Memory, [Uint8Array, number]>(
         `SELECT rowid as id, user_id as userId, content, category, importance,
                 created_at as createdAt, last_accessed as lastAccessed, distance
          FROM vec_memories
          WHERE embedding MATCH ? AND user_id = ?
          ORDER BY distance LIMIT 1`
       )
-      .get(embeddingBytes, userId, 1);
+      .get(embeddingBytes, userId);
 
     if (result && (result.distance ?? Infinity) < maxDistance) {
       return result;
