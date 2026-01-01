@@ -22,7 +22,7 @@ def state_file(temp_dir: Path) -> Path:
 
 
 @pytest.fixture
-def sample_state_data() -> dict:
+def sample_state_data() -> dict[str, object]:
     """範例狀態資料"""
     return {
         "vault_password_set": True,
@@ -39,7 +39,7 @@ def sample_state_data() -> dict:
 
 
 @pytest.fixture
-def state_file_with_data(state_file: Path, sample_state_data: dict) -> Path:
+def state_file_with_data(state_file: Path, sample_state_data: dict[str, object]) -> Path:
     """建立含有資料的狀態檔案"""
     state_file.write_text(json.dumps(sample_state_data))
     return state_file
