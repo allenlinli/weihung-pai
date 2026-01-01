@@ -13,6 +13,7 @@ import {
   handleDocument,
   handlePhoto,
 } from "./handlers";
+import { handleCallbackQuery } from "./callbacks";
 
 export async function setupBotCommands(bot: Bot): Promise<void> {
   await bot.api.setMyCommands([
@@ -71,6 +72,9 @@ export function createTelegramBot(): Bot {
 
   // Photo handler
   bot.on("message:photo", handlePhoto);
+
+  // Callback query handler (inline keyboard)
+  bot.on("callback_query:data", handleCallbackQuery);
 
   // Error handler
   bot.catch((err) => {

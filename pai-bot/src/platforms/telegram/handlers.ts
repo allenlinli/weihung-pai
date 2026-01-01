@@ -1,66 +1,56 @@
+/**
+ * Telegram Message Handlers
+ * 處理 Telegram 平台的訊息和指令
+ */
+
 import { Context } from "grammy";
+import { abortUserProcess, hasActiveProcess } from "../../claude/client";
+import { queueManager } from "../../claude/queue-manager";
 import {
-  streamClaude,
-  abortUserProcess,
-  hasActiveProcess,
-} from "../../claude/client";
+  executeClaudeTask,
+  prepareTask,
+  type MessageSender,
+} from "../../claude/task-executor";
 import { contextManager } from "../../context/manager";
 import { logger } from "../../utils/logger";
 import { escapeMarkdownV2, fmt } from "../../utils/telegram";
 import { config } from "../../config";
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import {
-  memoryManager,
-  extractAndSaveMemories,
-  formatMemoriesForPrompt,
-} from "../../memory";
+import { memoryManager } from "../../memory";
+import { setTaskExecutor } from "./callbacks";
 
-// Convert Claude's markdown to Telegram MarkdownV2
-function toMarkdownV2(text: string): string {
-  // Use unique placeholders that won't be affected by escaping
-  const CODE_BLOCK_PREFIX = "\u0000CB";
-  const INLINE_CODE_PREFIX = "\u0000IC";
-  const codeBlocks: string[] = [];
-  const inlineCodes: string[] = [];
+// 超時時間（毫秒）
+const DECISION_TIMEOUT_MS = 10000;
 
-  // Extract and protect code blocks
-  let result = text.replace(/```(\w*)\n?([\s\S]*?)```/g, (_, lang, code) => {
-    const idx = codeBlocks.length;
-    codeBlocks.push(`\`\`\`${lang}\n${code}\`\`\``);
-    return `${CODE_BLOCK_PREFIX}${idx}\u0000`;
-  });
+// Bot API 參考
+let botApi: Context["api"] | null = null;
 
-  // Extract and protect inline code
-  result = result.replace(/`([^`]+)`/g, (_, code) => {
-    const idx = inlineCodes.length;
-    inlineCodes.push(`\`${code}\``);
-    return `${INLINE_CODE_PREFIX}${idx}\u0000`;
-  });
-
-  // Escape special characters in regular text
-  result = escapeMarkdownV2(result);
-
-  // Convert markdown syntax to MarkdownV2
-  // Bold: **text** or __text__ -> *text*
-  result = result.replace(/\\\*\\\*(.+?)\\\*\\\*/g, "*$1*");
-  result = result.replace(/\\_\\_(.+?)\\_\\_/g, "*$1*");
-
-  // Italic: *text* or _text_ -> _text_
-  result = result.replace(/(?<!\\\*)\\\*([^*]+)\\\*(?!\\\*)/g, "_$1_");
-
-  // Restore code blocks and inline code
-  codeBlocks.forEach((code, idx) => {
-    result = result.replace(`${CODE_BLOCK_PREFIX}${idx}\u0000`, code);
-  });
-  inlineCodes.forEach((code, idx) => {
-    result = result.replace(`${INLINE_CODE_PREFIX}${idx}\u0000`, code);
-  });
-
-  return result;
+/**
+ * 建立 Telegram 訊息發送器
+ */
+function createTelegramSender(api: Context["api"]): MessageSender {
+  return {
+    sendChatAction: (chatId, action) => api.sendChatAction(chatId, action as any).then(() => {}),
+    sendMessage: (chatId, text, options) => api.sendMessage(chatId, text, options as any).then(() => {}),
+  };
 }
 
-// Handle /start command
+/**
+ * 初始化任務執行器（供 callbacks.ts 使用）
+ */
+export function initializeTaskExecutor(api: Context["api"]): void {
+  botApi = api;
+  const sender = createTelegramSender(api);
+  setTaskExecutor(async (task, chatId) => {
+    await executeClaudeTask(task, chatId, sender);
+  });
+}
+
+// ============================================================
+// Command Handlers
+// ============================================================
+
 export async function handleStart(ctx: Context): Promise<void> {
   const userId = ctx.from?.id;
   if (!userId) return;
@@ -76,12 +66,11 @@ export async function handleStart(ctx: Context): Promise<void> {
 • \`/stop\` \\- 中斷當前任務
 • \`/cc:<command>\` \\- 執行 Claude slash command
 
-發送任何訊息會自動中斷進行中的任務。`,
+發送新訊息時可選擇打斷或排隊。`,
     { parse_mode: "MarkdownV2" }
   );
 }
 
-// Handle /clear command
 export async function handleClear(ctx: Context): Promise<void> {
   const userId = ctx.from?.id;
   if (!userId) return;
@@ -90,40 +79,42 @@ export async function handleClear(ctx: Context): Promise<void> {
   await ctx.reply("對話歷史已清除");
 }
 
-// Handle /status command
 export async function handleStatus(ctx: Context): Promise<void> {
   const userId = ctx.from?.id;
   if (!userId) return;
 
   const messageCount = contextManager.getMessageCount(userId);
-  const isProcessing = hasActiveProcess(userId);
+  const { queueSize, isProcessing } = queueManager.getStatus(userId);
 
   await ctx.reply(
     `狀態
 
 • User ID: \`${userId}\`
 • 對話訊息數: ${messageCount}
-• 處理中: ${isProcessing ? "是" : "否"}`,
+• 處理中: ${isProcessing ? "是" : "否"}
+• 佇列中: ${queueSize} 個任務`,
     { parse_mode: "MarkdownV2" }
   );
 }
 
-// Handle /stop command - abort current task
 export async function handleStop(ctx: Context): Promise<void> {
   const userId = ctx.from?.id;
   if (!userId) return;
 
   const wasAborted = abortUserProcess(userId);
+  const clearedCount = queueManager.clearQueue(userId);
 
-  if (wasAborted) {
-    await ctx.reply("已中斷當前任務");
-    logger.info({ userId }, "User manually stopped task");
+  if (wasAborted || clearedCount > 0) {
+    const messages: string[] = [];
+    if (wasAborted) messages.push("已中斷當前任務");
+    if (clearedCount > 0) messages.push(`已清空 ${clearedCount} 個佇列任務`);
+    await ctx.reply(messages.join("，"));
+    logger.info({ userId, wasAborted, clearedCount }, "User manually stopped tasks");
   } else {
     await ctx.reply("目前沒有進行中的任務");
   }
 }
 
-// Handle /memory command - view long-term memories
 export async function handleMemory(ctx: Context): Promise<void> {
   const userId = ctx.from?.id;
   if (!userId) return;
@@ -151,7 +142,6 @@ export async function handleMemory(ctx: Context): Promise<void> {
   await ctx.reply(lines.join("\n"), { parse_mode: "MarkdownV2" });
 }
 
-// Handle /forget command - archive long-term memories (soft delete)
 export async function handleForget(ctx: Context): Promise<void> {
   const userId = ctx.from?.id;
   if (!userId) return;
@@ -165,7 +155,10 @@ export async function handleForget(ctx: Context): Promise<void> {
   await ctx.reply(`已封存 ${archived} 條長期記憶（可透過 MCP 工具恢復）`);
 }
 
-// Handle regular messages with streaming
+// ============================================================
+// Message Handler
+// ============================================================
+
 export async function handleMessage(ctx: Context): Promise<void> {
   const userId = ctx.from?.id;
   const text = ctx.message?.text;
@@ -173,111 +166,81 @@ export async function handleMessage(ctx: Context): Promise<void> {
 
   if (!userId || !text || !chatId) return;
 
-  // Auto-abort any existing task when user sends a new message
-  if (hasActiveProcess(userId)) {
-    abortUserProcess(userId);
-    logger.info({ userId }, "Auto-aborted previous task due to new message");
-    await ctx.reply("已自動中斷前一個任務");
+  // 初始化 bot API（首次調用時）
+  if (!botApi) {
+    initializeTaskExecutor(ctx.api);
   }
 
   // 處理 /cc: Claude slash command
   let prompt = text;
   if (text.startsWith("/cc:")) {
-    const commandPart = text.slice(4);
-    prompt = `/${commandPart}`;
+    prompt = `/${text.slice(4)}`;
   }
 
-  try {
-    // Save user message
-    contextManager.saveMessage(userId, "user", text);
+  // 準備任務
+  const task = await prepareTask(userId, chatId, text, prompt);
+  const sender = createTelegramSender(ctx.api);
 
-    // Get conversation context
-    const history = contextManager.getConversationContext(userId);
+  // 檢查是否有進行中的任務
+  const isProcessing = queueManager.isProcessing(userId) || hasActiveProcess(userId);
 
-    // Search for relevant memories (if enabled)
-    let memoryContext = "";
-    if (config.memory.enabled) {
+  if (isProcessing) {
+    // 有任務進行中，顯示選擇按鈕
+    const queueSize = queueManager.getQueueLength(userId);
+    const queueInfo = queueSize > 0 ? `（佇列中有 ${queueSize} 個任務）` : "";
+
+    const msg = await ctx.reply(`目前有任務進行中${queueInfo}，請選擇：`, {
+      reply_markup: {
+        inline_keyboard: [[
+          { text: "🛑 打斷並執行", callback_data: `abort:${task.id}` },
+          { text: "📋 排入佇列", callback_data: `queue:${task.id}` },
+        ]],
+      },
+    });
+
+    // 暫存任務
+    queueManager.storePendingTask(task);
+
+    // 設定超時自動排隊
+    const timeoutId = setTimeout(async () => {
+      if (!queueManager.getPendingTask(task.id)) return;
+
+      logger.info({ userId, taskId: task.id }, "Auto-queuing due to timeout");
+
       try {
-        const memories = await memoryManager.search(userId, text, 5);
-        if (memories.length > 0) {
-          memoryContext = formatMemoriesForPrompt(memories);
-          logger.debug({ userId, memoryCount: memories.length }, "Retrieved memories");
-        }
-      } catch (error) {
-        // Memory search is optional, don't fail the request
-        logger.warn({ error, userId }, "Memory search failed");
-      }
-    }
-
-    // Combine memory context with conversation history
-    const fullHistory = memoryContext
-      ? `${memoryContext}\n\n${history}`
-      : history;
-
-    // Show typing indicator during processing
-    let isProcessing = true;
-    const typingInterval = setInterval(async () => {
-      if (isProcessing) {
-        try {
-          await ctx.api.sendChatAction(chatId, "typing");
-        } catch {
-          // Ignore typing action errors
-        }
-      }
-    }, 4000); // Telegram typing status lasts ~5 seconds
-
-    // Send initial typing
-    await ctx.api.sendChatAction(chatId, "typing");
-
-    let currentText = "";
-
-    try {
-      // Stream the response (collect without editing)
-      for await (const event of streamClaude(prompt, {
-        conversationHistory: fullHistory,
-        userId,
-      })) {
-        if (event.type === "text") {
-          currentText = event.content;
-        } else if (event.type === "done") {
-          currentText = event.content || currentText;
-        } else if (event.type === "error") {
-          throw new Error(event.content);
-        }
-      }
-    } finally {
-      isProcessing = false;
-      clearInterval(typingInterval);
-    }
-
-    // Send final response as new message
-    const finalContent = currentText.trim();
-    if (finalContent) {
-      try {
-        await ctx.api.sendMessage(chatId, toMarkdownV2(finalContent), {
-          parse_mode: "MarkdownV2",
-        });
+        await ctx.api.deleteMessage(chatId, msg.message_id);
       } catch {
-        // Fallback: send without markdown
-        await ctx.api.sendMessage(chatId, finalContent);
+        // 忽略
       }
 
-      // Save assistant response
-      contextManager.saveMessage(userId, "assistant", finalContent);
+      await ctx.api.sendMessage(chatId, "已自動排入佇列");
 
-      // Extract and save memories asynchronously (if enabled, don't block response)
-      if (config.memory.enabled) {
-        extractAndSaveMemories(userId, text, finalContent).catch((error) => {
-          logger.warn({ error, userId }, "Memory extraction failed");
-        });
-      }
-    }
+      queueManager.enqueue(task, async (t) => {
+        await executeClaudeTask(t, chatId, sender);
+      }).catch((error) => {
+        logger.error({ error, taskId: task.id }, "Queued task failed");
+        ctx.api.sendMessage(chatId, `❌ 任務執行失敗：${error.message}`).catch(() => {});
+      });
+    }, DECISION_TIMEOUT_MS);
+
+    queueManager.setPendingDecision(userId, {
+      taskId: task.id,
+      messageId: msg.message_id,
+      timeoutId,
+    });
+
+    return;
+  }
+
+  // 沒有進行中的任務，直接執行
+  try {
+    await queueManager.executeImmediately(task, async (t) => {
+      await executeClaudeTask(t, chatId, sender);
+    });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorStack = error instanceof Error ? error.stack : undefined;
-    logger.error({ error: errorMessage, stack: errorStack, userId }, "Failed to process message");
+    logger.error({ error: errorMessage, userId }, "Failed to process message");
 
-    // 提供更有資訊的錯誤訊息
     const shortError = errorMessage.length > 100
       ? errorMessage.substring(0, 100) + "..."
       : errorMessage;
@@ -285,7 +248,10 @@ export async function handleMessage(ctx: Context): Promise<void> {
   }
 }
 
-// Handle document/file attachments
+// ============================================================
+// Attachment Handlers
+// ============================================================
+
 export async function handleDocument(ctx: Context): Promise<void> {
   const userId = ctx.from?.id;
   const chatId = ctx.chat?.id;
@@ -302,11 +268,9 @@ export async function handleDocument(ctx: Context): Promise<void> {
       return;
     }
 
-    // Ensure downloads directory exists
     const downloadsDir = resolve(config.workspace.downloadsDir);
     await mkdir(downloadsDir, { recursive: true });
 
-    // Download file
     const fileUrl = `https://api.telegram.org/file/bot${config.telegram.token}/${filePath}`;
     const response = await fetch(fileUrl);
 
@@ -314,12 +278,10 @@ export async function handleDocument(ctx: Context): Promise<void> {
       throw new Error(`Failed to download file: ${response.status}`);
     }
 
-    // Save with original filename
     const fileName = document.file_name || `file_${Date.now()}`;
     const localPath = join(downloadsDir, fileName);
 
     await Bun.write(localPath, response);
-
     logger.info({ userId, fileName, localPath }, "File downloaded");
 
     const userMessage = `[用戶傳送檔案: ${fileName}]`;
@@ -337,7 +299,6 @@ export async function handleDocument(ctx: Context): Promise<void> {
   }
 }
 
-// Handle photo attachments
 export async function handlePhoto(ctx: Context): Promise<void> {
   const userId = ctx.from?.id;
   const chatId = ctx.chat?.id;
@@ -346,7 +307,6 @@ export async function handlePhoto(ctx: Context): Promise<void> {
   if (!userId || !chatId || !photos || photos.length === 0) return;
 
   try {
-    // Get the largest photo (last in array)
     const photo = photos[photos.length - 1];
     const file = await ctx.api.getFile(photo.file_id);
     const filePath = file.file_path;
@@ -356,11 +316,9 @@ export async function handlePhoto(ctx: Context): Promise<void> {
       return;
     }
 
-    // Ensure downloads directory exists
     const downloadsDir = resolve(config.workspace.downloadsDir);
     await mkdir(downloadsDir, { recursive: true });
 
-    // Download file
     const fileUrl = `https://api.telegram.org/file/bot${config.telegram.token}/${filePath}`;
     const response = await fetch(fileUrl);
 
@@ -368,13 +326,11 @@ export async function handlePhoto(ctx: Context): Promise<void> {
       throw new Error(`Failed to download photo: ${response.status}`);
     }
 
-    // Save with timestamp filename
     const ext = filePath.split(".").pop() || "jpg";
     const fileName = `photo_${Date.now()}.${ext}`;
     const localPath = join(downloadsDir, fileName);
 
     await Bun.write(localPath, response);
-
     logger.info({ userId, fileName, localPath }, "Photo downloaded");
 
     const userMessage = `[用戶傳送圖片]`;
