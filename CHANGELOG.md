@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.6.2 (2026-01-01)
+
+### Bug Fixes
+
+- Correct pai-setup command in README
+  ([`2cb54f2`](https://github.com/wayne930242/weihung-pai/commit/2cb54f249d6205dc02b8f4aada1b6cc1bb6c5b2c))
+
+
 ## v1.6.1 (2026-01-01)
 
 ### Bug Fixes
