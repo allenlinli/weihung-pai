@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.5.8 (2026-01-01)
+
+### Bug Fixes
+
+- Use PostToolUse for Task notifications with full details
+  ([`8ea0b74`](https://github.com/wayne930242/weihung-pai/commit/8ea0b7435d7e8492ec47f7cbee03e7b617b501b2))
+
+
 ## v1.5.7 (2026-01-01)
 
 ### Bug Fixes
