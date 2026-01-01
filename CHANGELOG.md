@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.5.11 (2026-01-01)
+
+### Bug Fixes
+
+- Show detailed error message in telegram replies
+  ([`23a02b0`](https://github.com/wayne930242/weihung-pai/commit/23a02b0dbee4ff1ab986294e1d65b95aaf0f4966))
+
+
 ## v1.5.10 (2026-01-01)
 
 ### Bug Fixes
