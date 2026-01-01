@@ -1,7 +1,7 @@
 import { getDb } from "../storage/db";
 import { logger } from "../utils/logger";
-import { getEmbedding, EMBEDDING_DIMENSION, cosineSimilarity } from "./embedding";
-import { SIMILARITY_THRESHOLD, MAX_MEMORIES_PER_USER, CONSOLIDATION_THRESHOLD } from "./constants";
+import { getEmbedding, EMBEDDING_DIMENSION } from "./embedding";
+import { DEDUP_MAX_DISTANCE, MAX_MEMORIES_PER_USER, CONSOLIDATION_THRESHOLD } from "./constants";
 import { consolidateMemories } from "./consolidation";
 import * as sqliteVec from "sqlite-vec";
 
@@ -64,10 +64,10 @@ export class MemoryManager {
     const embeddingBytes = new Uint8Array(embedding.buffer);
 
     // Check for semantically similar memories
-    const similar = await this.findSimilar(userId, embedding, SIMILARITY_THRESHOLD);
+    const similar = await this.findSimilar(userId, embedding, DEDUP_MAX_DISTANCE);
     if (similar) {
       logger.debug(
-        { userId, existingId: similar.id, similarity: 1 - (similar.distance ?? 0) },
+        { userId, existingId: similar.id, distance: similar.distance },
         "Similar memory exists, skipping"
       );
       return null;
@@ -98,19 +98,15 @@ export class MemoryManager {
   }
 
   /**
-   * Find similar memory by embedding
+   * Find similar memory by embedding (L2 distance)
    */
   private async findSimilar(
     userId: number,
     embedding: Float32Array,
-    threshold: number
+    maxDistance: number
   ): Promise<Memory | null> {
     const db = getDb();
     const embeddingBytes = new Uint8Array(embedding.buffer);
-
-    // sqlite-vec distance is L2, convert threshold to distance
-    // For normalized vectors: distance ≈ 2 * (1 - cosine_similarity)
-    const maxDistance = 2 * (1 - threshold);
 
     const result = db
       .query<Memory, [Uint8Array, number]>(
