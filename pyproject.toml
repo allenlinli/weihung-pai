@@ -44,7 +44,7 @@ version_toml = ["pyproject.toml:project.version"]
 branch = "main"
 commit_message = "chore(release): {version}"
 tag_format = "v{version}"
-commit_parser = "angular"
+commit_parser = "conventional"
 
 [tool.semantic_release.remote]
 type = "github"
