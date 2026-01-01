@@ -111,7 +111,7 @@ export async function consolidateMemories(userId: number): Promise<number> {
 
       // Call Haiku to consolidate
       const response = await anthropic.messages.create({
-        model: "claude-haiku-4-5-20250109",
+        model: "claude-haiku-4-5",
         max_tokens: 256,
         messages: [
           {

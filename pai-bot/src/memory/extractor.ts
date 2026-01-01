@@ -34,7 +34,7 @@ export async function extractAndSaveMemories(
     const conversation = `用戶: ${userMessage}\n助手: ${assistantMessage}`;
 
     const response = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20250109",
+      model: "claude-haiku-4-5",
       max_tokens: 512,
       messages: [
         {
