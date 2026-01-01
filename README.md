@@ -76,7 +76,7 @@ brew install mutagen-io/mutagen/mutagen
 uv sync
 
 # 執行設定精靈（互動式）
-uv run setup
+uv run pai-setup
 
 # 常用命令
 uv run sync start   # 啟動同步
@@ -246,7 +246,7 @@ uv run pai ansible ansible-playbook ansible/playbooks/deploy-bot.yml
 
 | 命令 | 說明 |
 |------|------|
-| `uv run setup` | 互動式設定精靈 |
+| `uv run pai-setup` | 互動式設定精靈 |
 | `uv run sync start/stop/status` | Mutagen 同步管理 |
 | `uv run pai ansible <cmd>` | 執行 Ansible（自動解密 SSH key）|
 | `uv run pai ssh connect` | SSH 連線到 VPS |
