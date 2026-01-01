@@ -31,8 +31,6 @@ function getToolDetail(tool: string, input: ToolUseInput["tool_input"]): string 
       return input.url ? new URL(input.url).hostname : "";
     case "WebSearch":
       return input.query?.slice(0, 30) || "";
-    case "Task":
-      return input.description || "";
     default:
       return "";
   }
@@ -46,13 +44,13 @@ async function main() {
     const data: ToolUseInput = JSON.parse(input);
     const tool = data.tool_name;
 
-    // 過濾掉太頻繁的工具
-    const quietTools = ["Read", "Glob", "Grep", "TodoWrite"];
+    // 過濾掉太頻繁或有專用 hook 的工具
+    const quietTools = ["Read", "Glob", "Grep", "TodoWrite", "Task"];
     if (quietTools.includes(tool)) return;
 
     const detail = getToolDetail(tool, data.tool_input);
     const message = detail ? `${tool}: ${detail}` : tool;
-    await notify(`✅ ${message}`, "info");
+    await notify(message, "success");
   } catch {
     // 忽略解析錯誤
   }

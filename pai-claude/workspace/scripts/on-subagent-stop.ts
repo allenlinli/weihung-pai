@@ -28,7 +28,7 @@ async function main() {
                  data.tool_input?.prompt?.slice(0, 60) ||
                  "";
     const message = desc ? `${type}: ${desc}` : `${type} 完成`;
-    await notify(`✅ ${message}`, "success");
+    await notify(message, "success");
   } catch {
     // 忽略解析錯誤
   }
