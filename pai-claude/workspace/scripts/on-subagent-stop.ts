@@ -1,37 +1,16 @@
 #!/usr/bin/env bun
 
 /**
- * SubagentStop Hook - Subagent 完成通知
+ * SubagentStop Hook
+ *
+ * 注意：此 hook 的輸入資料有限（只有 session_id、transcript_path 等）
+ * 不包含 subagent 的描述或類型，因此不發送通知
+ * Task 完成通知由 PostToolUse hook 處理
  */
 
-import { notify } from "./lib/notify";
-
-interface SubagentStopInput {
-  subagent_type?: string;
-  task_description?: string;
-  tool_input?: {
-    description?: string;
-    prompt?: string;
-  };
-  [key: string]: unknown;
-}
-
 async function main() {
-  const input = await Bun.stdin.text();
-  if (!input.trim()) return;
-
-  try {
-    const data: SubagentStopInput = JSON.parse(input);
-    const type = data.subagent_type || "Agent";
-    const desc = data.tool_input?.description ||
-                 data.task_description ||
-                 data.tool_input?.prompt?.slice(0, 60) ||
-                 "";
-    const message = desc ? `${type}: ${desc}` : `${type} 完成`;
-    await notify(message, "success");
-  } catch {
-    // 忽略解析錯誤
-  }
+  // SubagentStop 輸入資料有限，不發送通知
+  // 如需處理，可讀取 transcript_path 獲取詳細資訊
 }
 
 main();

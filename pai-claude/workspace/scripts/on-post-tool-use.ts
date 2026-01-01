@@ -31,6 +31,10 @@ function getToolDetail(tool: string, input: ToolUseInput["tool_input"]): string 
       return input.url ? new URL(input.url).hostname : "";
     case "WebSearch":
       return input.query?.slice(0, 30) || "";
+    case "Task":
+      const agentType = (input as Record<string, unknown>).subagent_type || "Agent";
+      const desc = input.description || "";
+      return desc ? `${agentType}: ${desc}` : String(agentType);
     default:
       return "";
   }
@@ -44,8 +48,8 @@ async function main() {
     const data: ToolUseInput = JSON.parse(input);
     const tool = data.tool_name;
 
-    // 過濾掉太頻繁或有專用 hook 的工具
-    const quietTools = ["Read", "Glob", "Grep", "TodoWrite", "Task"];
+    // 過濾掉太頻繁的工具
+    const quietTools = ["Read", "Glob", "Grep", "TodoWrite"];
     if (quietTools.includes(tool)) return;
 
     const detail = getToolDetail(tool, data.tool_input);
