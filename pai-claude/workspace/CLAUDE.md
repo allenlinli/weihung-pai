@@ -75,7 +75,6 @@ All work files are stored in the current directory:
 ```
 ./
 ├── .claude/            # Agent System config (self-maintainable)
-│   ├── agents/         # Subagents
 │   ├── skills/         # Skill modules
 │   ├── commands/       # Slash commands
 │   ├── rules/          # Development conventions
@@ -99,7 +98,6 @@ You can maintain and extend your Agent System (`./.claude/`):
 |-----------|----------|---------|
 | Skills | `skills/*/SKILL.md` | Expertise modules, auto-triggered |
 | Commands | `commands/*.md` | User-invoked via `/command` |
-| Agents | `agents/*.md` | Specialized task subagents |
 | Rules | `rules/*.md` | Shared conventions, auto-injected |
 
 **Guidelines**:

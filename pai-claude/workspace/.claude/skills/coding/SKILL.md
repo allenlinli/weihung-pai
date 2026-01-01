@@ -49,6 +49,33 @@ All code saved in `./workspace/`:
 - **Reliable** - Handle errors
 - **Reusable** - Consider future extension
 
+## TDD Approach
+
+When implementing features:
+
+1. **Understand** - Confirm goals and acceptance criteria
+2. **Test First** - Define expected behavior with tests
+3. **Minimal Implementation** - Only what's needed, no over-engineering
+4. **Refactor** - Clean up after tests pass
+5. **Document** - Necessary comments and README
+
+Principle: Make it work → Make it right → Make it fast
+
+## Testing Strategy
+
+| Category | Focus |
+|----------|-------|
+| Happy Path | Normal use cases |
+| Edge Cases | Boundary values (0, null, max, min) |
+| Error Cases | Invalid input, exceptions |
+| Security | Injection, permissions, data leaks |
+
+Guidelines:
+- If not tested, assume it's broken
+- Edge cases fail most often
+- Tests are documentation
+- Automate when possible
+
 ## Templates
 
 ### Simple Script
