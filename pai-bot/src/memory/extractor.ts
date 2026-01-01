@@ -1,8 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { logger } from "../utils/logger";
 import { memoryManager } from "./manager";
-
-const anthropic = new Anthropic();
+import { generateText } from "./llm";
 
 interface ExtractedFact {
   content: string;
@@ -32,20 +30,7 @@ export async function extractAndSaveMemories(
 ): Promise<number> {
   try {
     const conversation = `用戶: ${userMessage}\n助手: ${assistantMessage}`;
-
-    const response = await anthropic.messages.create({
-      model: "claude-haiku-4-5",
-      max_tokens: 512,
-      messages: [
-        {
-          role: "user",
-          content: EXTRACTION_PROMPT + conversation,
-        },
-      ],
-    });
-
-    const responseText =
-      response.content[0].type === "text" ? response.content[0].text : "";
+    const { text: responseText } = await generateText(EXTRACTION_PROMPT + conversation, 512);
 
     // Parse JSON from response
     const jsonMatch = responseText.match(/\[[\s\S]*\]/);

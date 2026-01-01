@@ -62,18 +62,33 @@ class TestOptionalFeatures:
         """測試功能名稱"""
         names = [f["name"] for f in OPTIONAL_FEATURES]
         assert "vultr" in names
-        assert "anthropic" in names
+        assert "memory" in names
+        assert "fabric" in names
         assert "google" in names
         assert "mutagen" in names
 
-    def test_anthropic_feature_vars(self) -> None:
-        """測試 anthropic 功能變數"""
-        anthropic = next(f for f in OPTIONAL_FEATURES if f["name"] == "anthropic")
-        var_keys = [v["key"] for v in anthropic["vars"]]
+    def test_memory_feature_vars(self) -> None:
+        """測試 memory 功能變數"""
+        memory = next(f for f in OPTIONAL_FEATURES if f["name"] == "memory")
+        var_keys = [v["key"] for v in memory["vars"]]
 
-        assert "vault_anthropic_api_key" in var_keys
         assert "vault_enable_memory" in var_keys
+        assert "vault_memory_provider" in var_keys
+        assert "vault_gemini_api_key" in var_keys
+
+    def test_fabric_feature_vars(self) -> None:
+        """測試 fabric 功能變數"""
+        fabric = next(f for f in OPTIONAL_FEATURES if f["name"] == "fabric")
+        var_keys = [v["key"] for v in fabric["vars"]]
+
         assert "vault_enable_fabric" in var_keys
+        assert "vault_anthropic_api_key" in var_keys
+
+    def test_memory_provider_default(self) -> None:
+        """測試記憶萃取模型預設值"""
+        memory = next(f for f in OPTIONAL_FEATURES if f["name"] == "memory")
+        provider = next(v for v in memory["vars"] if v["key"] == "vault_memory_provider")
+        assert provider["default"] == "gemini"
 
     def test_bool_type_vars(self) -> None:
         """測試 bool 類型變數"""

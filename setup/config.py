@@ -79,28 +79,46 @@ OPTIONAL_FEATURES: list[FeatureDef] = [
         ],
     },
     {
-        "name": "anthropic",
-        "description": "Anthropic API（記憶 + Fabric AI 共用）",
+        "name": "memory",
+        "description": "Bot 長期記憶功能",
         "vars": [
             {
-                "key": "vault_anthropic_api_key",
-                "prompt": "Anthropic API Key",
-                "help": "用於記憶萃取（Haiku）及 Fabric AI",
-                "secret": True,
-            },
-            {
                 "key": "vault_enable_memory",
-                "prompt": "啟用 Bot 長期記憶",
-                "help": "使用 Haiku 萃取對話中的事實並記憶",
+                "prompt": "啟用長期記憶",
+                "help": "萃取對話中的事實並記憶",
                 "type": "bool",
                 "default": True,
             },
+            {
+                "key": "vault_memory_provider",
+                "prompt": "記憶萃取模型",
+                "help": "gemini（推薦，便宜）或 haiku",
+                "default": "gemini",
+            },
+            {
+                "key": "vault_gemini_api_key",
+                "prompt": "Gemini API Key",
+                "help": "從 https://aistudio.google.com/apikey 取得",
+                "secret": True,
+            },
+        ],
+    },
+    {
+        "name": "fabric",
+        "description": "Fabric AI CLI",
+        "vars": [
             {
                 "key": "vault_enable_fabric",
                 "prompt": "啟用 Fabric AI",
                 "help": "在 VPS 上安裝 Fabric AI CLI",
                 "type": "bool",
-                "default": True,
+                "default": False,
+            },
+            {
+                "key": "vault_anthropic_api_key",
+                "prompt": "Anthropic API Key",
+                "help": "用於 Fabric AI",
+                "secret": True,
             },
         ],
     },

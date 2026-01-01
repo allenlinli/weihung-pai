@@ -1,10 +1,8 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { getDb } from "../storage/db";
 import { logger } from "../utils/logger";
 import { getEmbedding } from "./embedding";
 import { Memory } from "./manager";
-
-const anthropic = new Anthropic();
+import { generateText } from "./llm";
 
 const CONSOLIDATION_PROMPT = `你是記憶整合器。將以下相似的記憶合併成一條簡潔的陳述。
 
@@ -109,20 +107,9 @@ export async function consolidateMemories(userId: number): Promise<number> {
         .map((m, i) => `${i + 1}. ${m.content}`)
         .join("\n");
 
-      // Call Haiku to consolidate
-      const response = await anthropic.messages.create({
-        model: "claude-haiku-4-5",
-        max_tokens: 256,
-        messages: [
-          {
-            role: "user",
-            content: CONSOLIDATION_PROMPT + memoryList,
-          },
-        ],
-      });
-
-      const consolidatedContent =
-        response.content[0].type === "text" ? response.content[0].text.trim() : null;
+      // Call LLM to consolidate
+      const { text } = await generateText(CONSOLIDATION_PROMPT + memoryList, 256);
+      const consolidatedContent = text.trim() || null;
 
       if (!consolidatedContent) continue;
 

@@ -10,6 +10,7 @@ export const config = {
   },
   memory: {
     enabled: process.env.ENABLE_MEMORY === "true",
+    provider: (process.env.MEMORY_PROVIDER || "gemini") as "gemini" | "haiku",
   },
   claude: {
     /** Claude 專案目錄（VPS 上是 ~/merlin，本地開發用 ../pai-claude） */

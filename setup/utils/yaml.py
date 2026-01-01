@@ -20,8 +20,12 @@ def build_vault_yaml(variables: dict[str, Any]) -> str:
         ("GitHub", ["github_token", "github_username"]),
         ("Vultr API（可選）", ["vultr_api_key"]),
         (
-            "Anthropic API（可選）",
-            ["vault_anthropic_api_key", "vault_enable_memory", "vault_enable_fabric"],
+            "Bot 長期記憶（可選）",
+            ["vault_enable_memory", "vault_memory_provider", "vault_gemini_api_key"],
+        ),
+        (
+            "Fabric AI（可選）",
+            ["vault_enable_fabric", "vault_anthropic_api_key"],
         ),
         (
             "Google OAuth（可選）",

@@ -44,7 +44,12 @@
         content: |
           {
             "site_domain": "{{ vault_site_domain }}",
-            "site_url": "https://{{ vault_site_domain }}"
+            "site_url": "https://{{ vault_site_domain }}",
+            "features": {
+              "memory": {{ vault_enable_memory | default(false) | lower }},
+              "memory_provider": "{{ vault_memory_provider | default('gemini') }}",
+              "fabric": {{ vault_enable_fabric | default(false) | lower }}
+            }
           }
         mode: "0644"
         owner: "{{ ansible_user }}"
