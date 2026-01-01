@@ -3,7 +3,7 @@ import { logger } from "./utils/logger";
 import { createTelegramBot, setupBotCommands } from "./platforms/telegram/bot";
 import { getDb, closeDb } from "./storage/db";
 import { startApiServer, setTelegramBot } from "./api/server";
-import { startScheduler, stopScheduler, type Schedule } from "./services/scheduler";
+import { startScheduler, stopScheduler, type Schedule, type TaskResult } from "./services/scheduler";
 import { callClaude } from "./claude/client";
 
 async function main() {
@@ -34,26 +34,40 @@ async function main() {
     );
 
     // Task executor for scheduler
-    const executeScheduledTask = async (schedule: Schedule) => {
+    const executeScheduledTask = async (schedule: Schedule): Promise<TaskResult> => {
       const taskData = schedule.task_data;
 
-      if (schedule.task_type === "message") {
-        // 直接發送訊息
-        await bot.api.sendMessage(schedule.user_id, taskData);
-      } else if (schedule.task_type === "prompt") {
-        // 執行 Claude prompt 並發送結果
-        try {
+      try {
+        if (schedule.task_type === "message") {
+          // 直接發送訊息
+          await bot.api.sendMessage(schedule.user_id, taskData);
+          return { success: true, result: "訊息已發送" };
+        } else if (schedule.task_type === "prompt") {
+          // 執行 Claude prompt 並發送結果
           const result = await callClaude(taskData);
           if (result.response) {
             await bot.api.sendMessage(schedule.user_id, result.response);
+            return { success: true, result: result.response.slice(0, 500) };
           }
-        } catch (error) {
-          logger.error({ error, scheduleId: schedule.id }, "Failed to execute Claude prompt");
+          return { success: true, result: "無回應內容" };
+        }
+        return { success: false, error: "未知的任務類型" };
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error({ error, scheduleId: schedule.id }, "Failed to execute scheduled task");
+
+        // 通知用戶執行失敗
+        try {
           await bot.api.sendMessage(
             schedule.user_id,
-            `排程任務「${schedule.name}」執行失敗`
+            `⚠️ 排程任務「${schedule.name}」執行失敗\n錯誤：${errorMessage}`
           );
+        } catch {
+          // 通知失敗也記錄
+          logger.error({ scheduleId: schedule.id }, "Failed to notify user about schedule error");
         }
+
+        return { success: false, error: errorMessage };
       }
     };
 

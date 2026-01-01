@@ -52,3 +52,16 @@ CREATE TABLE IF NOT EXISTS schedules (
 );
 
 CREATE INDEX IF NOT EXISTS idx_schedules_next ON schedules(enabled, next_run);
+
+-- Schedule execution logs
+CREATE TABLE IF NOT EXISTS schedule_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  schedule_id INTEGER NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('success', 'error')),
+  result TEXT,
+  error_message TEXT,
+  executed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (schedule_id) REFERENCES schedules(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_schedule_logs_schedule ON schedule_logs(schedule_id, executed_at DESC);

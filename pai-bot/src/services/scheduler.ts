@@ -31,7 +31,32 @@ export interface CreateScheduleInput {
   userId: number;
 }
 
-type TaskExecutor = (schedule: Schedule) => Promise<void>;
+export interface UpdateScheduleInput {
+  id: number;
+  name?: string;
+  cronExpression?: string | null;
+  runAt?: string | null;
+  taskType?: "message" | "prompt";
+  taskData?: string;
+  enabled?: boolean;
+}
+
+export interface ScheduleLog {
+  id: number;
+  schedule_id: number;
+  status: "success" | "error";
+  result: string | null;
+  error_message: string | null;
+  executed_at: string;
+}
+
+export interface TaskResult {
+  success: boolean;
+  result?: string;
+  error?: string;
+}
+
+type TaskExecutor = (schedule: Schedule) => Promise<TaskResult>;
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
 let taskExecutor: TaskExecutor | null = null;
@@ -110,6 +135,98 @@ export function deleteSchedule(id: number): boolean {
   return result.changes > 0;
 }
 
+// 更新排程
+export function updateSchedule(input: UpdateScheduleInput): Schedule | null {
+  const db = getDb();
+  const existing = getScheduleById(input.id);
+  if (!existing) return null;
+
+  const updates: string[] = [];
+  const values: (string | number | null)[] = [];
+
+  if (input.name !== undefined) {
+    updates.push("name = ?");
+    values.push(input.name);
+  }
+
+  if (input.taskType !== undefined) {
+    updates.push("task_type = ?");
+    values.push(input.taskType);
+  }
+
+  if (input.taskData !== undefined) {
+    updates.push("task_data = ?");
+    values.push(input.taskData);
+  }
+
+  if (input.enabled !== undefined) {
+    updates.push("enabled = ?");
+    values.push(input.enabled ? 1 : 0);
+  }
+
+  // 處理排程時間變更
+  if (input.cronExpression !== undefined || input.runAt !== undefined) {
+    const newCron = input.cronExpression ?? null;
+    const newRunAt = input.runAt ?? null;
+
+    updates.push("cron_expression = ?");
+    values.push(newCron);
+
+    updates.push("run_at = ?");
+    values.push(newRunAt);
+
+    // 計算新的 next_run
+    let nextRun: string | null = null;
+    if (newCron) {
+      const next = calculateNextRun(newCron);
+      if (!next) return null; // cron 表達式無效
+      nextRun = next.toISOString();
+    } else if (newRunAt) {
+      nextRun = new Date(newRunAt).toISOString();
+    }
+
+    updates.push("next_run = ?");
+    values.push(nextRun);
+  }
+
+  if (updates.length === 0) {
+    return existing;
+  }
+
+  values.push(input.id);
+  const stmt = db.prepare(`UPDATE schedules SET ${updates.join(", ")} WHERE id = ?`);
+  stmt.run(...values);
+
+  return getScheduleById(input.id);
+}
+
+// 記錄執行結果
+export function logScheduleExecution(
+  scheduleId: number,
+  status: "success" | "error",
+  result?: string,
+  errorMessage?: string
+): void {
+  const db = getDb();
+  const stmt = db.prepare(`
+    INSERT INTO schedule_logs (schedule_id, status, result, error_message)
+    VALUES (?, ?, ?, ?)
+  `);
+  stmt.run(scheduleId, status, result || null, errorMessage || null);
+}
+
+// 取得排程執行記錄
+export function getScheduleLogs(scheduleId: number, limit = 10): ScheduleLog[] {
+  const db = getDb();
+  const stmt = db.prepare(`
+    SELECT * FROM schedule_logs
+    WHERE schedule_id = ?
+    ORDER BY executed_at DESC
+    LIMIT ?
+  `);
+  return stmt.all(scheduleId, limit) as ScheduleLog[];
+}
+
 // 更新排程啟用狀態
 export function setScheduleEnabled(id: number, enabled: boolean): boolean {
   const db = getDb();
@@ -166,11 +283,22 @@ async function checkAndRunSchedules(): Promise<void> {
   for (const schedule of dueSchedules) {
     try {
       logger.info({ scheduleId: schedule.id, name: schedule.name }, "Executing schedule");
-      await taskExecutor(schedule);
+      const result = await taskExecutor(schedule);
+
+      // 記錄執行結果
+      if (result.success) {
+        logScheduleExecution(schedule.id, "success", result.result);
+        logger.info({ scheduleId: schedule.id }, "Schedule executed successfully");
+      } else {
+        logScheduleExecution(schedule.id, "error", undefined, result.error);
+        logger.error({ scheduleId: schedule.id, error: result.error }, "Schedule execution failed");
+      }
+
       updateScheduleAfterRun(schedule);
-      logger.info({ scheduleId: schedule.id }, "Schedule executed successfully");
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error({ error, scheduleId: schedule.id }, "Failed to execute schedule");
+      logScheduleExecution(schedule.id, "error", undefined, errorMessage);
       // 仍然更新執行時間，避免無限重試
       updateScheduleAfterRun(schedule);
     }
