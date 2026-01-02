@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v1.9.4 (2026-01-02)
+
+### Bug Fixes
+
+- **db**: Add migration support for schema changes
+  ([`0ba1cc0`](https://github.com/wayne930242/weihung-pai/commit/0ba1cc0391f5a6494462ef325678b96d400bb0e0))
+
+- **discord**: Use displayName for channel context author
+  ([`3a57fc0`](https://github.com/wayne930242/weihung-pai/commit/3a57fc0fce93a28a506bd1eca4cdbc4995d6e832))
+
+
 ## v1.9.3 (2026-01-02)
 
 ### Bug Fixes
