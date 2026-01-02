@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v1.9.2 (2026-01-02)
+
+### Bug Fixes
+
+- Trigger release workflow for v1.9.1
+  ([`0f247a6`](https://github.com/wayne930242/weihung-pai/commit/0f247a64fa6edc0d9666132e1ee023062d48cfd3))
+
+
+## v1.9.1 (2026-01-02)
+
+### Refactoring
+
+- Fetch channel context from Discord API directly
+  ([`71a6f42`](https://github.com/wayne930242/weihung-pai/commit/71a6f420339ee0e51ab085ade5a37170845ee80c))
+
+
 ## v1.9.0 (2026-01-02)
 
 ### Features
