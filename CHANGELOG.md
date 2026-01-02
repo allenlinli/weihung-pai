@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.8.2 (2026-01-02)
+
+### Bug Fixes
+
+- Improve error logging and handling
+  ([`db72ce6`](https://github.com/wayne930242/weihung-pai/commit/db72ce6d39c5b6d617853df82620c819473ac4b0))
+
+
 ## v1.8.1 (2026-01-02)
 
 ### Bug Fixes
