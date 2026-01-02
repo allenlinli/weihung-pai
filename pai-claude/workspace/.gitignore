@@ -1,22 +1,55 @@
-# ===== AI Generated Content =====
+# Ignore everything by default
+*
 
-# Sites (保留核心檔案)
-site/*
+# ===== Core Config =====
+!.gitignore
+!CLAUDE.md
+!README.md
+
+# ===== Agent System =====
+!.claude/
+!.claude/settings.json
+
+# Commands
+!.claude/commands/
+!.claude/commands/daily.md
+!.claude/commands/research.md
+!.claude/commands/weekly.md
+!.claude/commands/summarize.md
+
+# Rules
+!.claude/rules/
+!.claude/rules/bun.md
+!.claude/rules/code-style.md
+
+# Skills
+!.claude/skills/
+!.claude/skills/coding/
+!.claude/skills/coding/**
+!.claude/skills/daily/
+!.claude/skills/daily/**
+!.claude/skills/fabric/
+!.claude/skills/fabric/**
+!.claude/skills/google/
+!.claude/skills/google/**
+!.claude/skills/learning/
+!.claude/skills/learning/**
+!.claude/skills/notify/
+!.claude/skills/notify/**
+!.claude/skills/research/
+!.claude/skills/research/**
+!.claude/skills/web-deploy/
+!.claude/skills/web-deploy/**
+
+# ===== Hook Scripts =====
+!scripts/
+!scripts/*.ts
+# Ignore build artifacts
+scripts/lib/
+scripts/node_modules/
+
+# ===== Site (core pages only) =====
+!site/
 !site/index.html
 !site/privacy-policy.md
 !site/terms-of-service.md
-
-# Skills (保留核心 skills)
-.claude/skills/*
-!.claude/skills/coding/
-!.claude/skills/daily/
-!.claude/skills/fabric/
-!.claude/skills/google/
-!.claude/skills/learning/
-!.claude/skills/research/
-!.claude/skills/notify/
-!.claude/skills/web-deploy/
-
-# Scripts
-scripts/node_modules/
-scripts/lib/*.js
