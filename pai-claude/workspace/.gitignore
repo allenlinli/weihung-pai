@@ -40,6 +40,8 @@
 !.claude/skills/research/**
 !.claude/skills/web-deploy/
 !.claude/skills/web-deploy/**
+!.claude/skills/scheduling/
+!.claude/skills/scheduling/**
 
 # ===== Hook Scripts =====
 !scripts/
