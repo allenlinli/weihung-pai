@@ -68,6 +68,19 @@ export async function* streamClaude(
     stderr: "pipe",
   });
 
+  // 並行捕獲 stderr，避免時序競爭導致 stderr 丟失
+  let stderrBuffer = "";
+  const stderrPromise = (async () => {
+    try {
+      const stderrDecoder = new TextDecoder();
+      for await (const chunk of proc.stderr) {
+        stderrBuffer += stderrDecoder.decode(chunk, { stream: true });
+      }
+    } catch (error) {
+      logger.warn({ error }, "Error reading stderr stream");
+    }
+  })();
+
   // Create abort controller for this process
   const abortController = new AbortController();
 
@@ -127,21 +140,40 @@ export async function* streamClaude(
           } else if (event.type === "result") {
             yield { type: "done", content: event.result || "" };
           }
-        } catch {
-          // Ignore JSON parse errors for incomplete lines
+        } catch (parseError) {
+          // 記錄 JSON 解析錯誤（可能是重要的診斷信息）
+          logger.debug(
+            {
+              line: line.substring(0, 100),
+              error: parseError instanceof Error ? parseError.message : String(parseError)
+            },
+            "Failed to parse JSON line"
+          );
         }
       }
     }
 
     const exitCode = await proc.exited;
+
+    // 確保 stderr 捕獲完成
+    await stderrPromise;
+
     if (exitCode !== 0 && !abortController.signal.aborted) {
-      const stderr = await new Response(proc.stderr).text();
-      throw new Error(`Claude exited with code ${exitCode}: ${stderr}`);
+      logger.error(
+        { exitCode, stderr: stderrBuffer.trim(), lastStdout: buffer.trim() },
+        "Claude process failed"
+      );
+      throw new Error(
+        `Claude 執行失敗 (exit ${exitCode}):\n${stderrBuffer || "(無錯誤訊息)"}`
+      );
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
-    logger.error({ error: errorMessage, stack: errorStack }, "Stream error");
+    logger.error(
+      { error: errorMessage, stack: errorStack, stderr: stderrBuffer, exitCode: proc.exitCode },
+      "Stream error"
+    );
     yield { type: "error", content: errorMessage };
   } finally {
     // Unregister process when done
