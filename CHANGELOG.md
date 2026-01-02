@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.7.0 (2026-01-02)
+
+### Features
+
+- Add voice transcription using Gemini
+  ([`cb8fe11`](https://github.com/wayne930242/weihung-pai/commit/cb8fe113c30a9ccc51eac745073c330dc924ddff))
+
+
 ## v1.6.2 (2026-01-01)
 
 ### Bug Fixes
