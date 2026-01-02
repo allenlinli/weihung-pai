@@ -86,6 +86,51 @@ export function registerGoogleTools(server: McpServer): void {
     }
   );
 
+  server.registerTool(
+    "google_calendar_update_event",
+    {
+      title: "Update Calendar Event",
+      description: "更新日曆行程",
+      inputSchema: {
+        eventId: z.string().describe("行程 ID"),
+        summary: z.string().optional().describe("行程標題"),
+        description: z.string().optional().describe("行程描述"),
+        startDateTime: z
+          .string()
+          .optional()
+          .describe("開始時間 (ISO 8601，如 2024-01-15T10:00:00+08:00)"),
+        endDateTime: z.string().optional().describe("結束時間 (ISO 8601)"),
+        location: z.string().optional().describe("地點"),
+        calendarId: z.string().optional().describe("日曆 ID，預設 primary"),
+      },
+    },
+    async ({
+      eventId,
+      summary,
+      description,
+      startDateTime,
+      endDateTime,
+      location,
+      calendarId,
+    }) => {
+      const updateData: any = {};
+      if (summary) updateData.summary = summary;
+      if (description) updateData.description = description;
+      if (startDateTime) updateData.start = { dateTime: startDateTime };
+      if (endDateTime) updateData.end = { dateTime: endDateTime };
+      if (location) updateData.location = location;
+
+      const event = await google.calendar.updateEvent(
+        eventId,
+        updateData,
+        calendarId || "primary"
+      );
+      return {
+        content: [{ type: "text", text: JSON.stringify(event, null, 2) }],
+      };
+    }
+  );
+
   // === Drive Tools ===
 
   server.registerTool(
