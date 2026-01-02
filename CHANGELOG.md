@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.7.1 (2026-01-02)
+
+### Bug Fixes
+
+- Capture stderr in parallel to prevent data loss
+  ([`08d527e`](https://github.com/wayne930242/weihung-pai/commit/08d527e620bdbeea2eb7383e06377ec4a63f0a0b))
+
+
 ## v1.7.0 (2026-01-02)
 
 ### Features
