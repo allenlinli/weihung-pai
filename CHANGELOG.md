@@ -1,6 +1,22 @@
 # CHANGELOG
 
 
+## v1.10.0 (2026-01-02)
+
+### Features
+
+- **merlin**: Add proactive agent capabilities
+  ([`2e3c7e6`](https://github.com/wayne930242/weihung-pai/commit/2e3c7e64e431faea060f7abc1092521b330f5e72))
+
+### Refactoring
+
+- **pai-claude**: Simplify config structure
+  ([`7125daf`](https://github.com/wayne930242/weihung-pai/commit/7125dafecdb039f7fe81faa26e1315ea219913b0))
+
+- **workspace**: Use whitelist pattern for gitignore
+  ([`f3222ac`](https://github.com/wayne930242/weihung-pai/commit/f3222ac93b34ae9a190f9c6f922017d3f0d725fa))
+
+
 ## v1.9.4 (2026-01-02)
 
 ### Bug Fixes
