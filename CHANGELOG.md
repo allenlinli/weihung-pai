@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.9.3 (2026-01-02)
+
+### Bug Fixes
+
+- **discord**: Improve channel context handling and prevent duplicate messages
+  ([`c7e5217`](https://github.com/wayne930242/weihung-pai/commit/c7e5217c6e3ad71c25b18a4dff5c27a37ae8eed6))
+
+
 ## v1.9.2 (2026-01-02)
 
 ### Bug Fixes
