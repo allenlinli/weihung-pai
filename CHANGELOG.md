@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.18.0 (2026-01-03)
+
+### Features
+
+- **discord**: Add sound effects for soundboard panel
+  ([`af4d7d5`](https://github.com/wayne930242/weihung-pai/commit/af4d7d5e5d73cbced455b0003a3d1c606b4e99c9))
+
+
 ## v1.17.1 (2026-01-03)
 
 ### Bug Fixes
