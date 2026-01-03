@@ -2,10 +2,11 @@
  * Dice Panel Interactions
  */
 
-import type { ButtonInteraction, ModalSubmitInteraction, TextBasedChannel } from "discord.js";
+import type { ButtonInteraction, ModalSubmitInteraction, StringSelectMenuInteraction, TextBasedChannel } from "discord.js";
 import { isSendableChannel } from "../utils";
 import {
   buildCustomDiceModal,
+  buildDiceComponents,
   addDie,
   undoLastDie,
   clearDiceState,
@@ -13,7 +14,9 @@ import {
   formatAccumulatedDice,
   parseAndRoll,
   getDicePanel,
+  setGameSystem,
   type DiceType,
+  type GameSystem,
 } from "../panels";
 
 /**
@@ -202,4 +205,24 @@ export async function handleDiceModalSubmit(
   }
 
   await interaction.reply(`<@${discordUserId}> ${result.text}`);
+}
+
+/**
+ * Handle dice select menu (game system selection)
+ */
+export async function handleDiceSelectMenu(
+  interaction: StringSelectMenuInteraction,
+  discordUserId: string,
+  parts: string[]
+): Promise<void> {
+  const guildId = parts[2];
+  const selectedSystem = interaction.values[0] as GameSystem;
+  const channelId = interaction.channelId;
+
+  // Update the game system
+  setGameSystem(channelId, selectedSystem);
+
+  // Update the panel with new components
+  const components = buildDiceComponents(guildId, channelId);
+  await interaction.update({ components });
 }

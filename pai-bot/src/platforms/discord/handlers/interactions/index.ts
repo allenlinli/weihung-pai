@@ -5,9 +5,10 @@
 import type {
   ButtonInteraction,
   ModalSubmitInteraction,
+  StringSelectMenuInteraction,
 } from "discord.js";
 
-import { handleDiceButton, handleDiceModalSubmit } from "./dice";
+import { handleDiceButton, handleDiceModalSubmit, handleDiceSelectMenu } from "./dice";
 import { handleQueueButton } from "./queue";
 
 /**
@@ -51,5 +52,21 @@ export async function handleModalSubmit(
   // Handle dice modal: dice:modal:guildId
   if (parts[0] === "dice" && parts[1] === "modal") {
     await handleDiceModalSubmit(interaction, discordUserId);
+  }
+}
+
+/**
+ * Handle select menu interactions
+ */
+export async function handleSelectMenuInteraction(
+  interaction: StringSelectMenuInteraction
+): Promise<void> {
+  const customId = interaction.customId;
+  const parts = customId.split(":");
+  const discordUserId = interaction.user.id;
+
+  // Handle dice select menu: dice:system:channelId
+  if (parts[0] === "dice" && parts[1] === "system") {
+    await handleDiceSelectMenu(interaction, discordUserId, parts);
   }
 }
