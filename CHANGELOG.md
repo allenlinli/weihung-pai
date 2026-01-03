@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.21.0 (2026-01-03)
+
+### Features
+
+- **discord**: Dice panel with history message
+  ([`f53151f`](https://github.com/wayne930242/weihung-pai/commit/f53151f321757870cce9ba94c992adb84e1c944a))
+
+
 ## v1.20.0 (2026-01-03)
 
 ### Features
