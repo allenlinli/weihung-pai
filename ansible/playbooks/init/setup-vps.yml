@@ -58,26 +58,7 @@
           - python3
           - python3-venv
           - ffmpeg
-          # noVNC for YouTube cookie refresh
-          - xvfb
-          - x11vnc
-          - novnc
-          - websockify
-          - firefox
         state: present
-
-    # yt-dlp - YouTube downloader for music playback
-    - name: Check if yt-dlp is installed
-      ansible.builtin.stat:
-        path: /usr/local/bin/yt-dlp
-      register: ytdlp_installed
-
-    - name: Install yt-dlp
-      ansible.builtin.get_url:
-        url: https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp
-        dest: /usr/local/bin/yt-dlp
-        mode: "0755"
-      when: not ytdlp_installed.stat.exists
 
     # edge-tts - Text-to-Speech using Microsoft Edge
     - name: Install pipx
@@ -98,29 +79,6 @@
         creates: "{{ home_dir }}/.local/bin/edge-tts"
       become: true
       become_user: "{{ app_user }}"
-
-    - name: Schedule weekly yt-dlp update
-      ansible.builtin.cron:
-        name: "Update yt-dlp"
-        minute: "0"
-        hour: "4"
-        weekday: "0"
-        job: "/usr/local/bin/yt-dlp -U > /dev/null 2>&1"
-
-    # Deno - JavaScript runtime for yt-dlp challenge solving
-    - name: Check if Deno is installed
-      ansible.builtin.stat:
-        path: /usr/local/bin/deno
-      register: deno_installed
-
-    - name: Install Deno
-      ansible.builtin.shell:
-        cmd: |
-          set -o pipefail
-          curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh
-        executable: /bin/bash
-      when: not deno_installed.stat.exists
-      changed_when: true
 
     # Python uv - Fast Python package manager
     - name: Check if uv is installed
