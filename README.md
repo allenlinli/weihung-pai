@@ -69,6 +69,9 @@ bun run dev
 # 初始化（僅首次）
 uv run pai ansible ansible-playbook ansible/playbooks/init/init-user.yml
 uv run pai ansible ansible-playbook ansible/playbooks/init/setup-vps.yml
+uv run pai ansible ansible-playbook ansible/playbooks/init/setup-caddy.yml
+# 初始化 Librespot（可選）
+uv run pai ansible ansible-playbook ansible/playbooks/init/setup-librespot.yml
 
 # 日常部署
 uv run pai ansible ansible-playbook ansible/playbooks/deploy-bot.yml
@@ -103,6 +106,7 @@ uv run pai google auth              # Google OAuth
 | `init/init-user.yml` | 初始化部署用戶 |
 | `init/setup-vps.yml` | VPS 環境設定 |
 | `init/setup-caddy.yml` | Caddy 靜態網站 |
+| `init/setup-librespot.yml` | Librespot 音樂播放 |
 
 ## 技術棧
 

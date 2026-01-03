@@ -59,14 +59,6 @@ Discord Bot 管理。
 uv run pai discord invite       # 生成邀請連結
 ```
 
-### youtube
-
-YouTube 相關工具。
-
-```bash
-uv run pai youtube upload-cookies  # 上傳 cookies 到 VPS
-```
-
 ### spotify
 
 Spotify 認證（Librespot）。

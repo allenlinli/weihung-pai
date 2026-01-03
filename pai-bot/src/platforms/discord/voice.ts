@@ -18,8 +18,9 @@ import {
 import type { VoiceBasedChannel } from "discord.js";
 import { logger } from "../../utils/logger";
 
-const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || "";
-const YOUTUBE_COOKIES_PATH = "/home/pai/youtube-cookies.txt";
+// Spotify Connect 設定
+const LIBRESPOT_PATH = "/home/pai/.cargo/bin/librespot";
+const SPOTIFY_DEVICE_NAME = "Merlin DJ";
 
 // TTS 設定
 const TTS_VOICE = "zh-TW-HsiaoChenNeural"; // 台灣女聲（曉臻）
@@ -38,6 +39,8 @@ interface GuildQueue {
   playing: boolean;
   channelId: string;
   currentItem: QueueItem | null;
+  librespotProc: ReturnType<typeof Bun.spawn> | null;
+  spotifyConnected: boolean;
 }
 
 // Per-guild voice state
@@ -168,6 +171,8 @@ export async function joinChannel(
       playing: false,
       channelId: channel.id,
       currentItem: null,
+      librespotProc: null,
+      spotifyConnected: false,
     });
 
     logger.info({ channel: channel.name, guild: channel.guild.name }, "Joined voice channel");
@@ -202,263 +207,118 @@ export function leaveChannel(guildId: string): boolean {
 }
 
 /**
- * 使用 YouTube Data API 搜尋影片
+ * 啟動 Spotify Connect (librespot)
  */
-async function searchYouTube(query: string): Promise<{ ok: true; url: string; title: string } | { ok: false; error: string }> {
-  if (!YOUTUBE_API_KEY) {
-    return { ok: false, error: "YouTube API key 未設定" };
-  }
-
-  try {
-    const params = new URLSearchParams({
-      part: "snippet",
-      q: query,
-      type: "video",
-      maxResults: "1",
-      key: YOUTUBE_API_KEY,
-    });
-
-    const response = await fetch(
-      `https://www.googleapis.com/youtube/v3/search?${params}`
-    );
-
-    if (!response.ok) {
-      const error = await response.text();
-      logger.error({ status: response.status, error }, "YouTube API error");
-      return { ok: false, error: `YouTube API 錯誤: ${response.status}` };
-    }
-
-    const data = await response.json();
-    const items = data.items;
-
-    if (!items || items.length === 0) {
-      return { ok: false, error: `找不到「${query}」` };
-    }
-
-    const video = items[0];
-    return {
-      ok: true,
-      url: `https://www.youtube.com/watch?v=${video.id.videoId}`,
-      title: video.snippet.title,
-    };
-  } catch (error) {
-    logger.error({ error }, "YouTube search error");
-    return { ok: false, error: String(error) };
-  }
-}
-
-/**
- * 取得影片資訊（YouTube API 搜尋 + 直接 URL）
- * 不再使用 yt-dlp 取得 metadata（會被 YouTube 封鎖）
- */
-async function getVideoInfo(query: string): Promise<{ ok: true; url: string; title: string; duration: string } | { ok: false; error: string }> {
-  try {
-    // 如果是 URL 直接使用
-    if (query.startsWith("http")) {
-      // 從 URL 中提取 video ID 作為標題（簡化處理）
-      const videoId = query.match(/(?:v=|youtu\.be\/)([^&?]+)/)?.[1] || "Video";
-      return {
-        ok: true,
-        url: query,
-        title: `YouTube Video (${videoId})`,
-        duration: "?:??",
-      };
-    }
-
-    // 使用 YouTube API 搜尋
-    const searchResult = await searchYouTube(query);
-    if (!searchResult.ok) {
-      return searchResult;
-    }
-
-    return {
-      ok: true,
-      url: searchResult.url,
-      title: searchResult.title,
-      duration: "?:??", // YouTube API search doesn't return duration
-    };
-  } catch (error) {
-    logger.error({ error }, "getVideoInfo error");
-    return { ok: false, error: String(error) };
-  }
-}
-
-/**
- * 使用 yt-dlp 獲取音訊串流
- */
-function createYtdlpStream(url: string): ReturnType<typeof Bun.spawn> {
-  return Bun.spawn([
-    "yt-dlp",
-    "--cookies", YOUTUBE_COOKIES_PATH,
-    "--remote-components", "ejs:github",
-    "-f", "bestaudio",
-    "-o", "-",
-    "--quiet",
-    url,
-  ], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-}
-
-/**
- * 播放 YouTube 音樂
- */
-export async function playMusic(
-  guildId: string,
-  query: string
-): Promise<{ ok: true; item: QueueItem } | { ok: false; error: string }> {
+export async function startSpotifyConnect(
+  guildId: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
   const guildQueue = guildQueues.get(guildId);
   if (!guildQueue) {
     return { ok: false, error: "Bot 不在語音頻道中，請先使用 /join" };
   }
 
-  try {
-    // 使用 yt-dlp 獲取影片資訊（支援搜尋和 URL）
-    const result = await getVideoInfo(query);
-    if (!result.ok) {
-      return { ok: false, error: result.error };
-    }
-
-    const item: QueueItem = {
-      url: result.url,
-      title: result.title,
-      duration: result.duration,
-    };
-
-    guildQueue.queue.push(item);
-
-    // Start playing if not already
-    if (!guildQueue.playing) {
-      await playNext(guildId);
-    }
-
-    return { ok: true, item };
-  } catch (error) {
-    logger.error({ error, query }, "Failed to play music");
-    return { ok: false, error: `播放失敗: ${String(error)}` };
-  }
-}
-
-/**
- * 播放下一首
- */
-async function playNext(guildId: string): Promise<void> {
-  const guildQueue = guildQueues.get(guildId);
-  if (!guildQueue || guildQueue.queue.length === 0) {
-    return;
+  // 如果已經在運行，先停止
+  if (guildQueue.librespotProc) {
+    guildQueue.librespotProc.kill();
+    guildQueue.librespotProc = null;
   }
 
-  const item = guildQueue.queue.shift()!;
-  guildQueue.currentItem = item;
-
   try {
-    // 使用 yt-dlp 串流音訊
-    const proc = createYtdlpStream(item.url);
+    // 啟動 librespot，輸出到 stdout (pipe backend)
+    const proc = Bun.spawn([
+      LIBRESPOT_PATH,
+      "--name", SPOTIFY_DEVICE_NAME,
+      "--backend", "pipe",
+      "--initial-volume", "100",
+      "--enable-volume-normalisation",
+      "--format", "S16",
+      "--bitrate", "320",
+    ], {
+      stdout: "pipe",
+      stderr: "pipe",
+    });
 
-    // 將 Bun 的 ReadableStream 轉換為 Node.js Readable
+    guildQueue.librespotProc = proc;
+    guildQueue.spotifyConnected = true;
+
+    // 將 librespot 輸出串流到 Discord
     const nodeStream = await import("node:stream");
     const readable = nodeStream.Readable.fromWeb(proc.stdout as any);
 
     const resource = createAudioResource(readable, {
-      inputType: StreamType.Arbitrary,
+      inputType: StreamType.Raw,
+      inlineVolume: true,
     });
 
     guildQueue.player.play(resource);
     guildQueue.playing = true;
 
-    logger.info({ title: item.title }, "Now playing");
+    logger.info({ deviceName: SPOTIFY_DEVICE_NAME }, "Spotify Connect started");
 
-    // 通知控制面板：新歌曲開始
-    if (onTrackChangeCallback) {
-      onTrackChangeCallback(guildId, item);
-    }
+    // 監聽 librespot stderr（狀態訊息）
+    (async () => {
+      if (!proc.stderr) return;
+      const reader = proc.stderr.getReader();
+      const decoder = new TextDecoder();
 
-    // 監聯 yt-dlp 錯誤
-    proc.exited.then(async (code) => {
-      if (code !== 0 && proc.stderr) {
-        const stderr = await new Response(proc.stderr as ReadableStream).text();
-        logger.error({ stderr, code, url: item.url }, "yt-dlp stream error");
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const line = decoder.decode(value);
+        // 解析 librespot 日誌
+        if (line.includes("now playing")) {
+          logger.info({ line: line.trim() }, "Spotify now playing");
+        } else if (line.includes("ERROR") || line.includes("error")) {
+          logger.warn({ line: line.trim() }, "Librespot warning");
+        }
+      }
+    })();
+
+    // 監聽進程結束
+    proc.exited.then((code) => {
+      logger.info({ code }, "Librespot process ended");
+      if (guildQueue.librespotProc === proc) {
+        guildQueue.librespotProc = null;
+        guildQueue.spotifyConnected = false;
+        guildQueue.playing = false;
       }
     });
+
+    return { ok: true };
   } catch (error) {
-    logger.error({ error, item }, "Failed to play next track");
-    // Try next song
-    if (guildQueue.queue.length > 0) {
-      await playNext(guildId);
-    } else {
-      guildQueue.playing = false;
-    }
+    logger.error({ error }, "Failed to start Spotify Connect");
+    return { ok: false, error: String(error) };
   }
 }
 
 /**
- * 跳過目前歌曲
+ * 停止 Spotify Connect
  */
-export function skip(guildId: string): boolean {
+export function stopSpotifyConnect(guildId: string): boolean {
   const guildQueue = guildQueues.get(guildId);
-  if (!guildQueue) {
+  if (!guildQueue || !guildQueue.librespotProc) {
     return false;
   }
 
-  guildQueue.player.stop();
-  return true;
-}
-
-/**
- * 播放上一首（將目前歌曲放回 queue 開頭）
- */
-export function previous(guildId: string): boolean {
-  const guildQueue = guildQueues.get(guildId);
-  if (!guildQueue || !guildQueue.currentItem) {
-    return false;
-  }
-
-  // 沒有實作歷史記錄，只能重播目前歌曲
-  const current = guildQueue.currentItem;
-  guildQueue.queue.unshift(current);
-  guildQueue.player.stop();
-  return true;
-}
-
-/**
- * 跳到指定位置播放
- */
-export function playAt(guildId: string, index: number): boolean {
-  const guildQueue = guildQueues.get(guildId);
-  if (!guildQueue || index < 0 || index >= guildQueue.queue.length) {
-    return false;
-  }
-
-  // 移除 0 到 index 的歌曲（不包含 index）
-  guildQueue.queue.splice(0, index);
-  guildQueue.player.stop();
-  return true;
-}
-
-/**
- * 停止播放並清空佇列
- */
-export function stop(guildId: string): boolean {
-  const guildQueue = guildQueues.get(guildId);
-  if (!guildQueue) {
-    return false;
-  }
-
-  guildQueue.queue = [];
+  guildQueue.librespotProc.kill();
+  guildQueue.librespotProc = null;
+  guildQueue.spotifyConnected = false;
   guildQueue.player.stop();
   guildQueue.playing = false;
-  guildQueue.currentItem = null;
+
+  logger.info({ guildId }, "Spotify Connect stopped");
   return true;
 }
 
 /**
- * 取得目前佇列
+ * 檢查 Spotify Connect 狀態
  */
-export function getQueue(guildId: string): QueueItem[] {
+export function isSpotifyConnected(guildId: string): boolean {
   const guildQueue = guildQueues.get(guildId);
-  return guildQueue?.queue || [];
+  return guildQueue?.spotifyConnected ?? false;
 }
+
 
 /**
  * 檢查 bot 是否在語音頻道中（驗證連接狀態）
@@ -495,17 +355,6 @@ export function getVoiceChannelInfo(guildId: string): { inVoice: boolean; channe
     return { inVoice: true, channelId: guildQueue.channelId };
   }
   return { inVoice: false, channelId: null };
-}
-
-/**
- * 取得目前正在播放的項目
- */
-export function getNowPlaying(guildId: string): QueueItem | null {
-  const guildQueue = guildQueues.get(guildId);
-  if (!guildQueue || !guildQueue.playing) {
-    return null;
-  }
-  return guildQueue.currentItem;
 }
 
 /**

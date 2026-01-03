@@ -35,8 +35,6 @@ def main() -> None:
         run_discord_command(args)
     elif command == "spotify":
         run_spotify_command(args)
-    elif command == "youtube":
-        run_youtube_command(args)
     else:
         print(f"未知命令: {command}")
         print()
@@ -154,35 +152,6 @@ def run_spotify_command(args: list[str]) -> None:
         sys.exit(1)
 
 
-def run_youtube_command(args: list[str]) -> None:
-    from .upload_cookies import main as upload_cookies
-    from .youtube import vnc_start, vnc_stop, vnc_export, vnc_status
-
-    if not args:
-        print("用法: uv run pai youtube <subcommand>")
-        print("  upload-cookies   上傳 YouTube cookies 到 VPS")
-        print("  vnc-start        啟動 VNC 登入 YouTube")
-        print("  vnc-stop         停止 VNC")
-        print("  vnc-export       導出 cookies")
-        print("  vnc-status       查看 VNC 狀態")
-        sys.exit(1)
-
-    subcommand = args[0]
-    if subcommand == "upload-cookies":
-        upload_cookies()
-    elif subcommand == "vnc-start":
-        sys.exit(vnc_start())
-    elif subcommand == "vnc-stop":
-        sys.exit(vnc_stop())
-    elif subcommand == "vnc-export":
-        sys.exit(vnc_export())
-    elif subcommand == "vnc-status":
-        sys.exit(vnc_status())
-    else:
-        print(f"未知子命令: {subcommand}")
-        sys.exit(1)
-
-
 def print_help() -> None:
     print("PAI Infrastructure Scripts")
     print()
@@ -198,11 +167,7 @@ def print_help() -> None:
     print("  google auth           執行 Google OAuth2 授權")
     print("  google token          取得 Google access token")
     print("  discord invite        生成 Discord Bot 邀請連結")
-    print("  youtube upload-cookies 上傳 YouTube cookies 到 VPS")
-    print("  youtube vnc-start     啟動 VNC 登入 YouTube")
-    print("  youtube vnc-stop      停止 VNC")
-    print("  youtube vnc-export    導出 cookies")
-    print("  spotify auth          執行 Librespot OAuth 認證")
+    print("  spotify auth          執行 Spotify 認證")
     print("  spotify test          測試 Spotify 認證狀態")
     print()
     print("範例:")

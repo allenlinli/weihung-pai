@@ -6,7 +6,9 @@ import type { ChatInputCommandInteraction, Client } from "discord.js";
 import {
   joinChannel,
   leaveChannel,
-  playMusic,
+  startSpotifyConnect,
+  stopSpotifyConnect,
+  isSpotifyConnected,
   skip,
   stop as stopVoice,
   getQueue,
@@ -86,7 +88,7 @@ export async function handleLeave(interaction: ChatInputCommandInteraction): Pro
   await interaction.reply("Left voice channel");
 }
 
-export async function handlePlay(
+export async function handleSpotify(
   interaction: ChatInputCommandInteraction,
   discordUserId: string
 ): Promise<void> {
@@ -95,8 +97,13 @@ export async function handlePlay(
     return;
   }
 
-  const query = interaction.options.getString("query", true);
-  let needControlPanel = false;
+  // Check if already connected
+  if (isSpotifyConnected(interaction.guildId)) {
+    // Stop Spotify Connect
+    stopSpotifyConnect(interaction.guildId);
+    await interaction.reply("🎵 Spotify Connect 已停止");
+    return;
+  }
 
   // Auto-join if not in voice channel
   if (!isInVoiceChannel(interaction.guildId)) {
@@ -112,39 +119,23 @@ export async function handlePlay(
 
     const joinResult = await joinChannel(voiceChannel);
     if (!joinResult.ok) {
-      await interaction.editReply(`Unable to join: ${joinResult.error}`);
+      await interaction.editReply(`無法加入: ${joinResult.error}`);
       return;
     }
-    needControlPanel = true;
   } else {
     await interaction.deferReply();
   }
 
-  const result = await playMusic(interaction.guildId, query);
+  const result = await startSpotifyConnect(interaction.guildId);
 
   if (result.ok) {
-    const queue = getQueue(interaction.guildId);
-    const queueInfo = queue.length > 0 ? ` (Queue: ${queue.length})` : "";
-
-    if (needControlPanel) {
-      const content = buildPanelContent("player", interaction.guildId);
-      const components = buildPanelComponents("player", interaction.guildId);
-      const reply = await interaction.editReply({
-        content,
-        components,
-      });
-
-      setControlPanel(discordUserId, {
-        messageId: reply.id,
-        channelId: interaction.channelId,
-        guildId: interaction.guildId,
-        mode: "player",
-      });
-    } else {
-      await interaction.editReply(`Added: **${result.item.title}**${queueInfo}`);
-    }
+    await interaction.editReply(
+      "🎵 **Spotify Connect 已啟動**\n\n" +
+      "在 Spotify app 中選擇 **Merlin DJ** 設備即可播放音樂\n" +
+      "再次使用 `/spotify` 可停止"
+    );
   } else {
-    await interaction.editReply(`Error: ${result.error}`);
+    await interaction.editReply(`錯誤: ${result.error}`);
   }
 }
 

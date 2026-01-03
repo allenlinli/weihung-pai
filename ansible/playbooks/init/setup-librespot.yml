@@ -1,0 +1,74 @@
+---
+- name: Setup Librespot for Spotify playback
+  hosts: pai-server
+  vars:
+    cargo_home: "/home/{{ ansible_user }}/.cargo"
+
+  tasks:
+    - name: Install build dependencies
+      ansible.builtin.apt:
+        name:
+          - build-essential
+          - pkg-config
+          - libasound2-dev
+          - libssl-dev
+          - curl
+        state: present
+        update_cache: true
+
+    - name: Check if Rust is installed
+      ansible.builtin.stat:
+        path: "{{ cargo_home }}/bin/cargo"
+      register: cargo_stat
+
+    - name: Install Rust
+      ansible.builtin.shell: |
+        curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+      become: true
+      become_user: "{{ ansible_user }}"
+      args:
+        executable: /bin/bash
+        creates: "{{ cargo_home }}/bin/cargo"
+      when: not cargo_stat.stat.exists
+
+    - name: Check if librespot is installed
+      ansible.builtin.stat:
+        path: "{{ cargo_home }}/bin/librespot"
+      register: librespot_stat
+
+    - name: Install librespot via cargo
+      ansible.builtin.shell: |
+        source {{ cargo_home }}/env
+        cargo install librespot
+      become: true
+      become_user: "{{ ansible_user }}"
+      args:
+        executable: /bin/bash
+      when: not librespot_stat.stat.exists
+      register: librespot_install
+      # This takes a while to compile
+      async: 1800
+      poll: 30
+
+    - name: Create librespot cache directory
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user }}/.cache/librespot"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0755"
+
+    - name: Verify librespot installation
+      ansible.builtin.shell: |
+        source {{ cargo_home }}/env
+        librespot --version
+      become: true
+      become_user: "{{ ansible_user }}"
+      args:
+        executable: /bin/bash
+      register: librespot_version
+      changed_when: false
+
+    - name: Print librespot version
+      ansible.builtin.debug:
+        var: librespot_version.stdout

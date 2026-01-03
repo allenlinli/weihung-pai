@@ -25,11 +25,7 @@ import { handleBind, handleUnbind, handleChannels } from "./channel";
 import {
   handleJoin,
   handleLeave,
-  handlePlay,
-  handleSkip,
-  handleVStop,
-  handleQueue,
-  handleNowPlaying,
+  handleSpotify,
   handleSay,
   handlePanel,
   handleRoll,
@@ -100,24 +96,8 @@ export async function handleSlashCommand(interaction: ChatInputCommandInteractio
       await handleLeave(interaction);
       break;
 
-    case "play":
-      await handlePlay(interaction, discordUserId);
-      break;
-
-    case "skip":
-      await handleSkip(interaction);
-      break;
-
-    case "vstop":
-      await handleVStop(interaction);
-      break;
-
-    case "queue":
-      await handleQueue(interaction);
-      break;
-
-    case "np":
-      await handleNowPlaying(interaction);
+    case "spotify":
+      await handleSpotify(interaction, discordUserId);
       break;
 
     case "say":
