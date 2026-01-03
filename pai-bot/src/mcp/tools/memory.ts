@@ -70,7 +70,16 @@ export function registerMemoryTools(server: McpServer): void {
       inputSchema: {
         content: z.string().describe("記憶內容（關於用戶的事實）"),
         category: z
-          .enum(["preference", "personal", "event", "work", "general"])
+          .enum([
+            "preference",
+            "personal",
+            "event",
+            "work",
+            "health",
+            "investment",
+            "watchlist",
+            "general",
+          ])
           .optional()
           .describe("分類（預設 general）"),
         importance: z.number().min(1).max(5).optional().describe("重要性 1-5（預設 3）"),
