@@ -9,7 +9,7 @@ import {
   StringSelectMenuBuilder,
   type MessageActionRowComponentBuilder,
 } from "discord.js";
-import { getQueue, getNowPlaying, type QueueItem } from "../voice";
+import { getQueue, getNowPlaying } from "../voice";
 
 /**
  * Build music control buttons

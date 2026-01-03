@@ -13,7 +13,7 @@ import {
 import { config } from "../../config";
 import { logger } from "../../utils/logger";
 import { isAuthorized } from "./auth";
-import { handleMessage, handleInteraction, handleSlashCommand, handleAttachment, initializeTaskExecutor } from "./handlers";
+import { handleMessage, handleButtonInteraction, handleSelectMenuInteraction, handleSlashCommand, handleAttachment, initializeTaskExecutor } from "./handlers";
 import { isChannelBound } from "./channels";
 import { registerSlashCommands } from "./commands";
 import { migrateDatabase } from "../../storage/migrate";
@@ -153,7 +153,13 @@ export function createDiscordBot(): Client {
 
     // Handle buttons
     if (interaction.isButton()) {
-      await handleInteraction(interaction);
+      await handleButtonInteraction(interaction);
+      return;
+    }
+
+    // Handle select menus
+    if (interaction.isStringSelectMenu()) {
+      await handleSelectMenuInteraction(interaction);
     }
   });
 

@@ -385,6 +385,37 @@ export function skip(guildId: string): boolean {
 }
 
 /**
+ * 播放上一首（將目前歌曲放回 queue 開頭）
+ */
+export function previous(guildId: string): boolean {
+  const guildQueue = guildQueues.get(guildId);
+  if (!guildQueue || !guildQueue.currentItem) {
+    return false;
+  }
+
+  // 沒有實作歷史記錄，只能重播目前歌曲
+  const current = guildQueue.currentItem;
+  guildQueue.queue.unshift(current);
+  guildQueue.player.stop();
+  return true;
+}
+
+/**
+ * 跳到指定位置播放
+ */
+export function playAt(guildId: string, index: number): boolean {
+  const guildQueue = guildQueues.get(guildId);
+  if (!guildQueue || index < 0 || index >= guildQueue.queue.length) {
+    return false;
+  }
+
+  // 移除 0 到 index 的歌曲（不包含 index）
+  guildQueue.queue.splice(0, index);
+  guildQueue.player.stop();
+  return true;
+}
+
+/**
  * 停止播放並清空佇列
  */
 export function stop(guildId: string): boolean {

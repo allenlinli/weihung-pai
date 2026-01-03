@@ -1,28 +1,28 @@
 /**
- * Discord Button Interactions Handler
+ * Discord Button/Select Interactions Handler
  */
 
-import type { ButtonInteraction } from "discord.js";
+import type { ButtonInteraction, StringSelectMenuInteraction } from "discord.js";
 import { abortUserProcess } from "../../../claude/client";
 import { queueManager } from "../../../claude/queue-manager";
 import { logger } from "../../../utils/logger";
 import {
   skip,
   stop as stopVoice,
-  getQueue,
-  getNowPlaying,
   leaveChannel,
   getGuildControlPanels,
   clearControlPanel,
+  previous,
+  playAt,
 } from "../voice";
 import { toNumericId, isSendableChannel } from "./utils";
-import { buildMusicButtons, buildControlPanelContent } from "./music-panel";
+import { buildControlPanelContent, buildControlPanelComponents } from "./music-panel";
 import { executeClaudeTask, getPendingDecisions } from "./message";
 
 /**
  * Handle button interactions
  */
-export async function handleInteraction(interaction: ButtonInteraction): Promise<void> {
+export async function handleButtonInteraction(interaction: ButtonInteraction): Promise<void> {
   const data = interaction.customId;
   const discordUserId = interaction.user.id;
   const userId = toNumericId(discordUserId);
@@ -117,9 +117,20 @@ async function handleMusicButton(
   guildId: string
 ): Promise<void> {
   switch (action) {
+    case "prev": {
+      if (previous(guildId)) {
+        await interaction.reply({ content: "⏮️ 重播目前歌曲", ephemeral: true });
+        await updateControlPanelMessage(interaction, guildId);
+      } else {
+        await interaction.reply({ content: "沒有正在播放的歌曲", ephemeral: true });
+      }
+      break;
+    }
+
     case "skip": {
       if (skip(guildId)) {
         await interaction.reply({ content: "⏭️ 已跳過", ephemeral: true });
+        await updateControlPanelMessage(interaction, guildId);
       } else {
         await interaction.reply({ content: "沒有正在播放的歌曲", ephemeral: true });
       }
@@ -136,30 +147,6 @@ async function handleMusicButton(
       break;
     }
 
-    case "queue": {
-      const queue = getQueue(guildId);
-      const nowPlaying = getNowPlaying(guildId);
-
-      let content = "";
-      if (nowPlaying) {
-        content += `🎵 正在播放: **${nowPlaying.title}** [${nowPlaying.duration}]\n\n`;
-      }
-
-      if (queue.length === 0) {
-        content += "📋 播放佇列為空";
-      } else {
-        const lines = queue.slice(0, 10).map((item, i) =>
-          `${i + 1}. **${item.title}** [${item.duration}]`
-        );
-        if (queue.length > 10) {
-          lines.push(`\n...還有 ${queue.length - 10} 首`);
-        }
-        content += `📋 **播放佇列** (${queue.length} 首):\n${lines.join("\n")}`;
-      }
-
-      await interaction.reply({ content, ephemeral: true });
-      break;
-    }
 
     case "leave": {
       leaveChannel(guildId);
@@ -182,7 +169,33 @@ async function handleMusicButton(
 }
 
 /**
- * Update control panel message
+ * Handle select menu interactions
+ */
+export async function handleSelectMenuInteraction(
+  interaction: StringSelectMenuInteraction
+): Promise<void> {
+  const customId = interaction.customId;
+  const parts = customId.split(":");
+
+  // Handle music select: music:select:guildId
+  if (parts[0] === "music" && parts[1] === "select" && parts.length === 3) {
+    const guildId = parts[2];
+    const selectedIndex = parseInt(interaction.values[0], 10);
+
+    if (playAt(guildId, selectedIndex)) {
+      await interaction.reply({
+        content: `⏭️ 跳到第 ${selectedIndex + 1} 首`,
+        ephemeral: true,
+      });
+      await updateControlPanelFromSelect(interaction, guildId);
+    } else {
+      await interaction.reply({ content: "操作失敗", ephemeral: true });
+    }
+  }
+}
+
+/**
+ * Update control panel message (from button interaction)
  */
 async function updateControlPanelMessage(
   interaction: ButtonInteraction,
@@ -190,8 +203,24 @@ async function updateControlPanelMessage(
 ): Promise<void> {
   try {
     const content = buildControlPanelContent(guildId);
-    const buttons = buildMusicButtons(guildId);
-    await interaction.message.edit({ content, components: [buttons] });
+    const components = buildControlPanelComponents(guildId);
+    await interaction.message.edit({ content, components });
+  } catch (error) {
+    logger.debug({ error, guildId }, "Failed to update control panel message");
+  }
+}
+
+/**
+ * Update control panel message (from select menu interaction)
+ */
+async function updateControlPanelFromSelect(
+  interaction: StringSelectMenuInteraction,
+  guildId: string
+): Promise<void> {
+  try {
+    const content = buildControlPanelContent(guildId);
+    const components = buildControlPanelComponents(guildId);
+    await interaction.message.edit({ content, components });
   } catch (error) {
     logger.debug({ error, guildId }, "Failed to update control panel message");
   }

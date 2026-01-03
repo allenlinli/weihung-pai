@@ -11,7 +11,7 @@ import {
   getGuildControlPanels,
   setControlPanel,
 } from "../voice";
-import { buildMusicButtons, buildControlPanelContent } from "./music-panel";
+import { buildControlPanelContent, buildControlPanelComponents } from "./music-panel";
 import { setDiscordClient } from "./slash-commands/voice";
 
 // Discord client reference
@@ -41,8 +41,8 @@ export function initializeTaskExecutor(client: Client): void {
 
           // Send new message
           const content = buildControlPanelContent(guildId);
-          const buttons = buildMusicButtons(guildId);
-          const newMessage = await channel.send({ content, components: [buttons] });
+          const components = buildControlPanelComponents(guildId);
+          const newMessage = await channel.send({ content, components });
 
           // Update record
           setControlPanel(userId, {
@@ -60,6 +60,6 @@ export function initializeTaskExecutor(client: Client): void {
 
 // Re-export handlers
 export { handleMessage } from "./message";
-export { handleInteraction } from "./interactions";
+export { handleButtonInteraction, handleSelectMenuInteraction } from "./interactions";
 export { handleSlashCommand } from "./slash-commands";
 export { handleAttachment } from "./attachments";

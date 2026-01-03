@@ -18,7 +18,7 @@ import {
   getGuildControlPanels,
   speakTts,
 } from "../../voice";
-import { buildMusicButtons, buildControlPanelContent } from "../music-panel";
+import { buildControlPanelContent, buildControlPanelComponents } from "../music-panel";
 
 // Discord client reference (set by index.ts)
 let discordClient: Client | null = null;
@@ -66,10 +66,10 @@ export async function handleJoin(
 
   if (result.ok) {
     const content = buildControlPanelContent(interaction.guildId!);
-    const buttons = buildMusicButtons(interaction.guildId!);
+    const components = buildControlPanelComponents(interaction.guildId!);
     const reply = await interaction.editReply({
       content,
-      components: [buttons],
+      components,
     });
 
     setControlPanel(discordUserId, {
@@ -159,10 +159,10 @@ export async function handlePlay(
 
     if (needControlPanel) {
       const content = buildControlPanelContent(interaction.guildId);
-      const buttons = buildMusicButtons(interaction.guildId);
+      const components = buildControlPanelComponents(interaction.guildId);
       const reply = await interaction.editReply({
         content,
-        components: [buttons],
+        components,
       });
 
       setControlPanel(discordUserId, {

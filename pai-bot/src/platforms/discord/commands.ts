@@ -40,7 +40,7 @@ const slashCommands = [
 ].map(cmd => cmd.toJSON());
 
 /**
- * Register slash commands with Discord API
+ * Register slash commands with Discord API (global)
  */
 export async function registerSlashCommands(clientId: string): Promise<void> {
   const rest = new REST().setToken(config.discord.token);
@@ -49,5 +49,18 @@ export async function registerSlashCommands(clientId: string): Promise<void> {
     logger.info("Discord slash commands registered");
   } catch (error) {
     logger.error({ error }, "Failed to register slash commands");
+  }
+}
+
+/**
+ * Register slash commands to a specific guild (instant)
+ */
+export async function registerGuildCommands(clientId: string, guildId: string): Promise<void> {
+  const rest = new REST().setToken(config.discord.token);
+  try {
+    await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: slashCommands });
+    logger.info({ guildId }, "Discord guild slash commands registered");
+  } catch (error) {
+    logger.error({ error, guildId }, "Failed to register guild slash commands");
   }
 }
