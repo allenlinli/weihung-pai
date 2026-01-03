@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.22.0 (2026-01-03)
+
+### Features
+
+- **discord**: Add quick roll and custom dice modal
+  ([`f2bc28a`](https://github.com/wayne930242/weihung-pai/commit/f2bc28aff59de5fa7493fbb101aa5cf5827b63e0))
+
+
 ## v1.21.1 (2026-01-03)
 
 ### Bug Fixes
