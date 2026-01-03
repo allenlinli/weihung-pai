@@ -28,9 +28,13 @@ export {
   setDicePanel,
   getDicePanel,
   clearDicePanel,
+  setGameSystem,
+  GAME_SYSTEM_PRESETS,
+  GAME_SYSTEM_LABELS,
   type DiceResult,
   type DiceType,
   type DicePanel,
+  type GameSystem,
 } from "./dice";
 
 /**
@@ -50,12 +54,13 @@ export function buildPanelContent(mode: PanelMode, guildId: string): string {
  */
 export function buildPanelComponents(
   mode: PanelMode,
-  guildId: string
+  guildId: string,
+  channelId?: string
 ): ActionRowBuilder<MessageActionRowComponentBuilder>[] {
   switch (mode) {
     case "player":
       return buildPlayerComponents(guildId);
     case "dice":
-      return buildDiceComponents(guildId);
+      return buildDiceComponents(guildId, channelId);
   }
 }

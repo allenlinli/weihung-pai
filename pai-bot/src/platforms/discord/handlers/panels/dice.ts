@@ -7,11 +7,11 @@ import {
   ButtonBuilder,
   ButtonStyle,
   ModalBuilder,
+  StringSelectMenuBuilder,
   TextInputBuilder,
   TextInputStyle,
   type MessageActionRowComponentBuilder,
 } from "discord.js";
-import { buildModeSwitcher } from "./mode-switcher";
 
 // Dice types
 const DICE_ROW_1 = ["d4", "d6", "d8", "d10", "d12"] as const;
@@ -19,6 +19,56 @@ const DICE_ROW_2 = ["d20", "d100"] as const;
 const ALL_DICE = [...DICE_ROW_1, ...DICE_ROW_2] as const;
 
 export type DiceType = typeof ALL_DICE[number];
+
+// Game system types and presets
+export type GameSystem = "generic" | "coc" | "dnd" | "fate";
+
+export interface DicePreset {
+  label: string;
+  expression: string;
+}
+
+// Basic presets shared by all systems
+const BASIC_PRESETS: DicePreset[] = [
+  { label: "1d20", expression: "1d20" },
+  { label: "1d100", expression: "1d100" },
+  { label: "2d6", expression: "2d6" },
+];
+
+// System-specific presets (will be combined with basic)
+const SYSTEM_SPECIFIC_PRESETS: Record<GameSystem, DicePreset[]> = {
+  generic: [],
+  coc: [
+    { label: "獎1", expression: "10*2d10kl1+1d10" },  // keep lowest tens = lower result (better in CoC)
+    { label: "罰1", expression: "10*2d10k1+1d10" },   // keep highest tens = higher result (worse in CoC)
+    { label: "獎2", expression: "10*3d10kl1+1d10" },  // keep lowest from 3 tens dice
+    { label: "罰2", expression: "10*3d10k1+1d10" },   // keep highest from 3 tens dice
+    { label: "3d6", expression: "3d6" },
+  ],
+  dnd: [
+    { label: "優勢", expression: "2d20k1" },
+    { label: "劣勢", expression: "2d20kl1" },
+    { label: "4d6k3", expression: "4d6k3" },
+  ],
+  fate: [
+    { label: "4dF", expression: "4dF" },
+  ],
+};
+
+// Combined presets: system-specific first, then basic
+export const GAME_SYSTEM_PRESETS: Record<GameSystem, DicePreset[]> = {
+  generic: [...BASIC_PRESETS],
+  coc: [...SYSTEM_SPECIFIC_PRESETS.coc, ...BASIC_PRESETS],
+  dnd: [...SYSTEM_SPECIFIC_PRESETS.dnd, ...BASIC_PRESETS],
+  fate: [...SYSTEM_SPECIFIC_PRESETS.fate, ...BASIC_PRESETS],
+};
+
+export const GAME_SYSTEM_LABELS: Record<GameSystem, string> = {
+  generic: "通用",
+  coc: "CoC",
+  dnd: "DnD",
+  fate: "Fate",
+};
 
 // Per-user dice accumulation state
 export interface DiceState {
@@ -34,6 +84,7 @@ export interface DicePanel {
   historyMessageId: string;
   panelMessageId: string;
   channelId: string;
+  gameSystem: GameSystem;
 }
 
 const dicePanels = new Map<string, DicePanel>(); // channelId -> DicePanel
@@ -48,6 +99,16 @@ export function getDicePanel(channelId: string): DicePanel | undefined {
 
 export function clearDicePanel(channelId: string): void {
   dicePanels.delete(channelId);
+}
+
+/**
+ * Update game system for a channel (resets panel)
+ */
+export function setGameSystem(channelId: string, system: GameSystem): void {
+  const panel = dicePanels.get(channelId);
+  if (panel) {
+    panel.gameSystem = system;
+  }
 }
 
 /**
@@ -185,44 +246,32 @@ function formatFateRoll(roll: number): string {
 }
 
 /**
- * Parse and roll dice expression (e.g., "2d6+3", "d20", "3d8-2", "4df", "df")
+ * Roll a single dice term (e.g., "2d6", "4d6k3", "d20")
+ * Returns { value, text } or null if invalid
  */
-export function parseAndRoll(expression: string): { text: string; total: number } | null {
-  const expr = expression.toLowerCase().trim();
-
-  // Fate dice: df, 4df, 4df+2
-  const fateMatch = expr.match(/^(\d*)df([+-]\d+)?$/);
+function rollSingleDice(term: string): { value: number; text: string } | null {
+  // Fate dice: df, 4df
+  const fateMatch = term.match(/^(\d*)df$/);
   if (fateMatch) {
     const count = fateMatch[1] ? parseInt(fateMatch[1], 10) : 4;
-    const modifier = fateMatch[2] ? parseInt(fateMatch[2], 10) : 0;
-
     if (count < 1 || count > 20) return null;
 
     const rolls: number[] = [];
     for (let i = 0; i < count; i++) {
       rolls.push(rollFateDie());
     }
-
-    const sum = rolls.reduce((a, b) => a + b, 0);
-    const total = sum + modifier;
-
-    let text = `**${count}dF**: [${rolls.map(formatFateRoll).join(" ")}] = ${sum}`;
-    if (modifier !== 0) text += ` ${modifier > 0 ? "+" : ""}${modifier} = **${total}**`;
-    else text += ` → **${total}**`;
-
-    return { text, total };
+    const value = rolls.reduce((a, b) => a + b, 0);
+    return { value, text: `${count}dF[${rolls.map(formatFateRoll).join(" ")}]=${value}` };
   }
 
-  // Normal dice with keep/drop: 4d6k3, 4d6kh3, 4d6kl2, 4d6d1, 4d6dh1, 4d6dl1
-  // Format: XdY[k|kh|kl|d|dh|dl]Z[+/-M]
-  const match = expr.match(/^(\d*)d(\d+)(?:(k|kh|kl|d|dh|dl)(\d+))?([+-]\d+)?$/);
+  // Normal dice: XdY[k|kh|kl|d|dh|dl]Z
+  const match = term.match(/^(\d*)d(\d+)(?:(k|kh|kl|d|dh|dl)(\d+))?$/);
   if (!match) return null;
 
   const count = match[1] ? parseInt(match[1], 10) : 1;
   const sides = parseInt(match[2], 10);
   const keepDropOp = match[3] as "k" | "kh" | "kl" | "d" | "dh" | "dl" | undefined;
   const keepDropCount = match[4] ? parseInt(match[4], 10) : 0;
-  const modifier = match[5] ? parseInt(match[5], 10) : 0;
 
   if (count < 1 || count > 100 || sides < 2 || sides > 1000) return null;
   if (keepDropOp && (keepDropCount < 1 || keepDropCount >= count)) return null;
@@ -233,57 +282,112 @@ export function parseAndRoll(expression: string): { text: string; total: number 
   }
 
   // Apply keep/drop
-  let keptRolls = [...rolls];
   let droppedIndices: Set<number> = new Set();
-
   if (keepDropOp) {
     const sorted = rolls.map((v, i) => ({ v, i })).sort((a, b) => a.v - b.v);
-
     if (keepDropOp === "k" || keepDropOp === "kh") {
-      // Keep highest N
-      const toDrop = sorted.slice(0, count - keepDropCount);
-      toDrop.forEach((x) => droppedIndices.add(x.i));
+      sorted.slice(0, count - keepDropCount).forEach((x) => droppedIndices.add(x.i));
     } else if (keepDropOp === "kl") {
-      // Keep lowest N
-      const toDrop = sorted.slice(keepDropCount);
-      toDrop.forEach((x) => droppedIndices.add(x.i));
+      sorted.slice(keepDropCount).forEach((x) => droppedIndices.add(x.i));
     } else if (keepDropOp === "d" || keepDropOp === "dl") {
-      // Drop lowest N
-      const toDrop = sorted.slice(0, keepDropCount);
-      toDrop.forEach((x) => droppedIndices.add(x.i));
+      sorted.slice(0, keepDropCount).forEach((x) => droppedIndices.add(x.i));
     } else if (keepDropOp === "dh") {
-      // Drop highest N
-      const toDrop = sorted.slice(count - keepDropCount);
-      toDrop.forEach((x) => droppedIndices.add(x.i));
+      sorted.slice(count - keepDropCount).forEach((x) => droppedIndices.add(x.i));
     }
-
-    keptRolls = rolls.filter((_, i) => !droppedIndices.has(i));
   }
 
-  const sum = keptRolls.reduce((a, b) => a + b, 0);
-  const total = sum + modifier;
+  const keptRolls = rolls.filter((_, i) => !droppedIndices.has(i));
+  const value = keptRolls.reduce((a, b) => a + b, 0);
 
-  // Build expression string
-  let exprStr = `**${count}d${sides}`;
-  if (keepDropOp) exprStr += `${keepDropOp}${keepDropCount}`;
-  if (modifier !== 0) exprStr += modifier > 0 ? `+${modifier}` : `${modifier}`;
-  exprStr += `**: `;
+  // Format output
+  let diceStr = `${count}d${sides}`;
+  if (keepDropOp) diceStr += `${keepDropOp}${keepDropCount}`;
 
-  // Format rolls with strikethrough for dropped
-  if (count > 1 || keepDropOp) {
-    const formattedRolls = rolls.map((r, i) =>
-      droppedIndices.has(i) ? `~~${r}~~` : `${r}`
-    );
-    exprStr += `[${formattedRolls.join(", ")}]`;
-    if (keepDropOp) exprStr += ` = ${sum}`;
-    if (modifier !== 0) exprStr += ` ${modifier > 0 ? "+" : ""}${modifier}`;
-    exprStr += ` → **${total}**`;
-  } else {
-    exprStr += `**${rolls[0]}**`;
-    if (modifier !== 0) exprStr += ` ${modifier > 0 ? "+" : ""}${modifier} = **${total}**`;
+  const formattedRolls = rolls.map((r, i) => droppedIndices.has(i) ? `~~${r}~~` : `${r}`);
+  return { value, text: `${diceStr}[${formattedRolls.join(",")}]=${value}` };
+}
+
+/**
+ * Parse and roll dice expression
+ * Supports: "2d6+3", "d20", "4d6k3", "4dF", "10*2d10k1+1d10"
+ */
+export function parseAndRoll(expression: string): { text: string; total: number } | null {
+  const expr = expression.toLowerCase().trim().replace(/\s+/g, "");
+
+  // Tokenize: split by + and - while keeping the sign
+  const tokens: { sign: number; term: string }[] = [];
+  let current = "";
+  let sign = 1;
+
+  for (let i = 0; i < expr.length; i++) {
+    const char = expr[i];
+    if ((char === "+" || char === "-") && current.length > 0) {
+      tokens.push({ sign, term: current });
+      sign = char === "+" ? 1 : -1;
+      current = "";
+    } else if (char !== "+" && char !== "-") {
+      current += char;
+    } else if (current.length === 0) {
+      // Handle leading sign
+      sign = char === "+" ? 1 : -1;
+    }
+  }
+  if (current.length > 0) {
+    tokens.push({ sign, term: current });
   }
 
-  return { text: exprStr, total };
+  if (tokens.length === 0) return null;
+
+  const results: { value: number; text: string; sign: number }[] = [];
+  let grandTotal = 0;
+
+  for (const { sign: tokenSign, term } of tokens) {
+    // Check for multiplier: N*dice or dice*N
+    const multMatch = term.match(/^(\d+)\*(.+)$/) || term.match(/^(.+)\*(\d+)$/);
+
+    if (multMatch) {
+      const [, first, second] = multMatch;
+      const multiplier = /^\d+$/.test(first) ? parseInt(first, 10) : parseInt(second, 10);
+      const dicePart = /^\d+$/.test(first) ? second : first;
+
+      const result = rollSingleDice(dicePart);
+      if (!result) return null;
+
+      const value = result.value * multiplier * tokenSign;
+      grandTotal += value;
+      results.push({
+        value: Math.abs(value),
+        text: `${multiplier}×${result.text}`,
+        sign: tokenSign,
+      });
+    } else if (/^\d+$/.test(term)) {
+      // Pure number modifier
+      const value = parseInt(term, 10) * tokenSign;
+      grandTotal += value;
+      results.push({ value: parseInt(term, 10), text: term, sign: tokenSign });
+    } else {
+      // Single dice
+      const result = rollSingleDice(term);
+      if (!result) return null;
+
+      grandTotal += result.value * tokenSign;
+      results.push({ value: result.value, text: result.text, sign: tokenSign });
+    }
+  }
+
+  // Build output text
+  let text = "";
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i];
+    if (i === 0) {
+      text = r.sign < 0 ? `-${r.text}` : r.text;
+    } else {
+      text += r.sign < 0 ? ` - ${r.text}` : ` + ${r.text}`;
+    }
+  }
+  text = `**${expression}**: ${text} → **${grandTotal}**`;
+
+  return { text, total: grandTotal };
 }
 
 /**
@@ -303,27 +407,71 @@ export function formatResult(result: DiceResult): string {
 }
 
 /**
- * Build quick roll row (1d20, 1d100, 2d6, Custom)
+ * Build game system selector dropdown
  */
-function buildQuickRollRow(guildId: string): ActionRowBuilder<ButtonBuilder> {
-  return new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`dice:quick:1d20:${guildId}`)
-      .setLabel("1d20")
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId(`dice:quick:1d100:${guildId}`)
-      .setLabel("1d100")
-      .setStyle(ButtonStyle.Primary),
-    new ButtonBuilder()
-      .setCustomId(`dice:quick:2d6:${guildId}`)
-      .setLabel("2d6")
-      .setStyle(ButtonStyle.Primary),
+function buildSystemSelector(
+  guildId: string,
+  currentSystem: GameSystem
+): ActionRowBuilder<StringSelectMenuBuilder> {
+  const options = (Object.keys(GAME_SYSTEM_LABELS) as GameSystem[]).map((sys) => ({
+    label: GAME_SYSTEM_LABELS[sys],
+    value: sys,
+    default: sys === currentSystem,
+  }));
+
+  const select = new StringSelectMenuBuilder()
+    .setCustomId(`dice:system:${guildId}`)
+    .setPlaceholder("選擇遊戲系統")
+    .addOptions(options);
+
+  return new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select);
+}
+
+/**
+ * Build preset rows (based on current game system)
+ * Returns 1-2 rows depending on number of presets
+ */
+function buildPresetRows(
+  guildId: string,
+  system: GameSystem
+): ActionRowBuilder<ButtonBuilder>[] {
+  const presets = GAME_SYSTEM_PRESETS[system];
+  const rows: ActionRowBuilder<ButtonBuilder>[] = [];
+
+  // Row 1: up to 5 presets
+  const row1Buttons: ButtonBuilder[] = [];
+  for (let i = 0; i < Math.min(presets.length, 5); i++) {
+    const preset = presets[i];
+    row1Buttons.push(
+      new ButtonBuilder()
+        .setCustomId(`dice:quick:${preset.expression}:${guildId}`)
+        .setLabel(preset.label)
+        .setStyle(ButtonStyle.Primary)
+    );
+  }
+  rows.push(new ActionRowBuilder<ButtonBuilder>().addComponents(...row1Buttons));
+
+  // Row 2: remaining presets + Custom (if more than 5 presets)
+  const row2Buttons: ButtonBuilder[] = [];
+  for (let i = 5; i < presets.length; i++) {
+    const preset = presets[i];
+    row2Buttons.push(
+      new ButtonBuilder()
+        .setCustomId(`dice:quick:${preset.expression}:${guildId}`)
+        .setLabel(preset.label)
+        .setStyle(ButtonStyle.Primary)
+    );
+  }
+  // Add Custom button
+  row2Buttons.push(
     new ButtonBuilder()
       .setCustomId(`dice:custom:${guildId}`)
       .setLabel("Custom")
       .setStyle(ButtonStyle.Success)
   );
+  rows.push(new ActionRowBuilder<ButtonBuilder>().addComponents(...row2Buttons));
+
+  return rows;
 }
 
 /**
@@ -383,8 +531,8 @@ export function buildCustomDiceModal(guildId: string): ModalBuilder {
 
   const diceInput = new TextInputBuilder()
     .setCustomId("dice_expression")
-    .setLabel("2d6+3 擲2顆d6加3 | 4d6k3 擲4顆取高3 | 4dF 命運骰")
-    .setPlaceholder("輸入骰子表達式...")
+    .setLabel("骰子表達式")
+    .setPlaceholder("2d6+3 | 4d6k3 取高 | 2d20kl1 取低 | 4d6d1 去低")
     .setStyle(TextInputStyle.Short)
     .setRequired(true)
     .setMinLength(2)
@@ -398,13 +546,31 @@ export function buildCustomDiceModal(guildId: string): ModalBuilder {
 
 /**
  * Build all components for dice panel
+ * Layout (5 rows max):
+ * 1. System dropdown
+ * 2. Presets row 1 (up to 5)
+ * 3. Presets row 2 (remaining + Custom)
+ * 4. Accumulation d4-d12
+ * 5. Accumulation d20, d100, ↩, 🎲, ✕
  */
 export function buildDiceComponents(
-  guildId: string
+  guildId: string,
+  channelId?: string
 ): ActionRowBuilder<MessageActionRowComponentBuilder>[] {
+  // Get current game system from panel, default to generic
+  let gameSystem: GameSystem = "generic";
+  if (channelId) {
+    const panel = getDicePanel(channelId);
+    if (panel) {
+      gameSystem = panel.gameSystem;
+    }
+  }
+
+  const presetRows = buildPresetRows(guildId, gameSystem);
+
   return [
-    buildModeSwitcher(guildId, "dice") as ActionRowBuilder<MessageActionRowComponentBuilder>,
-    buildQuickRollRow(guildId) as ActionRowBuilder<MessageActionRowComponentBuilder>,
+    buildSystemSelector(guildId, gameSystem) as ActionRowBuilder<MessageActionRowComponentBuilder>,
+    ...presetRows.map(row => row as ActionRowBuilder<MessageActionRowComponentBuilder>),
     buildDiceRow1(guildId) as ActionRowBuilder<MessageActionRowComponentBuilder>,
     buildDiceRow2(guildId) as ActionRowBuilder<MessageActionRowComponentBuilder>,
   ];

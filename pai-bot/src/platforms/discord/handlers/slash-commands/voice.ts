@@ -274,6 +274,7 @@ export async function handlePanel(
       historyMessageId: historyMsg.id,
       panelMessageId: panelMsg.id,
       channelId: interaction.channelId,
+      gameSystem: "generic",
     });
 
     setControlPanel(discordUserId, {
