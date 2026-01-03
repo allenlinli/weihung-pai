@@ -37,6 +37,20 @@ const slashCommands = [
     .addStringOption(option =>
       option.setName("text").setDescription("要說的文字").setRequired(true)
     ),
+  new SlashCommandBuilder()
+    .setName("panel")
+    .setDescription("顯示控制面板")
+    .addStringOption(option =>
+      option
+        .setName("mode")
+        .setDescription("面板模式")
+        .setRequired(false)
+        .addChoices(
+          { name: "Player - 音樂播放器", value: "player" },
+          { name: "Sound - 音效板", value: "soundboard" },
+          { name: "Dice - TRPG 骰子", value: "dice" }
+        )
+    ),
 ].map(cmd => cmd.toJSON());
 
 /**

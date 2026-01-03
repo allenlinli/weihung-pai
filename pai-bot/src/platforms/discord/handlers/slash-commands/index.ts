@@ -31,6 +31,7 @@ import {
   handleQueue,
   handleNowPlaying,
   handleSay,
+  handlePanel,
 } from "./voice";
 
 /**
@@ -120,6 +121,10 @@ export async function handleSlashCommand(interaction: ChatInputCommandInteractio
 
     case "say":
       await handleSay(interaction);
+      break;
+
+    case "panel":
+      await handlePanel(interaction, discordUserId);
       break;
 
     default:

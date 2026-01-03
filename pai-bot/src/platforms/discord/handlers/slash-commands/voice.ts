@@ -1,5 +1,5 @@
 /**
- * Voice Slash Commands (join, leave, play, skip, vstop, queue, np, say)
+ * Voice Slash Commands (join, leave, play, skip, vstop, queue, np, say, panel)
  */
 
 import type { ChatInputCommandInteraction, Client } from "discord.js";
@@ -17,7 +17,7 @@ import {
   getGuildControlPanels,
   speakTts,
 } from "../../voice";
-import { buildPanelContent, buildPanelComponents } from "../panels";
+import { buildPanelContent, buildPanelComponents, type PanelMode } from "../panels";
 
 // Discord client reference (set by index.ts)
 let discordClient: Client | null = null;
@@ -242,5 +242,78 @@ export async function handleSay(interaction: ChatInputCommandInteraction): Promi
     await interaction.editReply(`Said: "${text.slice(0, 100)}${text.length > 100 ? "..." : ""}"`);
   } else {
     await interaction.editReply(`TTS failed: ${result.error}`);
+  }
+}
+
+export async function handlePanel(
+  interaction: ChatInputCommandInteraction,
+  discordUserId: string
+): Promise<void> {
+  if (!interaction.guildId) {
+    await interaction.reply({ content: "此指令只能在伺服器中使用", ephemeral: true });
+    return;
+  }
+
+  const modeOption = interaction.options.getString("mode") as PanelMode | null;
+  const mode: PanelMode = modeOption ?? "dice";
+
+  // Dice mode doesn't require voice channel
+  if (mode === "dice") {
+    const content = buildPanelContent(mode, interaction.guildId);
+    const components = buildPanelComponents(mode, interaction.guildId);
+    await interaction.reply({ content, components });
+
+    setControlPanel(discordUserId, {
+      messageId: interaction.id,
+      channelId: interaction.channelId,
+      guildId: interaction.guildId,
+      mode,
+    });
+    return;
+  }
+
+  // Player and Soundboard modes require voice channel
+  if (!isInVoiceChannel(interaction.guildId)) {
+    // Try to auto-join
+    const member = await interaction.guild!.members.fetch(discordUserId);
+    const voiceChannel = member.voice.channel;
+
+    if (!voiceChannel) {
+      await interaction.reply({
+        content: "請先加入語音頻道，或使用 /join",
+        ephemeral: true,
+      });
+      return;
+    }
+
+    await interaction.deferReply();
+
+    const joinResult = await joinChannel(voiceChannel);
+    if (!joinResult.ok) {
+      await interaction.editReply(`無法加入: ${joinResult.error}`);
+      return;
+    }
+
+    const content = buildPanelContent(mode, interaction.guildId);
+    const components = buildPanelComponents(mode, interaction.guildId);
+    const reply = await interaction.editReply({ content, components });
+
+    setControlPanel(discordUserId, {
+      messageId: reply.id,
+      channelId: interaction.channelId,
+      guildId: interaction.guildId,
+      mode,
+    });
+  } else {
+    const content = buildPanelContent(mode, interaction.guildId);
+    const components = buildPanelComponents(mode, interaction.guildId);
+    const reply = await interaction.reply({ content, components, fetchReply: true });
+
+    setControlPanel(discordUserId, {
+      messageId: reply.id,
+      channelId: interaction.channelId,
+      guildId: interaction.guildId,
+      mode,
+    });
   }
 }
