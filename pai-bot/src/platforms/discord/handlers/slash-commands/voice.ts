@@ -2,7 +2,7 @@
  * Voice Slash Commands (join, leave, spotify, say, panel, roll)
  */
 
-import type { ChatInputCommandInteraction, Client } from "discord.js";
+import { ActivityType, type ChatInputCommandInteraction, type Client } from "discord.js";
 import {
   joinChannel,
   leaveChannel,
@@ -10,12 +10,9 @@ import {
   stopSpotifyConnect,
   isSpotifyConnected,
   isInVoiceChannel,
-  setControlPanel,
-  clearControlPanel,
-  getGuildControlPanels,
   speakTts,
 } from "../../voice";
-import { buildPanelContent, buildPanelComponents, parseAndRoll, setDicePanel, type PanelMode } from "../panels";
+import { buildPanelContent, buildPanelComponents, parseAndRoll, setDicePanel } from "../panels";
 
 // Discord client reference (set by index.ts)
 let discordClient: Client | null = null;
@@ -46,19 +43,7 @@ export async function handleJoin(
   const result = await joinChannel(voiceChannel);
 
   if (result.ok) {
-    const content = buildPanelContent("player", interaction.guildId!);
-    const components = buildPanelComponents("player", interaction.guildId!);
-    const reply = await interaction.editReply({
-      content,
-      components,
-    });
-
-    setControlPanel(discordUserId, {
-      messageId: reply.id,
-      channelId: interaction.channelId,
-      guildId: interaction.guildId!,
-      mode: "player",
-    });
+    await interaction.editReply("✅ 已加入語音頻道");
   } else {
     await interaction.editReply(`無法加入: ${result.error}`);
   }
@@ -75,13 +60,8 @@ export async function handleLeave(interaction: ChatInputCommandInteraction): Pro
     return;
   }
 
-  const panels = getGuildControlPanels(interaction.guildId);
-  for (const { userId } of panels) {
-    clearControlPanel(userId);
-  }
-
   leaveChannel(interaction.guildId);
-  await interaction.reply("Left voice channel");
+  await interaction.reply("✅ 已離開語音頻道");
 }
 
 export async function handleSpotify(
@@ -97,6 +77,8 @@ export async function handleSpotify(
   if (isSpotifyConnected(interaction.guildId)) {
     // Stop Spotify Connect
     stopSpotifyConnect(interaction.guildId);
+    // Clear presence
+    interaction.client.user?.setActivity(null);
     await interaction.reply("🎵 Spotify Connect 已停止");
     return;
   }
@@ -125,6 +107,8 @@ export async function handleSpotify(
   const result = await startSpotifyConnect(interaction.guildId);
 
   if (result.ok) {
+    // Set presence to listening
+    interaction.client.user?.setActivity("Spotify Connect", { type: ActivityType.Listening });
     await interaction.editReply(
       "🎵 **Spotify Connect 已啟動**\n\n" +
       "在 Spotify app 中選擇 **Merlin DJ** 設備即可播放音樂\n" +
@@ -160,89 +144,28 @@ export async function handleSay(interaction: ChatInputCommandInteraction): Promi
 
 export async function handlePanel(
   interaction: ChatInputCommandInteraction,
-  discordUserId: string
+  _discordUserId: string
 ): Promise<void> {
   if (!interaction.guildId) {
     await interaction.reply({ content: "此指令只能在伺服器中使用", ephemeral: true });
     return;
   }
 
-  const modeInput = interaction.options.getString("mode")?.toLowerCase();
-  let mode: PanelMode = "dice";
-  if (modeInput === "player" || modeInput === "p") mode = "player";
-  else if (modeInput === "dice" || modeInput === "d") mode = "dice";
+  // Send history message first
+  const historyMsg = await interaction.reply({ content: "**擲骰歷史**\n—", fetchReply: true });
 
-  // Dice mode doesn't require voice channel
-  if (mode === "dice") {
-    // Send history message first
-    const historyMsg = await interaction.reply({ content: "**擲骰歷史**\n—", fetchReply: true });
+  // Send panel message
+  const content = buildPanelContent("dice", interaction.guildId);
+  const components = buildPanelComponents("dice", interaction.guildId);
+  const panelMsg = await interaction.followUp({ content, components, fetchReply: true });
 
-    // Send panel message
-    const content = buildPanelContent(mode, interaction.guildId);
-    const components = buildPanelComponents(mode, interaction.guildId);
-    const panelMsg = await interaction.followUp({ content, components, fetchReply: true });
-
-    // Track the dice panel
-    setDicePanel(interaction.channelId, {
-      historyMessageId: historyMsg.id,
-      panelMessageId: panelMsg.id,
-      channelId: interaction.channelId,
-      gameSystem: "generic",
-    });
-
-    setControlPanel(discordUserId, {
-      messageId: panelMsg.id,
-      channelId: interaction.channelId,
-      guildId: interaction.guildId,
-      mode,
-    });
-    return;
-  }
-
-  // Player and Soundboard modes require voice channel
-  if (!isInVoiceChannel(interaction.guildId)) {
-    // Try to auto-join
-    const member = await interaction.guild!.members.fetch(discordUserId);
-    const voiceChannel = member.voice.channel;
-
-    if (!voiceChannel) {
-      await interaction.reply({
-        content: "請先加入語音頻道，或使用 /join",
-        ephemeral: true,
-      });
-      return;
-    }
-
-    await interaction.deferReply();
-
-    const joinResult = await joinChannel(voiceChannel);
-    if (!joinResult.ok) {
-      await interaction.editReply(`無法加入: ${joinResult.error}`);
-      return;
-    }
-
-    const content = buildPanelContent(mode, interaction.guildId);
-    const components = buildPanelComponents(mode, interaction.guildId);
-    const reply = await interaction.editReply({ content, components });
-
-    setControlPanel(discordUserId, {
-      messageId: reply.id,
-      channelId: interaction.channelId,
-      guildId: interaction.guildId,
-      mode,
-    });
-  } else {
-    const content = buildPanelContent(mode, interaction.guildId);
-    const components = buildPanelComponents(mode, interaction.guildId);
-    const reply = await interaction.reply({ content, components, fetchReply: true });
-
-    setControlPanel(discordUserId, {
-      messageId: reply.id,
-      channelId: interaction.channelId,
-      guildId: interaction.guildId,
-      mode,
-    });
-  }
+  // Track the dice panel
+  setDicePanel(interaction.channelId, {
+    historyMessageId: historyMsg.id,
+    panelMessageId: panelMsg.id,
+    channelId: interaction.channelId,
+    gameSystem: "generic",
+  });
 }
 
 export async function handleRoll(interaction: ChatInputCommandInteraction): Promise<void> {

@@ -20,6 +20,7 @@ import { logger } from "../../utils/logger";
 
 // Spotify Connect 設定
 const LIBRESPOT_PATH = "/home/pai/.cargo/bin/librespot";
+const LIBRESPOT_CACHE = "/home/pai/.cache/librespot";
 const SPOTIFY_DEVICE_NAME = "Merlin DJ";
 
 // TTS 設定
@@ -190,6 +191,12 @@ export async function joinChannel(
 export function leaveChannel(guildId: string): boolean {
   const guildQueue = guildQueues.get(guildId);
   if (guildQueue) {
+    // Stop Spotify Connect if running
+    if (guildQueue.librespotProc) {
+      guildQueue.librespotProc.kill();
+      guildQueue.librespotProc = null;
+      guildQueue.spotifyConnected = false;
+    }
     guildQueue.player.stop();
     guildQueue.connection.destroy();
     guildQueues.delete(guildId);
@@ -224,12 +231,13 @@ export async function startSpotifyConnect(
   }
 
   try {
-    // 啟動 librespot，輸出到 stdout (pipe backend)
+    // 啟動 librespot，使用 cached credentials
     const proc = Bun.spawn([
       LIBRESPOT_PATH,
       "--name", SPOTIFY_DEVICE_NAME,
+      "--cache", LIBRESPOT_CACHE,
       "--backend", "pipe",
-      "--initial-volume", "100",
+      "--initial-volume", "50",
       "--enable-volume-normalisation",
       "--format", "S16",
       "--bitrate", "320",

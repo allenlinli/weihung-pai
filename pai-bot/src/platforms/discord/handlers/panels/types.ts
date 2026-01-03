@@ -2,7 +2,7 @@
  * Panel Types
  */
 
-export type PanelMode = "player" | "dice";
+export type PanelMode = "dice";
 
 export interface ControlPanel {
   messageId: string;

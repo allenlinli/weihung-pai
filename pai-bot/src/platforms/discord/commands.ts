@@ -32,10 +32,7 @@ const slashCommands = [
     ),
   new SlashCommandBuilder()
     .setName("panel")
-    .setDescription("顯示控制面板 (player/sound/dice)")
-    .addStringOption(option =>
-      option.setName("mode").setDescription("player / sound / dice").setRequired(false)
-    ),
+    .setDescription("顯示擲骰面板"),
   new SlashCommandBuilder()
     .setName("roll")
     .setDescription("擲骰子 (例: d20, 2d6+3)")

@@ -131,13 +131,13 @@ def run_discord_command(args: list[str]) -> None:
 
 
 def run_spotify_command(args: list[str]) -> None:
-    from .spotify import do_auth, do_test, do_token
+    from .spotify import do_auth, do_test, do_run
 
     if not args:
         print("用法: uv run pai spotify <subcommand>")
-        print("  auth   執行 Spotify OAuth 認證")
-        print("  test   測試認證狀態")
-        print("  token  取得 access token")
+        print("  auth   執行 Spotify OAuth 認證（首次使用需要）")
+        print("  test   測試 librespot 和認證狀態")
+        print("  run    手動啟動 librespot（測試用）")
         sys.exit(1)
 
     subcommand = args[0]
@@ -145,8 +145,8 @@ def run_spotify_command(args: list[str]) -> None:
         sys.exit(do_auth())
     elif subcommand == "test":
         sys.exit(do_test())
-    elif subcommand == "token":
-        sys.exit(do_token())
+    elif subcommand == "run":
+        sys.exit(do_run())
     else:
         print(f"未知子命令: {subcommand}")
         sys.exit(1)
