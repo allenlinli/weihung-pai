@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v1.24.0 (2026-01-03)
+
+### Chores
+
+- **discord**: Simplify bot permissions
+  ([`46f8fdf`](https://github.com/wayne930242/weihung-pai/commit/46f8fdf18954b9d3f20685ce0ab4177c3706d1ea))
+
+### Documentation
+
+- Add README for subprojects and simplify root README
+  ([`e174a05`](https://github.com/wayne930242/weihung-pai/commit/e174a05c776b1eab529fc235de1d7a0e407d2452))
+
+### Features
+
+- **youtube**: Add vnc commands for cookie refresh
+  ([`a7d8287`](https://github.com/wayne930242/weihung-pai/commit/a7d82872db3c36d50a0b474b25e4fecddcb4573c))
+
+
 ## v1.23.0 (2026-01-03)
 
 ### Features
