@@ -13,16 +13,116 @@ import { buildModeSwitcher } from "./mode-switcher";
 // Dice types
 const DICE_ROW_1 = ["d4", "d6", "d8", "d10", "d12"] as const;
 const DICE_ROW_2 = ["d20", "d100"] as const;
+const ALL_DICE = [...DICE_ROW_1, ...DICE_ROW_2] as const;
 
-export type DiceType = typeof DICE_ROW_1[number] | typeof DICE_ROW_2[number];
+export type DiceType = typeof ALL_DICE[number];
+
+// Per-user dice accumulation state
+export interface DiceState {
+  dice: Map<DiceType, number>; // dice type -> count
+  history: DiceType[]; // order of dice added (for undo)
+  guildId: string;
+}
+
+const userDiceStates = new Map<string, DiceState>();
+
+/**
+ * Get user's dice state
+ */
+export function getDiceState(userId: string): DiceState | undefined {
+  return userDiceStates.get(userId);
+}
+
+/**
+ * Add a die to user's accumulation
+ */
+export function addDie(userId: string, diceType: DiceType, guildId: string): DiceState {
+  let state = userDiceStates.get(userId);
+  if (!state || state.guildId !== guildId) {
+    state = { dice: new Map(), history: [], guildId };
+    userDiceStates.set(userId, state);
+  }
+  state.dice.set(diceType, (state.dice.get(diceType) || 0) + 1);
+  state.history.push(diceType);
+  return state;
+}
+
+/**
+ * Undo last added die
+ */
+export function undoLastDie(userId: string): DiceState | null {
+  const state = userDiceStates.get(userId);
+  if (!state || state.history.length === 0) return null;
+
+  const lastDice = state.history.pop()!;
+  const count = state.dice.get(lastDice) || 0;
+  if (count <= 1) {
+    state.dice.delete(lastDice);
+  } else {
+    state.dice.set(lastDice, count - 1);
+  }
+
+  return state;
+}
+
+/**
+ * Clear user's dice state
+ */
+export function clearDiceState(userId: string): void {
+  userDiceStates.delete(userId);
+}
+
+/**
+ * Format accumulated dice for display
+ */
+export function formatAccumulatedDice(state: DiceState): string {
+  const parts: string[] = [];
+  for (const diceType of ALL_DICE) {
+    const count = state.dice.get(diceType);
+    if (count && count > 0) {
+      parts.push(`${count}${diceType}`);
+    }
+  }
+  return parts.length > 0 ? parts.join(" + ") : "—";
+}
+
+/**
+ * Roll all accumulated dice and return formatted result
+ */
+export function rollAccumulatedDice(userId: string): string | null {
+  const state = userDiceStates.get(userId);
+  if (!state || state.dice.size === 0) return null;
+
+  const results: string[] = [];
+  let grandTotal = 0;
+
+  for (const diceType of ALL_DICE) {
+    const count = state.dice.get(diceType);
+    if (!count || count === 0) continue;
+
+    const sides = parseInt(diceType.slice(1), 10);
+    const rolls: number[] = [];
+    for (let i = 0; i < count; i++) {
+      rolls.push(rollDie(sides));
+    }
+    const sum = rolls.reduce((a, b) => a + b, 0);
+    grandTotal += sum;
+
+    // Format: **2d6**: [3, 5] = 8
+    results.push(`**${count}${diceType}**: [${rolls.join(", ")}] = **${sum}**`);
+  }
+
+  // Clear state after rolling
+  clearDiceState(userId);
+
+  return results.join("\n") + `\n\n**Total: ${grandTotal}**`;
+}
 
 export interface DiceResult {
   type: DiceType;
   rolls: number[];
   total: number;
   modifier?: number;
-  advantage?: boolean;
-  disadvantage?: boolean;
 }
 
 /**
@@ -33,77 +133,146 @@ export function rollDie(sides: number): number {
 }
 
 /**
- * Roll dice with optional advantage/disadvantage
+ * Roll dice
  */
-export function roll(
-  type: DiceType,
-  options?: { advantage?: boolean; disadvantage?: boolean; modifier?: number }
-): DiceResult {
+export function roll(type: DiceType, modifier?: number): DiceResult {
   const sides = parseInt(type.slice(1), 10);
-  const { advantage, disadvantage, modifier } = options ?? {};
+  const result = rollDie(sides);
+  const rolls = [result];
+  const total = modifier ? result + modifier : result;
+  return { type, rolls, total, modifier };
+}
 
-  let rolls: number[];
-  let total: number;
+/**
+ * Roll a Fate die (-1, 0, +1)
+ */
+function rollFateDie(): number {
+  const roll = Math.floor(Math.random() * 3) - 1;
+  return roll;
+}
 
-  if (advantage || disadvantage) {
-    const roll1 = rollDie(sides);
-    const roll2 = rollDie(sides);
-    rolls = [roll1, roll2];
-    total = advantage ? Math.max(roll1, roll2) : Math.min(roll1, roll2);
+/**
+ * Format Fate die result
+ */
+function formatFateRoll(roll: number): string {
+  if (roll === 1) return "+";
+  if (roll === -1) return "-";
+  return "0";
+}
+
+/**
+ * Parse and roll dice expression (e.g., "2d6+3", "d20", "3d8-2", "4df", "df")
+ */
+export function parseAndRoll(expression: string): { text: string; total: number } | null {
+  const expr = expression.toLowerCase().trim();
+
+  // Fate dice: df, 4df, 4df+2
+  const fateMatch = expr.match(/^(\d*)df([+-]\d+)?$/);
+  if (fateMatch) {
+    const count = fateMatch[1] ? parseInt(fateMatch[1], 10) : 4;
+    const modifier = fateMatch[2] ? parseInt(fateMatch[2], 10) : 0;
+
+    if (count < 1 || count > 20) return null;
+
+    const rolls: number[] = [];
+    for (let i = 0; i < count; i++) {
+      rolls.push(rollFateDie());
+    }
+
+    const sum = rolls.reduce((a, b) => a + b, 0);
+    const total = sum + modifier;
+
+    let text = `**${count}dF**: [${rolls.map(formatFateRoll).join(" ")}] = ${sum}`;
+    if (modifier !== 0) text += ` ${modifier > 0 ? "+" : ""}${modifier} = **${total}**`;
+    else text += ` → **${total}**`;
+
+    return { text, total };
+  }
+
+  // Normal dice with keep/drop: 4d6k3, 4d6kh3, 4d6kl2, 4d6d1, 4d6dh1, 4d6dl1
+  // Format: XdY[k|kh|kl|d|dh|dl]Z[+/-M]
+  const match = expr.match(/^(\d*)d(\d+)(?:(k|kh|kl|d|dh|dl)(\d+))?([+-]\d+)?$/);
+  if (!match) return null;
+
+  const count = match[1] ? parseInt(match[1], 10) : 1;
+  const sides = parseInt(match[2], 10);
+  const keepDropOp = match[3] as "k" | "kh" | "kl" | "d" | "dh" | "dl" | undefined;
+  const keepDropCount = match[4] ? parseInt(match[4], 10) : 0;
+  const modifier = match[5] ? parseInt(match[5], 10) : 0;
+
+  if (count < 1 || count > 100 || sides < 2 || sides > 1000) return null;
+  if (keepDropOp && (keepDropCount < 1 || keepDropCount >= count)) return null;
+
+  const rolls: number[] = [];
+  for (let i = 0; i < count; i++) {
+    rolls.push(rollDie(sides));
+  }
+
+  // Apply keep/drop
+  let keptRolls = [...rolls];
+  let droppedIndices: Set<number> = new Set();
+
+  if (keepDropOp) {
+    const sorted = rolls.map((v, i) => ({ v, i })).sort((a, b) => a.v - b.v);
+
+    if (keepDropOp === "k" || keepDropOp === "kh") {
+      // Keep highest N
+      const toDrop = sorted.slice(0, count - keepDropCount);
+      toDrop.forEach((x) => droppedIndices.add(x.i));
+    } else if (keepDropOp === "kl") {
+      // Keep lowest N
+      const toDrop = sorted.slice(keepDropCount);
+      toDrop.forEach((x) => droppedIndices.add(x.i));
+    } else if (keepDropOp === "d" || keepDropOp === "dl") {
+      // Drop lowest N
+      const toDrop = sorted.slice(0, keepDropCount);
+      toDrop.forEach((x) => droppedIndices.add(x.i));
+    } else if (keepDropOp === "dh") {
+      // Drop highest N
+      const toDrop = sorted.slice(count - keepDropCount);
+      toDrop.forEach((x) => droppedIndices.add(x.i));
+    }
+
+    keptRolls = rolls.filter((_, i) => !droppedIndices.has(i));
+  }
+
+  const sum = keptRolls.reduce((a, b) => a + b, 0);
+  const total = sum + modifier;
+
+  // Build expression string
+  let exprStr = `**${count}d${sides}`;
+  if (keepDropOp) exprStr += `${keepDropOp}${keepDropCount}`;
+  if (modifier !== 0) exprStr += modifier > 0 ? `+${modifier}` : `${modifier}`;
+  exprStr += `**: `;
+
+  // Format rolls with strikethrough for dropped
+  if (count > 1 || keepDropOp) {
+    const formattedRolls = rolls.map((r, i) =>
+      droppedIndices.has(i) ? `~~${r}~~` : `${r}`
+    );
+    exprStr += `[${formattedRolls.join(", ")}]`;
+    if (keepDropOp) exprStr += ` = ${sum}`;
+    if (modifier !== 0) exprStr += ` ${modifier > 0 ? "+" : ""}${modifier}`;
+    exprStr += ` → **${total}**`;
   } else {
-    const result = rollDie(sides);
-    rolls = [result];
-    total = result;
+    exprStr += `**${rolls[0]}**`;
+    if (modifier !== 0) exprStr += ` ${modifier > 0 ? "+" : ""}${modifier} = **${total}**`;
   }
 
-  if (modifier) {
-    total += modifier;
-  }
-
-  return { type, rolls, total, modifier, advantage, disadvantage };
+  return { text: exprStr, total };
 }
 
 /**
  * Format dice result for display
  */
 export function formatResult(result: DiceResult): string {
-  const { type, rolls, total, modifier, advantage, disadvantage } = result;
+  const { type, rolls, total, modifier } = result;
 
-  let text = `**${type}**: `;
-
-  if (advantage || disadvantage) {
-    const kept = advantage ? Math.max(...rolls) : Math.min(...rolls);
-    text += `[${rolls.join(", ")}] → **${kept}**`;
-    text += advantage ? " (Adv)" : " (Dis)";
-  } else {
-    text += `**${rolls[0]}**`;
-  }
+  let text = `**${type}**: **${rolls[0]}**`;
 
   if (modifier) {
     const sign = modifier > 0 ? "+" : "";
     text += ` ${sign}${modifier} = **${total}**`;
-  }
-
-  // Special results for d20
-  if (type === "d20") {
-    const baseRoll = advantage || disadvantage
-      ? (advantage ? Math.max(...rolls) : Math.min(...rolls))
-      : rolls[0];
-    if (baseRoll === 20) {
-      text += " Critical!";
-    } else if (baseRoll === 1) {
-      text += " Fumble!";
-    }
-  }
-
-  // Special results for d100 (CoC style)
-  if (type === "d100") {
-    const baseRoll = rolls[0];
-    if (baseRoll === 1) {
-      text += " Critical Success!";
-    } else if (baseRoll === 100) {
-      text += " Critical Failure!";
-    }
   }
 
   return text;
@@ -112,11 +281,11 @@ export function formatResult(result: DiceResult): string {
 /**
  * Build dice buttons row 1 (d4-d12)
  */
-function buildDiceRow1(guildId: string): ActionRowBuilder<ButtonBuilder> {
+function buildDiceRow1(guildId: string, userId: string): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     ...DICE_ROW_1.map((dice) =>
       new ButtonBuilder()
-        .setCustomId(`dice:${dice}:${guildId}`)
+        .setCustomId(`dice:add:${dice}:${guildId}:${userId}`)
         .setLabel(dice.toUpperCase())
         .setStyle(ButtonStyle.Secondary)
     )
@@ -124,43 +293,66 @@ function buildDiceRow1(guildId: string): ActionRowBuilder<ButtonBuilder> {
 }
 
 /**
- * Build dice buttons row 2 (d20, d100, advantage, disadvantage)
+ * Build dice buttons row 2 (d20, d100, Undo)
  */
-function buildDiceRow2(guildId: string): ActionRowBuilder<ButtonBuilder> {
+function buildDiceRow2(guildId: string, userId: string, hasAccumulated: boolean): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     ...DICE_ROW_2.map((dice) =>
       new ButtonBuilder()
-        .setCustomId(`dice:${dice}:${guildId}`)
+        .setCustomId(`dice:add:${dice}:${guildId}:${userId}`)
         .setLabel(dice.toUpperCase())
         .setStyle(dice === "d20" ? ButtonStyle.Primary : ButtonStyle.Secondary)
     ),
     new ButtonBuilder()
-      .setCustomId(`dice:adv:${guildId}`)
-      .setLabel("Adv")
-      .setStyle(ButtonStyle.Success),
+      .setCustomId(`dice:undo:${guildId}:${userId}`)
+      .setLabel("↩ Undo")
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(!hasAccumulated)
+  );
+}
+
+/**
+ * Build action row with Roll and Clear buttons
+ */
+function buildDiceActionRow(guildId: string, userId: string, hasAccumulated: boolean): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
-      .setCustomId(`dice:dis:${guildId}`)
-      .setLabel("Dis")
+      .setCustomId(`dice:roll:${guildId}:${userId}`)
+      .setLabel("🎲 Roll")
+      .setStyle(ButtonStyle.Success)
+      .setDisabled(!hasAccumulated),
+    new ButtonBuilder()
+      .setCustomId(`dice:clear:${guildId}:${userId}`)
+      .setLabel("Clear")
       .setStyle(ButtonStyle.Danger)
+      .setDisabled(!hasAccumulated)
   );
 }
 
 /**
  * Build dice panel content
  */
-export function buildDiceContent(): string {
-  return "**[Dice]**\n\nRoll dice for your TRPG session.\nAdv/Dis: Roll 2d20, keep highest/lowest.";
+export function buildDiceContent(userId: string, displayName?: string): string {
+  const state = getDiceState(userId);
+  const accumulated = state ? formatAccumulatedDice(state) : "—";
+  const nameLabel = displayName ? ` (${displayName})` : "";
+  return `**[Dice]**${nameLabel}\n累計: ${accumulated}`;
 }
 
 /**
  * Build all components for dice panel
  */
 export function buildDiceComponents(
-  guildId: string
+  guildId: string,
+  userId: string
 ): ActionRowBuilder<MessageActionRowComponentBuilder>[] {
+  const state = getDiceState(userId);
+  const hasAccumulated = state ? state.dice.size > 0 : false;
+
   return [
     buildModeSwitcher(guildId, "dice") as ActionRowBuilder<MessageActionRowComponentBuilder>,
-    buildDiceRow1(guildId) as ActionRowBuilder<MessageActionRowComponentBuilder>,
-    buildDiceRow2(guildId) as ActionRowBuilder<MessageActionRowComponentBuilder>,
+    buildDiceRow1(guildId, userId) as ActionRowBuilder<MessageActionRowComponentBuilder>,
+    buildDiceRow2(guildId, userId, hasAccumulated) as ActionRowBuilder<MessageActionRowComponentBuilder>,
+    buildDiceActionRow(guildId, userId, hasAccumulated) as ActionRowBuilder<MessageActionRowComponentBuilder>,
   ];
 }

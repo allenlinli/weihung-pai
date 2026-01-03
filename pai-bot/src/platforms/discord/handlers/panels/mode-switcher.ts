@@ -18,10 +18,6 @@ export function buildModeSwitcher(
       .setLabel("Player")
       .setStyle(currentMode === "player" ? ButtonStyle.Primary : ButtonStyle.Secondary),
     new ButtonBuilder()
-      .setCustomId(`panel:soundboard:${guildId}`)
-      .setLabel("Sound")
-      .setStyle(currentMode === "soundboard" ? ButtonStyle.Primary : ButtonStyle.Secondary),
-    new ButtonBuilder()
       .setCustomId(`panel:dice:${guildId}`)
       .setLabel("Dice")
       .setStyle(currentMode === "dice" ? ButtonStyle.Primary : ButtonStyle.Secondary)

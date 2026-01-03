@@ -17,7 +17,7 @@ import {
   getGuildControlPanels,
   speakTts,
 } from "../../voice";
-import { buildPanelContent, buildPanelComponents, type PanelMode } from "../panels";
+import { buildPanelContent, buildPanelComponents, parseAndRoll, type PanelMode } from "../panels";
 
 // Discord client reference (set by index.ts)
 let discordClient: Client | null = null;
@@ -257,17 +257,21 @@ export async function handlePanel(
   const modeInput = interaction.options.getString("mode")?.toLowerCase();
   let mode: PanelMode = "dice";
   if (modeInput === "player" || modeInput === "p") mode = "player";
-  else if (modeInput === "sound" || modeInput === "soundboard" || modeInput === "s") mode = "soundboard";
   else if (modeInput === "dice" || modeInput === "d") mode = "dice";
 
   // Dice mode doesn't require voice channel
   if (mode === "dice") {
-    const content = buildPanelContent(mode, interaction.guildId);
-    const components = buildPanelComponents(mode, interaction.guildId);
-    await interaction.reply({ content, components });
+    const member = interaction.member;
+    const displayName = member && "displayName" in member
+      ? member.displayName
+      : interaction.user.displayName;
+
+    const content = buildPanelContent(mode, interaction.guildId, { userId: discordUserId, displayName });
+    const components = buildPanelComponents(mode, interaction.guildId, { userId: discordUserId });
+    const reply = await interaction.reply({ content, components, fetchReply: true });
 
     setControlPanel(discordUserId, {
-      messageId: interaction.id,
+      messageId: reply.id,
       channelId: interaction.channelId,
       guildId: interaction.guildId,
       mode,
@@ -319,4 +323,19 @@ export async function handlePanel(
       mode,
     });
   }
+}
+
+export async function handleRoll(interaction: ChatInputCommandInteraction): Promise<void> {
+  const diceExpr = interaction.options.getString("dice", true);
+  const result = parseAndRoll(diceExpr);
+
+  if (!result) {
+    await interaction.reply({
+      content: "無效的骰子表達式。範例: d20, 2d6+3, 3d8-2",
+      ephemeral: true,
+    });
+    return;
+  }
+
+  await interaction.reply(result.text);
 }

@@ -46,8 +46,8 @@ export function initializeTaskExecutor(client: Client): void {
 
           // Send new message
           const mode = panel.mode ?? "player";
-          const content = buildPanelContent(mode, guildId, { soundCategory: panel.soundCategory });
-          const components = buildPanelComponents(mode, guildId, { soundCategory: panel.soundCategory });
+          const content = buildPanelContent(mode, guildId);
+          const components = buildPanelComponents(mode, guildId);
           const newMessage = await channel.send({ content, components });
 
           // Update record
@@ -56,7 +56,6 @@ export function initializeTaskExecutor(client: Client): void {
             channelId: panel.channelId,
             guildId,
             mode,
-            soundCategory: panel.soundCategory,
           });
         }
       } catch (error) {
