@@ -1,5 +1,5 @@
 /**
- * Voice Slash Commands (join, leave, play, skip, vstop, queue, np, say, panel)
+ * Voice Slash Commands (join, leave, spotify, say, panel, roll)
  */
 
 import type { ChatInputCommandInteraction, Client } from "discord.js";
@@ -9,11 +9,7 @@ import {
   startSpotifyConnect,
   stopSpotifyConnect,
   isSpotifyConnected,
-  skip,
-  stop as stopVoice,
-  getQueue,
   isInVoiceChannel,
-  getNowPlaying,
   setControlPanel,
   clearControlPanel,
   getGuildControlPanels,
@@ -136,80 +132,6 @@ export async function handleSpotify(
     );
   } else {
     await interaction.editReply(`錯誤: ${result.error}`);
-  }
-}
-
-export async function handleSkip(interaction: ChatInputCommandInteraction): Promise<void> {
-  if (!interaction.guildId) {
-    await interaction.reply({ content: "此指令只能在伺服器中使用", ephemeral: true });
-    return;
-  }
-
-  if (!isInVoiceChannel(interaction.guildId)) {
-    await interaction.reply({ content: "Bot 不在語音頻道中", ephemeral: true });
-    return;
-  }
-
-  if (skip(interaction.guildId)) {
-    await interaction.reply("Skipped");
-  } else {
-    await interaction.reply({ content: "Nothing playing", ephemeral: true });
-  }
-}
-
-export async function handleVStop(interaction: ChatInputCommandInteraction): Promise<void> {
-  if (!interaction.guildId) {
-    await interaction.reply({ content: "此指令只能在伺服器中使用", ephemeral: true });
-    return;
-  }
-
-  if (!isInVoiceChannel(interaction.guildId)) {
-    await interaction.reply({ content: "Bot 不在語音頻道中", ephemeral: true });
-    return;
-  }
-
-  if (stopVoice(interaction.guildId)) {
-    await interaction.reply("Stopped and cleared queue");
-  } else {
-    await interaction.reply({ content: "Nothing playing", ephemeral: true });
-  }
-}
-
-export async function handleQueue(interaction: ChatInputCommandInteraction): Promise<void> {
-  if (!interaction.guildId) {
-    await interaction.reply({ content: "此指令只能在伺服器中使用", ephemeral: true });
-    return;
-  }
-
-  const queue = getQueue(interaction.guildId);
-
-  if (queue.length === 0) {
-    await interaction.reply("Queue is empty");
-    return;
-  }
-
-  const lines = queue.slice(0, 10).map((item, i) =>
-    `${i + 1}. **${item.title}** [${item.duration}]`
-  );
-
-  if (queue.length > 10) {
-    lines.push(`\n... +${queue.length - 10} more`);
-  }
-
-  await interaction.reply(`**Queue** (${queue.length}):\n${lines.join("\n")}`);
-}
-
-export async function handleNowPlaying(interaction: ChatInputCommandInteraction): Promise<void> {
-  if (!interaction.guildId) {
-    await interaction.reply({ content: "此指令只能在伺服器中使用", ephemeral: true });
-    return;
-  }
-
-  const nowPlaying = getNowPlaying(interaction.guildId);
-  if (nowPlaying) {
-    await interaction.reply(`Now playing: **${nowPlaying.title}** [${nowPlaying.duration}]`);
-  } else {
-    await interaction.reply({ content: "Nothing playing", ephemeral: true });
   }
 }
 
