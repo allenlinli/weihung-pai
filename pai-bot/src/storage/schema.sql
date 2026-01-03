@@ -78,3 +78,20 @@ CREATE TABLE IF NOT EXISTS discord_channels (
 );
 
 CREATE INDEX IF NOT EXISTS idx_discord_channels ON discord_channels(channel_id);
+
+-- Sessions (platform info for notifications)
+CREATE TABLE IF NOT EXISTS sessions (
+  session_id INTEGER PRIMARY KEY,
+  platform TEXT NOT NULL CHECK (platform IN ('telegram', 'discord')),
+  platform_user_id TEXT,           -- Original platform user ID (snowflake for Discord)
+  chat_id TEXT,                    -- Telegram chat ID for sending messages
+  channel_id TEXT,                 -- Discord channel ID for sending messages
+  guild_id TEXT,                   -- Discord guild ID (for channel mode)
+  session_type TEXT NOT NULL CHECK (session_type IN ('dm', 'channel')),
+  is_hq INTEGER DEFAULT 0,         -- 1 if this session is the HQ for system notifications
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_sessions_platform ON sessions(platform);
+CREATE INDEX IF NOT EXISTS idx_sessions_hq ON sessions(is_hq);

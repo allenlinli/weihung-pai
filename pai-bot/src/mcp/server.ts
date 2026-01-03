@@ -10,6 +10,7 @@ import { registerGoogleTools } from "./tools/google";
 import { registerSchedulerTools } from "./tools/scheduler";
 import { registerSystemTools } from "./tools/system";
 import { registerMemoryTools } from "./tools/memory";
+import { registerNotifyTools } from "./tools/notify";
 
 // Simple stderr logger for MCP (stdout is reserved for protocol)
 const log = {
@@ -31,6 +32,7 @@ registerGoogleTools(server);
 registerSchedulerTools(server);
 registerSystemTools(server);
 registerMemoryTools(server);
+registerNotifyTools(server);
 
 // Start server
 log.info("Connecting to transport...");

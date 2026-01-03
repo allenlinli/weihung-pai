@@ -9,6 +9,7 @@ import {
   handleStop,
   handleMemory,
   handleForget,
+  handleHQ,
   handleMessage,
   handleDocument,
   handlePhoto,
@@ -24,6 +25,7 @@ export async function setupBotCommands(bot: Bot): Promise<void> {
     { command: "forget", description: "清除長期記憶" },
     { command: "status", description: "查看狀態" },
     { command: "stop", description: "中斷當前任務" },
+    { command: "hq", description: "設定為管理中心" },
   ]);
   logger.info("Bot commands registered");
 }
@@ -55,6 +57,7 @@ export function createTelegramBot(): Bot {
   bot.command("forget", handleForget);
   bot.command("status", handleStatus);
   bot.command("stop", handleStop);
+  bot.command("hq", handleHQ);
 
   // Message handler (for non-command messages)
   bot.on("message:text", async (ctx) => {

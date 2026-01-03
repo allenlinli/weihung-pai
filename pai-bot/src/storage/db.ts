@@ -13,6 +13,14 @@ function runMigrations(db: Database): void {
     return result.some((col) => col.name === column);
   };
 
+  // Check if table exists helper
+  const hasTable = (table: string): boolean => {
+    const result = db.query(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name=?"
+    ).get(table);
+    return !!result;
+  };
+
   // Migration: Add message_id to conversations
   if (!hasColumn("conversations", "message_id")) {
     try {
@@ -20,6 +28,16 @@ function runMigrations(db: Database): void {
       logger.info("Migration: Added message_id column to conversations");
     } catch (e) {
       // Table might not exist yet, will be created by schema
+    }
+  }
+
+  // Migration: Add is_hq to sessions
+  if (hasTable("sessions") && !hasColumn("sessions", "is_hq")) {
+    try {
+      db.run("ALTER TABLE sessions ADD COLUMN is_hq INTEGER DEFAULT 0");
+      logger.info("Migration: Added is_hq column to sessions");
+    } catch (e) {
+      // Ignore if table doesn't exist yet
     }
   }
 }

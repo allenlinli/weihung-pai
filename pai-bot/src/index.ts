@@ -3,7 +3,7 @@ import { logger } from "./utils/logger";
 import { createTelegramBot, setupBotCommands } from "./platforms/telegram/bot";
 import { createDiscordBot, startDiscordBot, stopDiscordBot } from "./platforms/discord";
 import { getDb, closeDb } from "./storage/db";
-import { startApiServer, setTelegramBot } from "./api/server";
+import { startApiServer, setTelegramBot, setDiscordClient } from "./api/server";
 import { startScheduler, stopScheduler, type Schedule, type TaskResult } from "./services/scheduler";
 import { callClaude } from "./claude/client";
 import type { Client } from "discord.js";
@@ -46,6 +46,10 @@ async function main() {
     // Initialize Discord if configured
     if (isDiscordEnabled()) {
       discordClient = createDiscordBot();
+
+      // Inject Discord client into API server
+      setDiscordClient(discordClient);
+
       logger.info("Discord bot configured");
     }
 

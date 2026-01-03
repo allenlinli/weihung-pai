@@ -30,6 +30,7 @@ import { transcribeAudio } from "../../services/transcription";
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { getChannelContext, formatChannelContext, hashToNumeric } from "./context";
+import { sessionService } from "../../storage/sessions";
 
 // Discord client reference
 let discordClient: Client | null = null;
@@ -234,7 +235,18 @@ async function prepareTask(
 export async function handleMessage(message: Message, isChannelMode: boolean = false): Promise<void> {
   const discordUserId = message.author.id;
   const channelId = message.channel.id;
+  const guildId = message.guild?.id;
   const sessionKey = isChannelMode ? hashToNumeric(channelId) : toNumericId(discordUserId);
+
+  // 記錄 session 資訊
+  sessionService.upsert({
+    sessionId: sessionKey,
+    platform: "discord",
+    platformUserId: isChannelMode ? undefined : discordUserId,
+    channelId,
+    guildId,
+    sessionType: isChannelMode ? "channel" : "dm",
+  });
 
   // Strip bot mention from message content
   let text = message.content;
@@ -488,6 +500,27 @@ async function handleCommand(message: Message, text: string, isChannelMode: bool
       break;
     }
 
+    case "/hq": {
+      // 確保 session 已記錄
+      sessionService.upsert({
+        sessionId: sessionKey,
+        platform: "discord",
+        platformUserId: isChannelMode ? undefined : discordUserId,
+        channelId,
+        guildId: message.guild?.id,
+        sessionType: isChannelMode ? "channel" : "dm",
+      });
+
+      // 設定為 HQ
+      const success = sessionService.setHQ(sessionKey);
+      if (success) {
+        await message.reply("✅ 已設定此對話為管理中心（HQ）\n系統通知將發送至此處");
+      } else {
+        await message.reply("❌ 設定失敗");
+      }
+      break;
+    }
+
     default:
       // Unknown command, treat as regular message
       await handleMessage({ ...message, content: text.slice(1) } as Message);
@@ -722,6 +755,27 @@ export async function handleSlashCommand(interaction: ChatInputCommandInteractio
 
       const archived = memoryManager.archiveByUser(userId);
       await interaction.reply(`Archived ${archived} memories (can be recovered via MCP)`);
+      break;
+    }
+
+    case "hq": {
+      // 確保 session 已記錄
+      sessionService.upsert({
+        sessionId: sessionKey,
+        platform: "discord",
+        platformUserId: isChannelMode ? undefined : discordUserId,
+        channelId,
+        guildId: interaction.guildId || undefined,
+        sessionType: isChannelMode ? "channel" : "dm",
+      });
+
+      // 設定為 HQ
+      const success = sessionService.setHQ(sessionKey);
+      if (success) {
+        await interaction.reply("✅ 已設定此對話為管理中心（HQ）\n系統通知將發送至此處");
+      } else {
+        await interaction.reply("❌ 設定失敗");
+      }
       break;
     }
 

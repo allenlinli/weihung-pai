@@ -20,6 +20,7 @@ import { join, resolve } from "node:path";
 import { memoryManager } from "../../memory";
 import { setTaskExecutor } from "./callbacks";
 import { transcribeAudio } from "../../services/transcription";
+import { sessionService } from "../../storage/sessions";
 
 // 超時時間（毫秒）
 const DECISION_TIMEOUT_MS = 10000;
@@ -156,6 +157,29 @@ export async function handleForget(ctx: Context): Promise<void> {
   await ctx.reply(`已封存 ${archived} 條長期記憶（可透過 MCP 工具恢復）`);
 }
 
+export async function handleHQ(ctx: Context): Promise<void> {
+  const userId = ctx.from?.id;
+  const chatId = ctx.chat?.id;
+  if (!userId || !chatId) return;
+
+  // 確保 session 已記錄
+  sessionService.upsert({
+    sessionId: userId,
+    platform: "telegram",
+    platformUserId: userId.toString(),
+    chatId: chatId.toString(),
+    sessionType: "dm",
+  });
+
+  // 設定為 HQ
+  const success = sessionService.setHQ(userId);
+  if (success) {
+    await ctx.reply("✅ 已設定此對話為管理中心（HQ）\n系統通知將發送至此處");
+  } else {
+    await ctx.reply("❌ 設定失敗，請先發送任意訊息建立 session");
+  }
+}
+
 // ============================================================
 // Message Handler
 // ============================================================
@@ -171,6 +195,15 @@ export async function handleMessage(ctx: Context): Promise<void> {
   if (!botApi) {
     initializeTaskExecutor(ctx.api);
   }
+
+  // 記錄 session 資訊
+  sessionService.upsert({
+    sessionId: userId,
+    platform: "telegram",
+    platformUserId: userId.toString(),
+    chatId: chatId.toString(),
+    sessionType: "dm",
+  });
 
   // 處理 /cc: Claude slash command
   let prompt = text;

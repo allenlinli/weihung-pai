@@ -3,13 +3,18 @@
  * 提供基本的 API endpoints
  */
 
+import type { Client as DiscordClient, TextChannel } from "discord.js";
 import { logger } from "../utils/logger";
 import * as google from "../services/google";
+import { sessionService, type Session } from "../storage/sessions";
 
 // Telegram bot 實例（稍後注入）
 let telegramBot: {
   sendMessage: (userId: number, text: string) => Promise<void>;
 } | null = null;
+
+// Discord client 實例（稍後注入）
+let discordClient: DiscordClient | null = null;
 
 // 允許的用戶 ID
 let allowedUserIds: number[] = [];
@@ -20,6 +25,31 @@ export function setTelegramBot(
 ) {
   telegramBot = bot;
   allowedUserIds = userIds;
+}
+
+export function setDiscordClient(client: DiscordClient) {
+  discordClient = client;
+}
+
+/**
+ * 透過 session 發送通知
+ */
+async function notifyBySession(session: Session, message: string): Promise<void> {
+  if (session.platform === "telegram") {
+    if (!telegramBot || !session.chat_id) {
+      throw new Error("Telegram bot not configured or missing chat_id");
+    }
+    await telegramBot.sendMessage(parseInt(session.chat_id), message);
+  } else if (session.platform === "discord") {
+    if (!discordClient || !session.channel_id) {
+      throw new Error("Discord client not configured or missing channel_id");
+    }
+    const channel = await discordClient.channels.fetch(session.channel_id);
+    if (!channel || !channel.isTextBased()) {
+      throw new Error("Discord channel not found or not text-based");
+    }
+    await (channel as TextChannel).send(message);
+  }
 }
 
 /**
@@ -40,7 +70,7 @@ export function startApiServer(port = 3000) {
           return Response.json({ status: "ok" });
         }
 
-        // Notify API
+        // Notify API - sends to HQ session (fallback to allowedUserIds[0])
         if (path === "/api/notify" && method === "POST") {
           const body = await req.json();
           const { message, level = "info" } = body;
@@ -49,22 +79,73 @@ export function startApiServer(port = 3000) {
             return Response.json({ error: "Missing message" }, { status: 400 });
           }
 
-          if (!telegramBot || allowedUserIds.length === 0) {
-            return Response.json({ error: "Telegram bot not configured" }, { status: 500 });
-          }
-
-          const userId = allowedUserIds[0];
           const icons: Record<string, string> = {
             info: "ℹ️",
             warning: "⚠️",
             error: "❌",
-            success: "➡️",
+            success: "✅",
           };
-
           const icon = icons[level] || icons.info;
-          await telegramBot.sendMessage(userId, `${icon} ${message}`);
+          const formattedMessage = `${icon} ${message}`;
 
-          return Response.json({ success: true });
+          // Try HQ session first
+          const hqSession = sessionService.getHQ();
+          if (hqSession) {
+            try {
+              await notifyBySession(hqSession, formattedMessage);
+              return Response.json({ success: true, target: "hq", platform: hqSession.platform });
+            } catch (error) {
+              logger.warn({ error }, "Failed to notify HQ, falling back to default");
+            }
+          }
+
+          // Fallback to allowedUserIds[0]
+          if (!telegramBot || allowedUserIds.length === 0) {
+            return Response.json({ error: "No HQ configured and Telegram bot not available" }, { status: 500 });
+          }
+
+          await telegramBot.sendMessage(allowedUserIds[0], formattedMessage);
+          return Response.json({ success: true, target: "fallback" });
+        }
+
+        // Session-based notify API
+        if (path === "/api/notify/session" && method === "POST") {
+          const body = await req.json();
+          const { sessionId, message }: { sessionId: number; message: string } = body;
+
+          if (!sessionId || !message) {
+            return Response.json({ error: "Missing sessionId or message" }, { status: 400 });
+          }
+
+          const session = sessionService.get(sessionId);
+          if (!session) {
+            return Response.json({ error: "Session not found" }, { status: 404 });
+          }
+
+          await notifyBySession(session, message);
+          return Response.json({ success: true, platform: session.platform });
+        }
+
+        // List sessions API
+        if (path === "/api/sessions" && method === "GET") {
+          const platform = url.searchParams.get("platform");
+          const sessions = platform
+            ? sessionService.getByPlatform(platform as "telegram" | "discord")
+            : sessionService.getAll();
+          return Response.json({ sessions });
+        }
+
+        // Get session API
+        if (path.startsWith("/api/sessions/") && method === "GET") {
+          const id = parseInt(path.split("/").pop()!);
+          if (isNaN(id)) {
+            return Response.json({ error: "Invalid session ID" }, { status: 400 });
+          }
+          const session = sessionService.get(id);
+          if (!session) {
+            return Response.json({ error: "Session not found" }, { status: 404 });
+          }
+          return Response.json({ session });
         }
 
         // === Google APIs ===

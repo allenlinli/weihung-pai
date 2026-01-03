@@ -17,6 +17,7 @@ const slashCommands = [
   new SlashCommandBuilder().setName("forget").setDescription("清除長期記憶"),
   new SlashCommandBuilder().setName("status").setDescription("查看狀態"),
   new SlashCommandBuilder().setName("stop").setDescription("中斷當前任務"),
+  new SlashCommandBuilder().setName("hq").setDescription("設定為管理中心"),
 ].map(cmd => cmd.toJSON());
 
 /**
