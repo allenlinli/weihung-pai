@@ -70,3 +70,8 @@ vault_anthropic_api_key: "sk-ant-api03-YOUR_ANTHROPIC_API_KEY"
 vault_google_client_id: "YOUR_CLIENT_ID.apps.googleusercontent.com"
 vault_google_client_secret: "YOUR_CLIENT_SECRET"
 vault_google_refresh_token: "YOUR_REFRESH_TOKEN"
+
+# === Garmin Connect（可選，用於健康數據追蹤）===
+# 用於取得步數、睡眠、心率等健康數據
+vault_garmin_email: "YOUR_GARMIN_EMAIL"
+vault_garmin_password: "YOUR_GARMIN_PASSWORD"

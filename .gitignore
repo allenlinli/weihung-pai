@@ -43,3 +43,6 @@ tmp/
 temp/
 *.tmp
 .ansible/
+
+# ===== Service Tokens =====
+.garmin_tokens/

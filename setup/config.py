@@ -194,6 +194,23 @@ OPTIONAL_FEATURES: list[FeatureDef] = [
             },
         ],
     },
+    {
+        "name": "garmin",
+        "description": "Garmin Connect 健康數據整合（步數、睡眠、心率）",
+        "vars": [
+            {
+                "key": "vault_garmin_email",
+                "prompt": "Garmin Connect Email",
+                "help": "你的 Garmin Connect 帳號 Email",
+            },
+            {
+                "key": "vault_garmin_password",
+                "prompt": "Garmin Connect 密碼",
+                "help": "你的 Garmin Connect 密碼",
+                "secret": True,
+            },
+        ],
+    },
 ]
 
 # Playbooks
