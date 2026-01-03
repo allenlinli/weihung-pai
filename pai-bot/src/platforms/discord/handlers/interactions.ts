@@ -14,9 +14,20 @@ import {
   clearControlPanel,
   previous,
   playAt,
+  getControlPanel,
+  setControlPanel,
+  playSoundEffect,
 } from "../voice";
+import { getSoundPath, type SoundCategory } from "../sounds";
 import { toNumericId, isSendableChannel } from "./utils";
-import { buildControlPanelContent, buildControlPanelComponents } from "./music-panel";
+import {
+  buildPanelContent,
+  buildPanelComponents,
+  roll,
+  formatResult,
+  type PanelMode,
+  type DiceResult,
+} from "./panels";
 import { executeClaudeTask, getPendingDecisions } from "./message";
 
 /**
@@ -27,12 +38,36 @@ export async function handleButtonInteraction(interaction: ButtonInteraction): P
   const discordUserId = interaction.user.id;
   const userId = toNumericId(discordUserId);
 
-  // Parse callback data: action:param or music:action:guildId
+  // Parse callback data
   const parts = data.split(":");
 
-  // Handle music buttons
+  // Handle panel mode switch: panel:mode:guildId
+  if (parts[0] === "panel" && parts.length === 3) {
+    await handlePanelSwitch(interaction, discordUserId, parts[1] as PanelMode, parts[2]);
+    return;
+  }
+
+  // Handle music buttons: music:action:guildId
   if (parts[0] === "music" && parts.length === 3) {
-    await handleMusicButton(interaction, parts[1], parts[2]);
+    await handleMusicButton(interaction, discordUserId, parts[1], parts[2]);
+    return;
+  }
+
+  // Handle sound buttons: sound:category-id:guildId
+  if (parts[0] === "sound" && parts.length === 3) {
+    await handleSoundButton(interaction, parts[1], parts[2]);
+    return;
+  }
+
+  // Handle sound category switch: soundcat:category:guildId
+  if (parts[0] === "soundcat" && parts.length === 3) {
+    await handleSoundCategorySwitch(interaction, discordUserId, parts[1] as SoundCategory, parts[2]);
+    return;
+  }
+
+  // Handle dice buttons: dice:type:guildId
+  if (parts[0] === "dice" && parts.length === 3) {
+    await handleDiceButton(interaction, parts[1], parts[2]);
     return;
   }
 
@@ -109,18 +144,53 @@ export async function handleButtonInteraction(interaction: ButtonInteraction): P
 }
 
 /**
+ * Handle panel mode switch
+ */
+async function handlePanelSwitch(
+  interaction: ButtonInteraction,
+  discordUserId: string,
+  mode: PanelMode,
+  guildId: string
+): Promise<void> {
+  const panel = getControlPanel(discordUserId);
+  const soundCategory = panel?.soundCategory ?? "dnd";
+
+  // Update panel mode
+  setControlPanel(discordUserId, {
+    messageId: interaction.message.id,
+    channelId: interaction.channelId,
+    guildId,
+    mode,
+    soundCategory,
+  });
+
+  // Update message
+  const content = buildPanelContent(mode, guildId, { soundCategory });
+  const components = buildPanelComponents(mode, guildId, { soundCategory });
+
+  try {
+    await interaction.update({ content, components });
+  } catch (error) {
+    logger.debug({ error }, "Failed to update panel");
+  }
+}
+
+/**
  * Handle music button interactions
  */
 async function handleMusicButton(
   interaction: ButtonInteraction,
+  discordUserId: string,
   action: string,
   guildId: string
 ): Promise<void> {
+  const panel = getControlPanel(discordUserId);
+
   switch (action) {
     case "prev": {
       if (previous(guildId)) {
         await interaction.reply({ content: "Replaying current track", ephemeral: true });
-        await updateControlPanelMessage(interaction, guildId);
+        await updatePanelMessage(interaction, guildId, panel);
       } else {
         await interaction.reply({ content: "Nothing playing", ephemeral: true });
       }
@@ -130,7 +200,7 @@ async function handleMusicButton(
     case "skip": {
       if (skip(guildId)) {
         await interaction.reply({ content: "Skipped", ephemeral: true });
-        await updateControlPanelMessage(interaction, guildId);
+        await updatePanelMessage(interaction, guildId, panel);
       } else {
         await interaction.reply({ content: "Nothing playing", ephemeral: true });
       }
@@ -140,7 +210,7 @@ async function handleMusicButton(
     case "stop": {
       if (stopVoice(guildId)) {
         await interaction.reply({ content: "Stopped and cleared queue", ephemeral: true });
-        await updateControlPanelMessage(interaction, guildId);
+        await updatePanelMessage(interaction, guildId, panel);
       } else {
         await interaction.reply({ content: "Nothing playing", ephemeral: true });
       }
@@ -163,8 +233,89 @@ async function handleMusicButton(
     }
 
     default:
-      await interaction.reply({ content: "未知操作", ephemeral: true });
+      await interaction.reply({ content: "Unknown action", ephemeral: true });
   }
+}
+
+/**
+ * Handle sound button interactions
+ */
+async function handleSoundButton(
+  interaction: ButtonInteraction,
+  soundInfo: string,
+  guildId: string
+): Promise<void> {
+  // soundInfo format: category-soundId (e.g., "dnd-sword")
+  const [category, soundId] = soundInfo.split("-") as [SoundCategory, string];
+
+  const soundPath = getSoundPath(category, soundId);
+  if (!soundPath) {
+    await interaction.reply({ content: "Sound not found", ephemeral: true });
+    return;
+  }
+
+  const result = await playSoundEffect(guildId, soundPath);
+  if (result.ok) {
+    await interaction.reply({ content: `Playing: ${soundId}`, ephemeral: true });
+  } else {
+    await interaction.reply({ content: result.error, ephemeral: true });
+  }
+}
+
+/**
+ * Handle sound category switch
+ */
+async function handleSoundCategorySwitch(
+  interaction: ButtonInteraction,
+  discordUserId: string,
+  category: SoundCategory,
+  guildId: string
+): Promise<void> {
+  const panel = getControlPanel(discordUserId);
+
+  // Update panel with new category
+  setControlPanel(discordUserId, {
+    messageId: interaction.message.id,
+    channelId: interaction.channelId,
+    guildId,
+    mode: "soundboard",
+    soundCategory: category,
+  });
+
+  // Update message
+  const content = buildPanelContent("soundboard", guildId, { soundCategory: category });
+  const components = buildPanelComponents("soundboard", guildId, { soundCategory: category });
+
+  try {
+    await interaction.update({ content, components });
+  } catch (error) {
+    logger.debug({ error }, "Failed to update soundboard");
+  }
+}
+
+/**
+ * Handle dice button interactions
+ */
+async function handleDiceButton(
+  interaction: ButtonInteraction,
+  diceType: string,
+  guildId: string
+): Promise<void> {
+  let result: DiceResult;
+
+  if (diceType === "adv") {
+    result = roll("d20", { advantage: true });
+  } else if (diceType === "dis") {
+    result = roll("d20", { disadvantage: true });
+  } else if (diceType.startsWith("d")) {
+    result = roll(diceType as any);
+  } else {
+    await interaction.reply({ content: "Unknown dice type", ephemeral: true });
+    return;
+  }
+
+  const formatted = formatResult(result);
+  await interaction.reply({ content: formatted, ephemeral: false });
 }
 
 /**
@@ -175,18 +326,20 @@ export async function handleSelectMenuInteraction(
 ): Promise<void> {
   const customId = interaction.customId;
   const parts = customId.split(":");
+  const discordUserId = interaction.user.id;
 
   // Handle music select: music:select:guildId
   if (parts[0] === "music" && parts[1] === "select" && parts.length === 3) {
     const guildId = parts[2];
     const selectedIndex = parseInt(interaction.values[0], 10);
+    const panel = getControlPanel(discordUserId);
 
     if (playAt(guildId, selectedIndex)) {
       await interaction.reply({
         content: `Jumping to track ${selectedIndex + 1}`,
         ephemeral: true,
       });
-      await updateControlPanelFromSelect(interaction, guildId);
+      await updatePanelMessageFromSelect(interaction, guildId, panel);
     } else {
       await interaction.reply({ content: "Failed", ephemeral: true });
     }
@@ -194,33 +347,37 @@ export async function handleSelectMenuInteraction(
 }
 
 /**
- * Update control panel message (from button interaction)
+ * Update panel message (from button interaction)
  */
-async function updateControlPanelMessage(
+async function updatePanelMessage(
   interaction: ButtonInteraction,
-  guildId: string
+  guildId: string,
+  panel?: { mode?: PanelMode; soundCategory?: SoundCategory }
 ): Promise<void> {
   try {
-    const content = buildControlPanelContent(guildId);
-    const components = buildControlPanelComponents(guildId);
+    const mode = panel?.mode ?? "player";
+    const content = buildPanelContent(mode, guildId, { soundCategory: panel?.soundCategory });
+    const components = buildPanelComponents(mode, guildId, { soundCategory: panel?.soundCategory });
     await interaction.message.edit({ content, components });
   } catch (error) {
-    logger.debug({ error, guildId }, "Failed to update control panel message");
+    logger.debug({ error, guildId }, "Failed to update panel message");
   }
 }
 
 /**
- * Update control panel message (from select menu interaction)
+ * Update panel message (from select menu interaction)
  */
-async function updateControlPanelFromSelect(
+async function updatePanelMessageFromSelect(
   interaction: StringSelectMenuInteraction,
-  guildId: string
+  guildId: string,
+  panel?: { mode?: PanelMode; soundCategory?: SoundCategory }
 ): Promise<void> {
   try {
-    const content = buildControlPanelContent(guildId);
-    const components = buildControlPanelComponents(guildId);
+    const mode = panel?.mode ?? "player";
+    const content = buildPanelContent(mode, guildId, { soundCategory: panel?.soundCategory });
+    const components = buildPanelComponents(mode, guildId, { soundCategory: panel?.soundCategory });
     await interaction.message.edit({ content, components });
   } catch (error) {
-    logger.debug({ error, guildId }, "Failed to update control panel message");
+    logger.debug({ error, guildId }, "Failed to update panel message");
   }
 }

@@ -137,8 +137,13 @@ export function createDiscordBot(): Client {
 
   // Interaction handler (for buttons and slash commands)
   client.on(Events.InteractionCreate, async (interaction: Interaction) => {
+    // Skip auth for dice buttons (TRPG mode - anyone can roll)
+    const shouldSkipAuth =
+      interaction.isButton() &&
+      interaction.customId.startsWith("dice:");
+
     // Check authorization
-    if (!isAuthorized(interaction.user.id)) {
+    if (!shouldSkipAuth && !isAuthorized(interaction.user.id)) {
       if (interaction.isRepliable()) {
         await interaction.reply({ content: "Unauthorized", ephemeral: true });
       }

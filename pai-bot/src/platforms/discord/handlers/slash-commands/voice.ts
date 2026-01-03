@@ -13,12 +13,11 @@ import {
   isInVoiceChannel,
   getNowPlaying,
   setControlPanel,
-  getControlPanel,
   clearControlPanel,
   getGuildControlPanels,
   speakTts,
 } from "../../voice";
-import { buildControlPanelContent, buildControlPanelComponents } from "../music-panel";
+import { buildPanelContent, buildPanelComponents } from "../panels";
 
 // Discord client reference (set by index.ts)
 let discordClient: Client | null = null;
@@ -46,27 +45,11 @@ export async function handleJoin(
 
   await interaction.deferReply();
 
-  // Check if user has control panel in another guild
-  const existingPanel = getControlPanel(discordUserId);
-  if (existingPanel && existingPanel.guildId !== interaction.guildId) {
-    leaveChannel(existingPanel.guildId);
-    try {
-      const oldChannel = await discordClient?.channels.fetch(existingPanel.channelId);
-      if (oldChannel?.isTextBased() && "messages" in oldChannel) {
-        const oldMessage = await oldChannel.messages.fetch(existingPanel.messageId);
-        await oldMessage.delete();
-      }
-    } catch {
-      // Ignore delete errors
-    }
-    clearControlPanel(discordUserId);
-  }
-
   const result = await joinChannel(voiceChannel);
 
   if (result.ok) {
-    const content = buildControlPanelContent(interaction.guildId!);
-    const components = buildControlPanelComponents(interaction.guildId!);
+    const content = buildPanelContent("player", interaction.guildId!);
+    const components = buildPanelComponents("player", interaction.guildId!);
     const reply = await interaction.editReply({
       content,
       components,
@@ -76,6 +59,7 @@ export async function handleJoin(
       messageId: reply.id,
       channelId: interaction.channelId,
       guildId: interaction.guildId!,
+      mode: "player",
     });
   } else {
     await interaction.editReply(`無法加入: ${result.error}`);
@@ -99,7 +83,7 @@ export async function handleLeave(interaction: ChatInputCommandInteraction): Pro
   }
 
   leaveChannel(interaction.guildId);
-  await interaction.reply("👋 已離開語音頻道");
+  await interaction.reply("Left voice channel");
 }
 
 export async function handlePlay(
@@ -126,24 +110,9 @@ export async function handlePlay(
 
     await interaction.deferReply();
 
-    const existingPanel = getControlPanel(discordUserId);
-    if (existingPanel && existingPanel.guildId !== interaction.guildId) {
-      leaveChannel(existingPanel.guildId);
-      try {
-        const oldChannel = await discordClient?.channels.fetch(existingPanel.channelId);
-        if (oldChannel?.isTextBased() && "messages" in oldChannel) {
-          const oldMessage = await oldChannel.messages.fetch(existingPanel.messageId);
-          await oldMessage.delete();
-        }
-      } catch {
-        // Ignore delete errors
-      }
-      clearControlPanel(discordUserId);
-    }
-
     const joinResult = await joinChannel(voiceChannel);
     if (!joinResult.ok) {
-      await interaction.editReply(`❌ 無法加入語音頻道: ${joinResult.error}`);
+      await interaction.editReply(`Unable to join: ${joinResult.error}`);
       return;
     }
     needControlPanel = true;
@@ -155,11 +124,11 @@ export async function handlePlay(
 
   if (result.ok) {
     const queue = getQueue(interaction.guildId);
-    const queueInfo = queue.length > 0 ? ` (佇列: ${queue.length} 首)` : "";
+    const queueInfo = queue.length > 0 ? ` (Queue: ${queue.length})` : "";
 
     if (needControlPanel) {
-      const content = buildControlPanelContent(interaction.guildId);
-      const components = buildControlPanelComponents(interaction.guildId);
+      const content = buildPanelContent("player", interaction.guildId);
+      const components = buildPanelComponents("player", interaction.guildId);
       const reply = await interaction.editReply({
         content,
         components,
@@ -169,6 +138,7 @@ export async function handlePlay(
         messageId: reply.id,
         channelId: interaction.channelId,
         guildId: interaction.guildId,
+        mode: "player",
       });
     } else {
       await interaction.editReply(`Added: **${result.item.title}**${queueInfo}`);
@@ -190,9 +160,9 @@ export async function handleSkip(interaction: ChatInputCommandInteraction): Prom
   }
 
   if (skip(interaction.guildId)) {
-    await interaction.reply("⏭️ 已跳過");
+    await interaction.reply("Skipped");
   } else {
-    await interaction.reply({ content: "沒有正在播放的歌曲", ephemeral: true });
+    await interaction.reply({ content: "Nothing playing", ephemeral: true });
   }
 }
 
@@ -208,9 +178,9 @@ export async function handleVStop(interaction: ChatInputCommandInteraction): Pro
   }
 
   if (stopVoice(interaction.guildId)) {
-    await interaction.reply("⏹️ 已停止播放並清空佇列");
+    await interaction.reply("Stopped and cleared queue");
   } else {
-    await interaction.reply({ content: "沒有正在播放的歌曲", ephemeral: true });
+    await interaction.reply({ content: "Nothing playing", ephemeral: true });
   }
 }
 
@@ -223,7 +193,7 @@ export async function handleQueue(interaction: ChatInputCommandInteraction): Pro
   const queue = getQueue(interaction.guildId);
 
   if (queue.length === 0) {
-    await interaction.reply("📋 播放佇列為空");
+    await interaction.reply("Queue is empty");
     return;
   }
 
@@ -232,10 +202,10 @@ export async function handleQueue(interaction: ChatInputCommandInteraction): Pro
   );
 
   if (queue.length > 10) {
-    lines.push(`\n...還有 ${queue.length - 10} 首`);
+    lines.push(`\n... +${queue.length - 10} more`);
   }
 
-  await interaction.reply(`📋 **播放佇列** (${queue.length} 首):\n${lines.join("\n")}`);
+  await interaction.reply(`**Queue** (${queue.length}):\n${lines.join("\n")}`);
 }
 
 export async function handleNowPlaying(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -246,9 +216,9 @@ export async function handleNowPlaying(interaction: ChatInputCommandInteraction)
 
   const nowPlaying = getNowPlaying(interaction.guildId);
   if (nowPlaying) {
-    await interaction.reply(`🎵 正在播放: **${nowPlaying.title}** [${nowPlaying.duration}]`);
+    await interaction.reply(`Now playing: **${nowPlaying.title}** [${nowPlaying.duration}]`);
   } else {
-    await interaction.reply({ content: "目前沒有播放中的歌曲", ephemeral: true });
+    await interaction.reply({ content: "Nothing playing", ephemeral: true });
   }
 }
 
@@ -269,8 +239,8 @@ export async function handleSay(interaction: ChatInputCommandInteraction): Promi
   const result = await speakTts(interaction.guildId, text);
 
   if (result.ok) {
-    await interaction.editReply(`🎙️ 已說出: "${text.slice(0, 100)}${text.length > 100 ? "..." : ""}"`);
+    await interaction.editReply(`Said: "${text.slice(0, 100)}${text.length > 100 ? "..." : ""}"`);
   } else {
-    await interaction.editReply(`❌ TTS 播放失敗: ${result.error}`);
+    await interaction.editReply(`TTS failed: ${result.error}`);
   }
 }

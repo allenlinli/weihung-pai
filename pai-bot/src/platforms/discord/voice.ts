@@ -44,11 +44,8 @@ interface GuildQueue {
 const guildQueues = new Map<string, GuildQueue>();
 
 // 控制面板追蹤（每個使用者一個）
-interface ControlPanel {
-  messageId: string;
-  channelId: string;
-  guildId: string;
-}
+import type { ControlPanel } from "./handlers/panels/types";
+export type { ControlPanel } from "./handlers/panels/types";
 
 const userControlPanels = new Map<string, ControlPanel>();
 
@@ -136,6 +133,30 @@ export async function joinChannel(
       if (guildQueue && guildQueue.queue.length > 0) {
         playNext(channel.guild.id);
       }
+    });
+
+    // 監聽連接狀態變化，自動清理失效的連接
+    connection.on(VoiceConnectionStatus.Disconnected, async () => {
+      logger.warn({ guildId: channel.guild.id }, "Voice connection disconnected");
+      try {
+        // 嘗試等待重新連接（5 秒）
+        await Promise.race([
+          entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
+          entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
+        ]);
+        // 成功重新連接
+        logger.info({ guildId: channel.guild.id }, "Voice connection reconnecting");
+      } catch {
+        // 無法重新連接，清理資源
+        logger.info({ guildId: channel.guild.id }, "Voice connection failed to reconnect, cleaning up");
+        connection.destroy();
+        guildQueues.delete(channel.guild.id);
+      }
+    });
+
+    connection.on(VoiceConnectionStatus.Destroyed, () => {
+      logger.info({ guildId: channel.guild.id }, "Voice connection destroyed");
+      guildQueues.delete(channel.guild.id);
     });
 
     connection.subscribe(player);
@@ -440,10 +461,29 @@ export function getQueue(guildId: string): QueueItem[] {
 }
 
 /**
- * 檢查 bot 是否在語音頻道中
+ * 檢查 bot 是否在語音頻道中（驗證連接狀態）
  */
 export function isInVoiceChannel(guildId: string): boolean {
-  return guildQueues.has(guildId) || !!getVoiceConnection(guildId);
+  const guildQueue = guildQueues.get(guildId);
+  if (guildQueue) {
+    // 驗證連接狀態是否有效
+    const status = guildQueue.connection.state.status;
+    if (status === VoiceConnectionStatus.Ready || status === VoiceConnectionStatus.Signalling) {
+      return true;
+    }
+    // 連接無效，清理
+    logger.warn({ guildId, status }, "Invalid voice connection state, cleaning up");
+    guildQueues.delete(guildId);
+  }
+
+  // 檢查是否有獨立的連接（不在 guildQueues 中）
+  const connection = getVoiceConnection(guildId);
+  if (connection) {
+    const status = connection.state.status;
+    return status === VoiceConnectionStatus.Ready || status === VoiceConnectionStatus.Signalling;
+  }
+
+  return false;
 }
 
 /**
@@ -572,6 +612,43 @@ export async function speakTts(
     return { ok: true };
   } catch (error) {
     logger.error({ error, text }, "TTS playback failed");
+    return { ok: false, error: String(error) };
+  }
+}
+
+/**
+ * 播放本地音效檔案
+ */
+export async function playSoundEffect(
+  guildId: string,
+  filePath: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const guildQueue = guildQueues.get(guildId);
+  if (!guildQueue) {
+    return { ok: false, error: "Bot 不在語音頻道中" };
+  }
+
+  try {
+    const fs = await import("node:fs");
+    const fsPromises = await import("node:fs/promises");
+
+    // Check if file exists
+    try {
+      await fsPromises.access(filePath);
+    } catch {
+      return { ok: false, error: `音效檔案不存在: ${filePath}` };
+    }
+
+    const readable = fs.createReadStream(filePath);
+    const resource = createAudioResource(readable, {
+      inputType: StreamType.Arbitrary,
+    });
+
+    guildQueue.player.play(resource);
+    logger.info({ filePath }, "Sound effect played");
+    return { ok: true };
+  } catch (error) {
+    logger.error({ error, filePath }, "Sound effect playback failed");
     return { ok: false, error: String(error) };
   }
 }

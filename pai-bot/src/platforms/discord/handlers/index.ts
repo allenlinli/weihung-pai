@@ -11,7 +11,7 @@ import {
   getGuildControlPanels,
   setControlPanel,
 } from "../voice";
-import { buildControlPanelContent, buildControlPanelComponents } from "./music-panel";
+import { buildPanelContent, buildPanelComponents } from "./panels";
 import { setDiscordClient } from "./slash-commands/voice";
 
 // Discord client reference
@@ -28,6 +28,11 @@ export function initializeTaskExecutor(client: Client): void {
   setOnTrackChange(async (guildId, item) => {
     const panels = getGuildControlPanels(guildId);
     for (const { userId, panel } of panels) {
+      // Only update if in player mode
+      if (panel.mode && panel.mode !== "player") {
+        continue;
+      }
+
       try {
         const channel = await client.channels.fetch(panel.channelId);
         if (channel?.isTextBased() && "messages" in channel && "send" in channel) {
@@ -40,8 +45,9 @@ export function initializeTaskExecutor(client: Client): void {
           }
 
           // Send new message
-          const content = buildControlPanelContent(guildId);
-          const components = buildControlPanelComponents(guildId);
+          const mode = panel.mode ?? "player";
+          const content = buildPanelContent(mode, guildId, { soundCategory: panel.soundCategory });
+          const components = buildPanelComponents(mode, guildId, { soundCategory: panel.soundCategory });
           const newMessage = await channel.send({ content, components });
 
           // Update record
@@ -49,6 +55,8 @@ export function initializeTaskExecutor(client: Client): void {
             messageId: newMessage.id,
             channelId: panel.channelId,
             guildId,
+            mode,
+            soundCategory: panel.soundCategory,
           });
         }
       } catch (error) {
