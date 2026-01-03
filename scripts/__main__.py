@@ -31,6 +31,8 @@ def main() -> None:
         run_bot_command(args)
     elif command == "google":
         run_google_command(args)
+    elif command == "discord":
+        run_discord_command(args)
     else:
         print(f"未知命令: {command}")
         print()
@@ -110,6 +112,22 @@ def run_google_command(args: list[str]) -> None:
         sys.exit(1)
 
 
+def run_discord_command(args: list[str]) -> None:
+    from .discord import invite
+
+    if not args:
+        print("用法: uv run pai discord <subcommand>")
+        print("  invite   生成 Bot 邀請連結")
+        sys.exit(1)
+
+    subcommand = args[0]
+    if subcommand == "invite":
+        sys.exit(invite())
+    else:
+        print(f"未知子命令: {subcommand}")
+        sys.exit(1)
+
+
 def print_help() -> None:
     print("PAI Infrastructure Scripts")
     print()
@@ -124,6 +142,7 @@ def print_help() -> None:
     print("  bot restart           重啟 bot")
     print("  google auth           執行 Google OAuth2 授權")
     print("  google token          取得 Google access token")
+    print("  discord invite        生成 Discord Bot 邀請連結")
     print()
     print("範例:")
     print("  uv run pai ansible ansible-playbook ansible/playbooks/deploy-bot.yml")

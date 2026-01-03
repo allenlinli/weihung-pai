@@ -83,6 +83,11 @@ OPTIONAL_FEATURES: list[FeatureDef] = [
                 "secret": True,
             },
             {
+                "key": "discord_client_id",
+                "prompt": "Discord Client ID",
+                "help": "從 Discord Developer Portal 取得（用於生成邀請連結）",
+            },
+            {
                 "key": "discord_allowed_user_ids",
                 "prompt": "允許的 Discord User ID",
                 "help": "你的 Discord User ID（開發者模式下右鍵頭像複製）",
