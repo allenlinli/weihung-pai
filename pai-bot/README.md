@@ -24,7 +24,7 @@ Personal AI Bot - 整合 Claude Code 的多平台聊天機器人。
 
 ### Discord 特色
 
-- 音樂播放（YouTube、Spotify）
+- 音樂播放（Spotify Connect）
 - 骰子系統（支援 TRPG 規則）
 - 語音頻道管理
 
