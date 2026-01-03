@@ -1,6 +1,32 @@
 # CHANGELOG
 
 
+## v1.24.1 (2026-01-03)
+
+### Bug Fixes
+
+- Remove player panel and queue references
+  ([`a810583`](https://github.com/wayne930242/weihung-pai/commit/a810583cbd1c5e145957e1a63ef605b443dd201d))
+
+### Chores
+
+- Remove YouTube config from setup wizard
+  ([`a9ad065`](https://github.com/wayne930242/weihung-pai/commit/a9ad065e832244ba5dbaefe9cb75b4c792992c4b))
+
+- Remove YouTube/VNC dependencies from setup
+  ([`9c6b241`](https://github.com/wayne930242/weihung-pai/commit/9c6b241a9f35451b6be0a3321c3eda2e60910815))
+
+### Documentation
+
+- Update music feature to Spotify Connect
+  ([`1dabd6f`](https://github.com/wayne930242/weihung-pai/commit/1dabd6f7d0e6e428404002358cba9e1fc1d45b66))
+
+### Refactoring
+
+- Replace YouTube with Spotify Connect
+  ([`0aba644`](https://github.com/wayne930242/weihung-pai/commit/0aba6448bef28a3649e21ab16da50ddc51b5d345))
+
+
 ## v1.24.0 (2026-01-03)
 
 ### Chores
