@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.19.0 (2026-01-03)
+
+### Features
+
+- **discord**: Add /panel slash command for control panel
+  ([`21f2fb6`](https://github.com/wayne930242/weihung-pai/commit/21f2fb6bf0060bf24ad09df39f3b554dd867b690))
+
+
 ## v1.18.0 (2026-01-03)
 
 ### Features
