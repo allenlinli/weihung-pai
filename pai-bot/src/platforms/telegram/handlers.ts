@@ -10,6 +10,7 @@ import {
   executeClaudeTask,
   prepareTask,
   type MessageSender,
+  type SessionInfo,
 } from "../../claude/task-executor";
 import { contextManager } from "../../context/manager";
 import { logger } from "../../utils/logger";
@@ -211,8 +212,15 @@ export async function handleMessage(ctx: Context): Promise<void> {
     prompt = `/${text.slice(4)}`;
   }
 
+  // 準備 session 資訊
+  const session: SessionInfo = {
+    sessionId: userId,
+    platform: "telegram",
+    sessionType: "dm",
+  };
+
   // 準備任務
-  const task = await prepareTask(userId, chatId, text, prompt);
+  const task = await prepareTask(userId, chatId, text, prompt, session);
   const sender = createTelegramSender(ctx.api);
 
   // 檢查是否有進行中的任務
@@ -433,7 +441,12 @@ export async function handleVoice(ctx: Context): Promise<void> {
 
     // 將轉錄文字作為用戶訊息處理
     const prompt = result.text;
-    const task = await prepareTask(userId, chatId, `[語音訊息] ${prompt}`, prompt);
+    const session: SessionInfo = {
+      sessionId: userId,
+      platform: "telegram",
+      sessionType: "dm",
+    };
+    const task = await prepareTask(userId, chatId, `[語音訊息] ${prompt}`, prompt, session);
     const sender = createTelegramSender(ctx.api);
 
     // 檢查是否有進行中的任務

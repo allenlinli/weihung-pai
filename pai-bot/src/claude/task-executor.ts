@@ -136,13 +136,23 @@ export async function executeClaudeTask(
 }
 
 /**
+ * Session 資訊
+ */
+export interface SessionInfo {
+  sessionId: number;
+  platform: "telegram" | "discord";
+  sessionType: "dm" | "channel";
+}
+
+/**
  * 準備任務資料（收集 context 和 memory）
  */
 export async function prepareTask(
   userId: number,
   chatId: number,
   text: string,
-  prompt: string
+  prompt: string,
+  session: SessionInfo
 ): Promise<QueuedTask> {
   // Save user message
   contextManager.saveMessage(userId, "user", text);
@@ -164,8 +174,17 @@ export async function prepareTask(
     }
   }
 
+  // Build session context for Claude
+  const sessionContext = `[Session]
+session_id: ${session.sessionId}
+platform: ${session.platform}
+type: ${session.sessionType}
+`;
+
   // Combine memory context with history
-  const fullHistory = memoryContext ? `${memoryContext}\n\n${history}` : history;
+  const fullHistory = memoryContext
+    ? `${sessionContext}\n${memoryContext}\n\n${history}`
+    : `${sessionContext}\n${history}`;
 
   return {
     id: queueManager.generateTaskId(),

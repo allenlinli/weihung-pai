@@ -208,13 +208,24 @@ async function prepareTask(
     }
   }
 
-  // Combine all context: memory context + conversation history + channel context
-  let fullHistory = history;
+  // Build session context for Claude
+  const sessionType = isChannelMode ? "channel" : "dm";
+  const sessionContext = `[Session]
+session_id: ${sessionKey}
+platform: discord
+type: ${sessionType}
+`;
+
+  // Combine all context: session + memory + conversation history + channel context
+  let fullHistory = `${sessionContext}\n${history}`;
   if (channelContext) {
     fullHistory = `${fullHistory}\n\n${channelContext}`;
   }
   if (memoryContext) {
-    fullHistory = `${memoryContext}\n\n${fullHistory}`;
+    fullHistory = `${sessionContext}\n${memoryContext}\n\n${history}`;
+    if (channelContext) {
+      fullHistory = `${fullHistory}\n\n${channelContext}`;
+    }
   }
 
   return {
