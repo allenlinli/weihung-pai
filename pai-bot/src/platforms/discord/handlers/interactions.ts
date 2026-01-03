@@ -21,11 +21,13 @@ import { toNumericId, isSendableChannel } from "./utils";
 import {
   buildPanelContent,
   buildPanelComponents,
+  buildCustomDiceModal,
   addDie,
   undoLastDie,
   clearDiceState,
   rollAccumulatedDice,
   formatAccumulatedDice,
+  parseAndRoll,
   getDicePanel,
   type PanelMode,
   type DiceType,
@@ -265,6 +267,55 @@ async function handleDiceButton(
     : interaction.user.displayName;
 
   switch (action) {
+    case "quick": {
+      // dice:quick:expression:guildId - quick roll
+      const expression = parts[2];
+      const guildId = parts[3];
+      const result = parseAndRoll(expression);
+      if (!result) {
+        await interaction.reply({ content: "無效的骰子表達式", ephemeral: true });
+        return;
+      }
+
+      // Try to edit history message
+      const dicePanel = getDicePanel(interaction.channelId);
+      if (dicePanel && channel && "messages" in channel) {
+        try {
+          const historyMsg = await channel.messages.fetch(dicePanel.historyMessageId);
+          const currentContent = historyMsg.content;
+          const newEntry = `<@${discordUserId}> ${result.text}`;
+
+          if (currentContent.length + newEntry.length + 2 > 1900) {
+            await interaction.reply({
+              content: "歷史訊息已滿，請使用 `/panel dice` 重新建立面板",
+              ephemeral: true
+            });
+            return;
+          }
+
+          const newContent = currentContent === "**擲骰歷史**\n—"
+            ? `**擲骰歷史**\n${newEntry}`
+            : `${currentContent}\n${newEntry}`;
+
+          await historyMsg.edit(newContent);
+          await interaction.reply({ content: `你的結果: ${result.text}`, ephemeral: true });
+          return;
+        } catch {
+          // Fall through to normal reply
+        }
+      }
+      await interaction.reply(`<@${discordUserId}> ${result.text}`);
+      return;
+    }
+
+    case "custom": {
+      // dice:custom:guildId - show modal
+      const guildId = parts[2];
+      const modal = buildCustomDiceModal(guildId);
+      await interaction.showModal(modal);
+      return;
+    }
+
     case "add": {
       // dice:add:diceType:guildId
       const diceType = parts[2] as DiceType;
@@ -382,5 +433,63 @@ export async function handleSelectMenuInteraction(
       guildId,
       mode: "player",
     });
+  }
+}
+
+/**
+ * Handle modal submit interactions
+ */
+export async function handleModalSubmit(
+  interaction: import("discord.js").ModalSubmitInteraction
+): Promise<void> {
+  const customId = interaction.customId;
+  const parts = customId.split(":");
+  const discordUserId = interaction.user.id;
+
+  // Handle dice modal: dice:modal:guildId
+  if (parts[0] === "dice" && parts[1] === "modal") {
+    const expression = interaction.fields.getTextInputValue("dice_expression");
+    const result = parseAndRoll(expression);
+
+    if (!result) {
+      await interaction.reply({ content: "無效的骰子表達式", ephemeral: true });
+      return;
+    }
+
+    const channel = interaction.channel;
+    if (!channel || !isSendableChannel(channel)) {
+      await interaction.reply({ content: result.text, ephemeral: true });
+      return;
+    }
+
+    // Try to edit history message
+    const dicePanel = interaction.channelId ? getDicePanel(interaction.channelId) : undefined;
+    if (dicePanel && "messages" in channel) {
+      try {
+        const historyMsg = await channel.messages.fetch(dicePanel.historyMessageId);
+        const currentContent = historyMsg.content;
+        const newEntry = `<@${discordUserId}> ${result.text}`;
+
+        if (currentContent.length + newEntry.length + 2 > 1900) {
+          await interaction.reply({
+            content: "歷史訊息已滿，請使用 `/panel dice` 重新建立面板",
+            ephemeral: true
+          });
+          return;
+        }
+
+        const newContent = currentContent === "**擲骰歷史**\n—"
+          ? `**擲骰歷史**\n${newEntry}`
+          : `${currentContent}\n${newEntry}`;
+
+        await historyMsg.edit(newContent);
+        await interaction.reply({ content: `你的結果: ${result.text}`, ephemeral: true });
+        return;
+      } catch {
+        // Fall through
+      }
+    }
+
+    await interaction.reply(`<@${discordUserId}> ${result.text}`);
   }
 }

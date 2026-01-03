@@ -13,7 +13,7 @@ import {
 import { config } from "../../config";
 import { logger } from "../../utils/logger";
 import { isAuthorized } from "./auth";
-import { handleMessage, handleButtonInteraction, handleSelectMenuInteraction, handleSlashCommand, handleAttachment, initializeTaskExecutor } from "./handlers";
+import { handleMessage, handleButtonInteraction, handleSelectMenuInteraction, handleModalSubmit, handleSlashCommand, handleAttachment, initializeTaskExecutor } from "./handlers";
 import { isChannelBound } from "./channels";
 import { registerSlashCommands } from "./commands";
 import { migrateDatabase } from "../../storage/migrate";
@@ -137,10 +137,10 @@ export function createDiscordBot(): Client {
 
   // Interaction handler (for buttons and slash commands)
   client.on(Events.InteractionCreate, async (interaction: Interaction) => {
-    // Skip auth for dice buttons (TRPG mode - anyone can roll)
+    // Skip auth for dice interactions (TRPG mode - anyone can roll)
     const shouldSkipAuth =
-      interaction.isButton() &&
-      interaction.customId.startsWith("dice:");
+      (interaction.isButton() && interaction.customId.startsWith("dice:")) ||
+      (interaction.isModalSubmit() && interaction.customId.startsWith("dice:"));
 
     // Check authorization
     if (!shouldSkipAuth && !isAuthorized(interaction.user.id)) {
@@ -165,6 +165,12 @@ export function createDiscordBot(): Client {
     // Handle select menus
     if (interaction.isStringSelectMenu()) {
       await handleSelectMenuInteraction(interaction);
+      return;
+    }
+
+    // Handle modal submits
+    if (interaction.isModalSubmit()) {
+      await handleModalSubmit(interaction);
     }
   });
 

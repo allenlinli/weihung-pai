@@ -6,6 +6,9 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
   type MessageActionRowComponentBuilder,
 } from "discord.js";
 import { buildModeSwitcher } from "./mode-switcher";
@@ -300,49 +303,65 @@ export function formatResult(result: DiceResult): string {
 }
 
 /**
- * Build dice buttons row 1 (d4-d12)
+ * Build quick roll row (1d20, 1d100, 2d6, Custom)
+ */
+function buildQuickRollRow(guildId: string): ActionRowBuilder<ButtonBuilder> {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    new ButtonBuilder()
+      .setCustomId(`dice:quick:1d20:${guildId}`)
+      .setLabel("1d20")
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(`dice:quick:1d100:${guildId}`)
+      .setLabel("1d100")
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(`dice:quick:2d6:${guildId}`)
+      .setLabel("2d6")
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId(`dice:custom:${guildId}`)
+      .setLabel("Custom")
+      .setStyle(ButtonStyle.Success)
+  );
+}
+
+/**
+ * Build dice buttons row 1 (d4-d12) - accumulation mode
  */
 function buildDiceRow1(guildId: string): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     ...DICE_ROW_1.map((dice) =>
       new ButtonBuilder()
         .setCustomId(`dice:add:${dice}:${guildId}`)
-        .setLabel(dice.toUpperCase())
+        .setLabel(dice)
         .setStyle(ButtonStyle.Secondary)
     )
   );
 }
 
 /**
- * Build dice buttons row 2 (d20, d100, Undo)
+ * Build dice buttons row 2 (d20, d100, Undo) - accumulation mode
  */
 function buildDiceRow2(guildId: string): ActionRowBuilder<ButtonBuilder> {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     ...DICE_ROW_2.map((dice) =>
       new ButtonBuilder()
         .setCustomId(`dice:add:${dice}:${guildId}`)
-        .setLabel(dice.toUpperCase())
-        .setStyle(dice === "d20" ? ButtonStyle.Primary : ButtonStyle.Secondary)
+        .setLabel(dice)
+        .setStyle(ButtonStyle.Secondary)
     ),
     new ButtonBuilder()
       .setCustomId(`dice:undo:${guildId}`)
-      .setLabel("↩ Undo")
-      .setStyle(ButtonStyle.Secondary)
-  );
-}
-
-/**
- * Build action row with Roll and Clear buttons
- */
-function buildDiceActionRow(guildId: string): ActionRowBuilder<ButtonBuilder> {
-  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+      .setLabel("↩")
+      .setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId(`dice:roll:${guildId}`)
-      .setLabel("🎲 Roll")
+      .setLabel("🎲")
       .setStyle(ButtonStyle.Success),
     new ButtonBuilder()
       .setCustomId(`dice:clear:${guildId}`)
-      .setLabel("Clear")
+      .setLabel("✕")
       .setStyle(ButtonStyle.Danger)
   );
 }
@@ -351,7 +370,30 @@ function buildDiceActionRow(guildId: string): ActionRowBuilder<ButtonBuilder> {
  * Build dice panel content
  */
 export function buildDiceContent(): string {
-  return "**[Dice]** 點擊骰子累積，Roll 擲出";
+  return "**[Dice]** 上方快速擲骰 | 下方累積模式";
+}
+
+/**
+ * Build custom dice modal
+ */
+export function buildCustomDiceModal(guildId: string): ModalBuilder {
+  const modal = new ModalBuilder()
+    .setCustomId(`dice:modal:${guildId}`)
+    .setTitle("自定義骰子");
+
+  const diceInput = new TextInputBuilder()
+    .setCustomId("dice_expression")
+    .setLabel("2d6+3 擲2顆d6加3 | 4d6k3 擲4顆取高3 | 4dF 命運骰")
+    .setPlaceholder("輸入骰子表達式...")
+    .setStyle(TextInputStyle.Short)
+    .setRequired(true)
+    .setMinLength(2)
+    .setMaxLength(50);
+
+  const row = new ActionRowBuilder<TextInputBuilder>().addComponents(diceInput);
+  modal.addComponents(row);
+
+  return modal;
 }
 
 /**
@@ -362,8 +404,8 @@ export function buildDiceComponents(
 ): ActionRowBuilder<MessageActionRowComponentBuilder>[] {
   return [
     buildModeSwitcher(guildId, "dice") as ActionRowBuilder<MessageActionRowComponentBuilder>,
+    buildQuickRollRow(guildId) as ActionRowBuilder<MessageActionRowComponentBuilder>,
     buildDiceRow1(guildId) as ActionRowBuilder<MessageActionRowComponentBuilder>,
     buildDiceRow2(guildId) as ActionRowBuilder<MessageActionRowComponentBuilder>,
-    buildDiceActionRow(guildId) as ActionRowBuilder<MessageActionRowComponentBuilder>,
   ];
 }

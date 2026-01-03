@@ -67,6 +67,6 @@ export function initializeTaskExecutor(client: Client): void {
 
 // Re-export handlers
 export { handleMessage } from "./message";
-export { handleButtonInteraction, handleSelectMenuInteraction } from "./interactions";
+export { handleButtonInteraction, handleSelectMenuInteraction, handleModalSubmit } from "./interactions";
 export { handleSlashCommand } from "./slash-commands";
 export { handleAttachment } from "./attachments";

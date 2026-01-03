@@ -15,6 +15,7 @@ export { buildPlayerContent, buildPlayerComponents } from "./player";
 export {
   buildDiceContent,
   buildDiceComponents,
+  buildCustomDiceModal,
   roll,
   formatResult,
   parseAndRoll,
