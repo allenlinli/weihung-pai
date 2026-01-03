@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v1.15.0 (2026-01-03)
+
+### Features
+
+- **bot**: Add voice channel context to session
+  ([`903d47e`](https://github.com/wayne930242/weihung-pai/commit/903d47e66d4f3f5bec49e1507c38bce863cd92b2))
+
+- **discord**: Add YouTube music playback
+  ([`3f1589a`](https://github.com/wayne930242/weihung-pai/commit/3f1589a6c625ea4059ad4e783f7f7b3e008f3e5e))
+
+- **scripts**: Add discord invite command
+  ([`727b439`](https://github.com/wayne930242/weihung-pai/commit/727b4397334bf692c2c8ab2feaef62fd89e6ec4b))
+
+
 ## v1.14.0 (2026-01-03)
 
 ### Features
