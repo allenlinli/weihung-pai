@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.23.0 (2026-01-03)
+
+### Features
+
+- **discord**: Enhance dice panel with game systems and compound expressions
+  ([`ffb972d`](https://github.com/wayne930242/weihung-pai/commit/ffb972de362dd283618c74ad40db01d331722739))
+
+
 ## v1.22.0 (2026-01-03)
 
 ### Features
