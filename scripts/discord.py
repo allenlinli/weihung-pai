@@ -13,7 +13,7 @@ def invite() -> int:
     url = (
         f"https://discord.com/oauth2/authorize"
         f"?client_id={client_id}"
-        f"&permissions=37080128"
+        f"&permissions=8"
         f"&integration_type=0"
         f"&scope=bot+applications.commands"
     )
