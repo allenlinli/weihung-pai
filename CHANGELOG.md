@@ -1,6 +1,20 @@
 # CHANGELOG
 
 
+## v1.27.0 (2026-01-04)
+
+### Features
+
+- Remove Ollama, simplify memory to SQLite, add Obsidian RAG
+  ([`fbdba3a`](https://github.com/wayne930242/weihung-pai/commit/fbdba3a4fedbc9cb98d46fffa93148edd731be43))
+
+- **obsidian**: Add vault sync and TOON index generation
+  ([`41ad6f2`](https://github.com/wayne930242/weihung-pai/commit/41ad6f2275b2b572f781f8e77057780f0e32733a))
+
+- **scripts**: Add git skip-worktree management tool
+  ([`552daaf`](https://github.com/wayne930242/weihung-pai/commit/552daafe0ccdc27b76eb33b7f15d3d44db8cdb17))
+
+
 ## v1.26.0 (2026-01-04)
 
 ### Bug Fixes
