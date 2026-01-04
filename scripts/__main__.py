@@ -35,6 +35,8 @@ def main() -> None:
         run_discord_command(args)
     elif command == "spotify":
         run_spotify_command(args)
+    elif command == "git":
+        run_git_command(args)
     else:
         print(f"未知命令: {command}")
         print()
@@ -131,7 +133,7 @@ def run_discord_command(args: list[str]) -> None:
 
 
 def run_spotify_command(args: list[str]) -> None:
-    from .spotify import do_auth, do_test, do_run
+    from .spotify import do_auth, do_run, do_test
 
     if not args:
         print("用法: uv run pai spotify <subcommand>")
@@ -147,6 +149,45 @@ def run_spotify_command(args: list[str]) -> None:
         sys.exit(do_test())
     elif subcommand == "run":
         sys.exit(do_run())
+    else:
+        print(f"未知子命令: {subcommand}")
+        sys.exit(1)
+
+
+def run_git_command(args: list[str]) -> None:
+    from .git import commit_with_restore, list_skipped, track, untrack
+
+    if not args:
+        print("用法: uv run pai git <subcommand>")
+        print("  skip list          列出被 skip-worktree 忽略的檔案")
+        print("  skip track <file>  暫時恢復追蹤")
+        print("  skip untrack <file>  重新設定 skip-worktree")
+        print("  skip commit        互動式選擇檔案並 commit")
+        sys.exit(1)
+
+    subcommand = args[0]
+    if subcommand == "skip":
+        if len(args) < 2:
+            print("用法: uv run pai git skip <list|track|untrack|commit>")
+            sys.exit(1)
+        action = args[1]
+        if action == "list":
+            sys.exit(list_skipped())
+        elif action == "track":
+            if len(args) < 3:
+                print("用法: uv run pai git skip track <file>")
+                sys.exit(1)
+            sys.exit(track(args[2]))
+        elif action == "untrack":
+            if len(args) < 3:
+                print("用法: uv run pai git skip untrack <file>")
+                sys.exit(1)
+            sys.exit(untrack(args[2]))
+        elif action == "commit":
+            sys.exit(commit_with_restore())
+        else:
+            print(f"未知動作: {action}")
+            sys.exit(1)
     else:
         print(f"未知子命令: {subcommand}")
         sys.exit(1)
@@ -169,6 +210,8 @@ def print_help() -> None:
     print("  discord invite        生成 Discord Bot 邀請連結")
     print("  spotify auth          執行 Spotify 認證")
     print("  spotify test          測試 Spotify 認證狀態")
+    print("  git skip list         列出被忽略的檔案")
+    print("  git skip commit       互動式 commit 被忽略的檔案")
     print()
     print("範例:")
     print("  uv run pai ansible ansible-playbook ansible/playbooks/deploy-bot.yml")
