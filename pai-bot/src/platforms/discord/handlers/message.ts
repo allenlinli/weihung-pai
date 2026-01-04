@@ -3,48 +3,45 @@
  */
 
 import {
-  type Message,
-  type TextBasedChannel,
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  type Message,
+  type TextBasedChannel,
 } from "discord.js";
-import { streamClaude } from "../../../claude/client";
-import { abortUserProcess, hasActiveProcess } from "../../../claude/client";
-import { queueManager, type QueuedTask } from "../../../claude/queue-manager";
+import { hasActiveProcess, streamClaude } from "../../../claude/client";
+import { type QueuedTask, queueManager } from "../../../claude/queue-manager";
+import { config } from "../../../config";
 import { contextManager } from "../../../context/manager";
+import { extractAndSaveMemories, formatMemoriesForPrompt, memoryManager } from "../../../memory";
+import { sessionService } from "../../../storage/sessions";
 import { logger } from "../../../utils/logger";
 import { buildSessionContext } from "../../../utils/session";
-import { config } from "../../../config";
-import {
-  memoryManager,
-  extractAndSaveMemories,
-  formatMemoriesForPrompt,
-} from "../../../memory";
-import { isChannelBound } from "../channels";
+import { formatChannelContext, getChannelContext, hashToNumeric } from "../context";
 import { getVoiceChannelInfo } from "../voice";
-import { getChannelContext, formatChannelContext, hashToNumeric } from "../context";
-import { sessionService } from "../../../storage/sessions";
-import { toNumericId, isSendableChannel, safeSend, splitMessage } from "./utils";
 import { handleCommand } from "./commands";
+import { isSendableChannel, safeSend, splitMessage, toNumericId } from "./utils";
 
 // Decision timeout (ms)
 const DECISION_TIMEOUT_MS = 10000;
 
 // Pending decisions map
-const pendingDecisions = new Map<string, {
-  taskId: string;
-  messageId: string;
-  channelId: string;
-  timeoutId: ReturnType<typeof setTimeout>;
-}>();
+const pendingDecisions = new Map<
+  string,
+  {
+    taskId: string;
+    messageId: string;
+    channelId: string;
+    timeoutId: ReturnType<typeof setTimeout>;
+  }
+>();
 
 /**
  * Execute Claude task and send response
  */
 export async function executeClaudeTask(
   task: QueuedTask,
-  channel: TextBasedChannel
+  channel: TextBasedChannel,
 ): Promise<void> {
   if (!isSendableChannel(channel)) return;
 
@@ -98,7 +95,7 @@ export async function prepareTask(
   isChannelMode: boolean = false,
   channel?: TextBasedChannel,
   messageId?: string,
-  guildId?: string
+  guildId?: string,
 ): Promise<QueuedTask> {
   const sessionKey = isChannelMode ? hashToNumeric(channelId) : toNumericId(discordUserId);
   const userId = toNumericId(discordUserId);
@@ -128,7 +125,9 @@ export async function prepareTask(
 
   const sessionType = isChannelMode ? "channel" : "dm";
   const voiceContext = guildId ? getVoiceChannelInfo(guildId) : undefined;
-  const sessionContext = buildSessionContext(sessionKey, "discord", sessionType, { voice: voiceContext });
+  const sessionContext = buildSessionContext(sessionKey, "discord", sessionType, {
+    voice: voiceContext,
+  });
 
   let fullHistory = `${sessionContext}\n${history}`;
   if (channelContext) {
@@ -155,7 +154,10 @@ export async function prepareTask(
 /**
  * Handle incoming message
  */
-export async function handleMessage(message: Message, isChannelMode: boolean = false): Promise<void> {
+export async function handleMessage(
+  message: Message,
+  isChannelMode: boolean = false,
+): Promise<void> {
   const discordUserId = message.author.id;
   const channelId = message.channel.id;
   const guildId = message.guild?.id;
@@ -182,7 +184,16 @@ export async function handleMessage(message: Message, isChannelMode: boolean = f
     return;
   }
 
-  const task = await prepareTask(discordUserId, channelId, text, text, isChannelMode, message.channel, message.id, guildId);
+  const task = await prepareTask(
+    discordUserId,
+    channelId,
+    text,
+    text,
+    isChannelMode,
+    message.channel,
+    message.id,
+    guildId,
+  );
   const isProcessing = queueManager.isProcessing(sessionKey) || hasActiveProcess(sessionKey);
 
   if (isProcessing) {
@@ -190,12 +201,14 @@ export async function handleMessage(message: Message, isChannelMode: boolean = f
       const queueSize = queueManager.getQueueLength(sessionKey);
       await message.reply(`Queued (position: ${queueSize + 1})`);
 
-      queueManager.enqueue(task, async (t) => {
-        await executeClaudeTask(t, message.channel);
-      }).catch((error) => {
-        logger.error({ error, taskId: task.id }, "Queued task failed");
-        safeSend(message.channel, `Task failed: ${error.message}`).catch(() => {});
-      });
+      queueManager
+        .enqueue(task, async (t) => {
+          await executeClaudeTask(t, message.channel);
+        })
+        .catch((error) => {
+          logger.error({ error, taskId: task.id }, "Queued task failed");
+          safeSend(message.channel, `Task failed: ${error.message}`).catch(() => {});
+        });
       return;
     }
 
@@ -211,7 +224,7 @@ export async function handleMessage(message: Message, isChannelMode: boolean = f
       new ButtonBuilder()
         .setCustomId(`queue:${task.id}`)
         .setLabel("Queue")
-        .setStyle(ButtonStyle.Secondary)
+        .setStyle(ButtonStyle.Secondary),
     );
 
     const reply = await message.reply({
@@ -234,12 +247,14 @@ export async function handleMessage(message: Message, isChannelMode: boolean = f
         // Ignore edit errors
       }
 
-      queueManager.enqueue(task, async (t) => {
-        await executeClaudeTask(t, message.channel);
-      }).catch((error) => {
-        logger.error({ error, taskId: task.id }, "Queued task failed");
-        safeSend(message.channel, `Task failed: ${error.message}`).catch(() => {});
-      });
+      queueManager
+        .enqueue(task, async (t) => {
+          await executeClaudeTask(t, message.channel);
+        })
+        .catch((error) => {
+          logger.error({ error, taskId: task.id }, "Queued task failed");
+          safeSend(message.channel, `Task failed: ${error.message}`).catch(() => {});
+        });
     }, DECISION_TIMEOUT_MS);
 
     pendingDecisions.set(discordUserId, {

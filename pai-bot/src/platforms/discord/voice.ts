@@ -4,16 +4,16 @@
  */
 
 import {
-  joinVoiceChannel,
+  type AudioPlayer,
+  AudioPlayerStatus,
   createAudioPlayer,
   createAudioResource,
-  AudioPlayerStatus,
-  VoiceConnectionStatus,
   entersState,
   getVoiceConnection,
-  type VoiceConnection,
-  type AudioPlayer,
+  joinVoiceChannel,
   StreamType,
+  type VoiceConnection,
+  VoiceConnectionStatus,
 } from "@discordjs/voice";
 import type { VoiceBasedChannel } from "discord.js";
 import { logger } from "../../utils/logger";
@@ -34,7 +34,13 @@ interface GuildQueue {
   channelId: string;
   librespotProc: ReturnType<typeof Bun.spawn> | null;
   spotifyConnected: boolean;
+  volume: number; // 0-100
+  muted: boolean;
+  volumeResource: { setVolume: (v: number) => void } | null;
 }
+
+// Default volume
+const DEFAULT_VOLUME = 100;
 
 // Per-guild voice state
 const guildQueues = new Map<string, GuildQueue>();
@@ -43,7 +49,7 @@ const guildQueues = new Map<string, GuildQueue>();
  * 加入語音頻道
  */
 export async function joinChannel(
-  channel: VoiceBasedChannel
+  channel: VoiceBasedChannel,
 ): Promise<{ ok: true; connection: VoiceConnection } | { ok: false; error: string }> {
   try {
     const connection = joinVoiceChannel({
@@ -82,7 +88,10 @@ export async function joinChannel(
         logger.info({ guildId: channel.guild.id }, "Voice connection reconnecting");
       } catch {
         // 無法重新連接，清理資源
-        logger.info({ guildId: channel.guild.id }, "Voice connection failed to reconnect, cleaning up");
+        logger.info(
+          { guildId: channel.guild.id },
+          "Voice connection failed to reconnect, cleaning up",
+        );
         connection.destroy();
         guildQueues.delete(channel.guild.id);
       }
@@ -102,6 +111,9 @@ export async function joinChannel(
       channelId: channel.id,
       librespotProc: null,
       spotifyConnected: false,
+      volume: DEFAULT_VOLUME,
+      muted: false,
+      volumeResource: null,
     });
 
     logger.info({ channel: channel.name, guild: channel.guild.name }, "Joined voice channel");
@@ -145,7 +157,7 @@ export function leaveChannel(guildId: string): boolean {
  * 啟動 Spotify Connect (librespot)
  */
 export async function startSpotifyConnect(
-  guildId: string
+  guildId: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const guildQueue = guildQueues.get(guildId);
   if (!guildQueue) {
@@ -160,19 +172,28 @@ export async function startSpotifyConnect(
 
   try {
     // 啟動 librespot，使用 cached credentials
-    const proc = Bun.spawn([
-      LIBRESPOT_PATH,
-      "--name", SPOTIFY_DEVICE_NAME,
-      "--cache", LIBRESPOT_CACHE,
-      "--backend", "pipe",
-      "--initial-volume", "100",
-      "--enable-volume-normalisation",
-      "--format", "S16",
-      "--bitrate", "320",
-    ], {
-      stdout: "pipe",
-      stderr: "pipe",
-    });
+    const proc = Bun.spawn(
+      [
+        LIBRESPOT_PATH,
+        "--name",
+        SPOTIFY_DEVICE_NAME,
+        "--cache",
+        LIBRESPOT_CACHE,
+        "--backend",
+        "pipe",
+        "--initial-volume",
+        "100",
+        "--enable-volume-normalisation",
+        "--format",
+        "S16",
+        "--bitrate",
+        "320",
+      ],
+      {
+        stdout: "pipe",
+        stderr: "pipe",
+      },
+    );
 
     guildQueue.librespotProc = proc;
     guildQueue.spotifyConnected = true;
@@ -185,6 +206,12 @@ export async function startSpotifyConnect(
       inputType: StreamType.Raw,
       inlineVolume: true,
     });
+
+    // 保存音量控制引用
+    if (resource.volume) {
+      guildQueue.volumeResource = resource.volume;
+      resource.volume.setVolume(guildQueue.muted ? 0 : guildQueue.volume / 100);
+    }
 
     guildQueue.player.play(resource);
     guildQueue.playing = true;
@@ -255,7 +282,6 @@ export function isSpotifyConnected(guildId: string): boolean {
   return guildQueue?.spotifyConnected ?? false;
 }
 
-
 /**
  * 檢查 bot 是否在語音頻道中（驗證連接狀態）
  */
@@ -285,7 +311,10 @@ export function isInVoiceChannel(guildId: string): boolean {
 /**
  * 取得語音頻道資訊
  */
-export function getVoiceChannelInfo(guildId: string): { inVoice: boolean; channelId: string | null } {
+export function getVoiceChannelInfo(guildId: string): {
+  inVoice: boolean;
+  channelId: string | null;
+} {
   const guildQueue = guildQueues.get(guildId);
   if (guildQueue) {
     return { inVoice: true, channelId: guildQueue.channelId };
@@ -311,7 +340,7 @@ async function ensureTtsTempDir(): Promise<void> {
 export async function speakTts(
   guildId: string,
   text: string,
-  options?: { voice?: string; interrupt?: boolean }
+  options?: { voice?: string; interrupt?: boolean },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const guildQueue = guildQueues.get(guildId);
   if (!guildQueue) {
@@ -328,15 +357,13 @@ export async function speakTts(
     const filename = `${TTS_TEMP_DIR}/tts-${Date.now()}-${Math.random().toString(36).slice(2)}.mp3`;
 
     // 使用 edge-tts 生成音頻
-    const proc = Bun.spawn([
-      "edge-tts",
-      "--voice", voice,
-      "--text", text,
-      "--write-media", filename,
-    ], {
-      stdout: "pipe",
-      stderr: "pipe",
-    });
+    const proc = Bun.spawn(
+      ["edge-tts", "--voice", voice, "--text", text, "--write-media", filename],
+      {
+        stdout: "pipe",
+        stderr: "pipe",
+      },
+    );
 
     const exitCode = await proc.exited;
     if (exitCode !== 0) {
@@ -395,7 +422,7 @@ export async function speakTts(
  */
 export async function playSoundEffect(
   guildId: string,
-  filePath: string
+  filePath: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const guildQueue = guildQueues.get(guildId);
   if (!guildQueue) {
@@ -425,4 +452,127 @@ export async function playSoundEffect(
     logger.error({ error, filePath }, "Sound effect playback failed");
     return { ok: false, error: String(error) };
   }
+}
+
+// ============================================================================
+// Volume Control
+// ============================================================================
+
+export interface VolumeState {
+  volume: number;
+  muted: boolean;
+}
+
+/**
+ * 取得音量狀態
+ */
+export function getVolumeState(guildId: string): VolumeState | null {
+  const guildQueue = guildQueues.get(guildId);
+  if (!guildQueue) return null;
+  return { volume: guildQueue.volume, muted: guildQueue.muted };
+}
+
+/**
+ * 設定音量 (0-100)
+ */
+export function setVolume(guildId: string, volume: number): boolean {
+  const guildQueue = guildQueues.get(guildId);
+  if (!guildQueue) return false;
+
+  guildQueue.volume = Math.max(0, Math.min(100, volume));
+  if (!guildQueue.muted && guildQueue.volumeResource) {
+    guildQueue.volumeResource.setVolume(guildQueue.volume / 100);
+  }
+  logger.info({ guildId, volume: guildQueue.volume }, "Volume set");
+  return true;
+}
+
+/**
+ * 調整音量 (+/- delta)
+ */
+export function adjustVolume(guildId: string, delta: number): number | null {
+  const guildQueue = guildQueues.get(guildId);
+  if (!guildQueue) return null;
+
+  const newVolume = Math.max(0, Math.min(100, guildQueue.volume + delta));
+  setVolume(guildId, newVolume);
+  return newVolume;
+}
+
+/**
+ * 靜音/取消靜音
+ */
+export function toggleMute(guildId: string): boolean | null {
+  const guildQueue = guildQueues.get(guildId);
+  if (!guildQueue) return null;
+
+  guildQueue.muted = !guildQueue.muted;
+  if (guildQueue.volumeResource) {
+    guildQueue.volumeResource.setVolume(guildQueue.muted ? 0 : guildQueue.volume / 100);
+  }
+  logger.info({ guildId, muted: guildQueue.muted }, "Mute toggled");
+  return guildQueue.muted;
+}
+
+/**
+ * 淡出 (fade out)
+ */
+export async function fadeOut(guildId: string, durationMs: number = 2000): Promise<boolean> {
+  const guildQueue = guildQueues.get(guildId);
+  if (!guildQueue || !guildQueue.volumeResource) return false;
+
+  const startVolume = guildQueue.muted ? 0 : guildQueue.volume;
+  const steps = 20;
+  const stepDuration = durationMs / steps;
+  const volumeStep = startVolume / steps;
+
+  for (let i = steps; i >= 0; i--) {
+    const currentVolume = (i * volumeStep) / 100;
+    guildQueue.volumeResource.setVolume(currentVolume);
+    await new Promise((resolve) => setTimeout(resolve, stepDuration));
+  }
+
+  guildQueue.muted = true;
+  logger.info({ guildId, durationMs }, "Fade out complete");
+  return true;
+}
+
+/**
+ * 淡入 (fade in)
+ */
+export async function fadeIn(guildId: string, durationMs: number = 2000): Promise<boolean> {
+  const guildQueue = guildQueues.get(guildId);
+  if (!guildQueue || !guildQueue.volumeResource) return false;
+
+  const targetVolume = guildQueue.volume;
+  const steps = 20;
+  const stepDuration = durationMs / steps;
+  const volumeStep = targetVolume / steps;
+
+  guildQueue.muted = false;
+
+  for (let i = 0; i <= steps; i++) {
+    const currentVolume = (i * volumeStep) / 100;
+    guildQueue.volumeResource.setVolume(currentVolume);
+    await new Promise((resolve) => setTimeout(resolve, stepDuration));
+  }
+
+  logger.info({ guildId, durationMs, targetVolume }, "Fade in complete");
+  return true;
+}
+
+/**
+ * 重置音量到預設值
+ */
+export function resetVolume(guildId: string): boolean {
+  const guildQueue = guildQueues.get(guildId);
+  if (!guildQueue) return false;
+
+  guildQueue.volume = DEFAULT_VOLUME;
+  guildQueue.muted = false;
+  if (guildQueue.volumeResource) {
+    guildQueue.volumeResource.setVolume(DEFAULT_VOLUME / 100);
+  }
+  logger.info({ guildId, volume: DEFAULT_VOLUME }, "Volume reset");
+  return true;
 }

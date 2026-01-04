@@ -1,44 +1,58 @@
 /**
- * Control Panels - Dice only (Spotify controlled via app)
+ * Control Panels - Dice and Volume
  */
 
 import type { ActionRowBuilder, MessageActionRowComponentBuilder } from "discord.js";
-import type { PanelMode, ControlPanel } from "./types";
-import { buildDiceContent, buildDiceComponents } from "./dice";
+import { buildDiceComponents, buildDiceContent } from "./dice";
+import type { PanelMode } from "./types";
+import { buildVolumeComponents, buildVolumeContent } from "./volume";
 
-// Re-export types
-export type { PanelMode, ControlPanel } from "./types";
-
-// Re-export panel builders
+// Re-export dice panel builders
 export {
-  buildDiceContent,
-  buildDiceComponents,
-  buildCustomDiceModal,
-  roll,
-  formatResult,
-  parseAndRoll,
   addDie,
-  undoLastDie,
-  clearDiceState,
-  rollAccumulatedDice,
-  formatAccumulatedDice,
-  getDiceState,
-  setDicePanel,
-  getDicePanel,
+  buildCustomDiceModal,
+  buildDiceComponents,
+  buildDiceContent,
   clearDicePanel,
-  setGameSystem,
-  GAME_SYSTEM_PRESETS,
-  GAME_SYSTEM_LABELS,
+  clearDiceState,
+  type DicePanel,
   type DiceResult,
   type DiceType,
-  type DicePanel,
+  formatAccumulatedDice,
+  formatResult,
+  GAME_SYSTEM_LABELS,
+  GAME_SYSTEM_PRESETS,
   type GameSystem,
+  getDicePanel,
+  getDiceState,
+  parseAndRoll,
+  roll,
+  rollAccumulatedDice,
+  setDicePanel,
+  setGameSystem,
+  undoLastDie,
 } from "./dice";
+// Re-export types
+export type { ControlPanel, PanelMode } from "./types";
+
+// Re-export volume panel builders
+export {
+  buildVolumeComponents,
+  buildVolumeContent,
+  clearVolumePanel,
+  formatVolumeDisplay,
+  getVolumePanel,
+  setVolumePanel,
+  type VolumePanel,
+} from "./volume";
 
 /**
  * Build panel content based on mode
  */
 export function buildPanelContent(mode: PanelMode, guildId: string): string {
+  if (mode === "volume") {
+    return buildVolumeContent(guildId);
+  }
   return buildDiceContent();
 }
 
@@ -48,7 +62,10 @@ export function buildPanelContent(mode: PanelMode, guildId: string): string {
 export function buildPanelComponents(
   mode: PanelMode,
   guildId: string,
-  channelId?: string
+  channelId?: string,
 ): ActionRowBuilder<MessageActionRowComponentBuilder>[] {
+  if (mode === "volume") {
+    return buildVolumeComponents(guildId);
+  }
   return buildDiceComponents(guildId, channelId);
 }

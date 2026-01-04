@@ -3,25 +3,25 @@
  * 處理 Telegram 平台的訊息和指令
  */
 
-import { Context } from "grammy";
+import { mkdir } from "node:fs/promises";
+import { join, resolve } from "node:path";
+import type { Context } from "grammy";
 import { abortUserProcess, hasActiveProcess } from "../../claude/client";
 import { queueManager } from "../../claude/queue-manager";
 import {
   executeClaudeTask,
-  prepareTask,
   type MessageSender,
+  prepareTask,
   type SessionInfo,
 } from "../../claude/task-executor";
-import { contextManager } from "../../context/manager";
-import { logger } from "../../utils/logger";
-import { escapeMarkdownV2, fmt } from "../../utils/telegram";
 import { config } from "../../config";
-import { mkdir } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { contextManager } from "../../context/manager";
 import { memoryManager } from "../../memory";
-import { setTaskExecutor } from "./callbacks";
 import { transcribeAudio } from "../../services/transcription";
 import { sessionService } from "../../storage/sessions";
+import { logger } from "../../utils/logger";
+import { escapeMarkdownV2, fmt } from "../../utils/telegram";
+import { setTaskExecutor } from "./callbacks";
 
 // 超時時間（毫秒）
 const DECISION_TIMEOUT_MS = 10000;
@@ -35,7 +35,8 @@ let botApi: Context["api"] | null = null;
 function createTelegramSender(api: Context["api"]): MessageSender {
   return {
     sendChatAction: (chatId, action) => api.sendChatAction(chatId, action as any).then(() => {}),
-    sendMessage: (chatId, text, options) => api.sendMessage(chatId, text, options as any).then(() => {}),
+    sendMessage: (chatId, text, options) =>
+      api.sendMessage(chatId, text, options as any).then(() => {}),
   };
 }
 
@@ -70,7 +71,7 @@ export async function handleStart(ctx: Context): Promise<void> {
 • \`/cc:<command>\` \\- 執行 Claude slash command
 
 發送新訊息時可選擇打斷或排隊。`,
-    { parse_mode: "MarkdownV2" }
+    { parse_mode: "MarkdownV2" },
   );
 }
 
@@ -96,7 +97,7 @@ export async function handleStatus(ctx: Context): Promise<void> {
 • 對話訊息數: ${messageCount}
 • 處理中: ${isProcessing ? "是" : "否"}
 • 佇列中: ${queueSize} 個任務`,
-    { parse_mode: "MarkdownV2" }
+    { parse_mode: "MarkdownV2" },
   );
 }
 
@@ -233,10 +234,12 @@ export async function handleMessage(ctx: Context): Promise<void> {
 
     const msg = await ctx.reply(`目前有任務進行中${queueInfo}，請選擇：`, {
       reply_markup: {
-        inline_keyboard: [[
-          { text: "🛑 打斷並執行", callback_data: `abort:${task.id}` },
-          { text: "📋 排入佇列", callback_data: `queue:${task.id}` },
-        ]],
+        inline_keyboard: [
+          [
+            { text: "🛑 打斷並執行", callback_data: `abort:${task.id}` },
+            { text: "📋 排入佇列", callback_data: `queue:${task.id}` },
+          ],
+        ],
       },
     });
 
@@ -257,12 +260,14 @@ export async function handleMessage(ctx: Context): Promise<void> {
 
       await ctx.api.sendMessage(chatId, "已自動排入佇列");
 
-      queueManager.enqueue(task, async (t) => {
-        await executeClaudeTask(t, chatId, sender);
-      }).catch((error) => {
-        logger.error({ error, taskId: task.id }, "Queued task failed");
-        ctx.api.sendMessage(chatId, `❌ 任務執行失敗：${error.message}`).catch(() => {});
-      });
+      queueManager
+        .enqueue(task, async (t) => {
+          await executeClaudeTask(t, chatId, sender);
+        })
+        .catch((error) => {
+          logger.error({ error, taskId: task.id }, "Queued task failed");
+          ctx.api.sendMessage(chatId, `❌ 任務執行失敗：${error.message}`).catch(() => {});
+        });
     }, DECISION_TIMEOUT_MS);
 
     queueManager.setPendingDecision(userId, {
@@ -283,9 +288,8 @@ export async function handleMessage(ctx: Context): Promise<void> {
     logger.error({ error, userId }, "Failed to process message");
 
     const errorMessage = error instanceof Error ? error.message : String(error);
-    const shortError = errorMessage.length > 100
-      ? errorMessage.substring(0, 100) + "..."
-      : errorMessage;
+    const shortError =
+      errorMessage.length > 100 ? `${errorMessage.substring(0, 100)}...` : errorMessage;
     await ctx.reply(`❌ 發生錯誤：${shortError}`);
   }
 }
@@ -459,10 +463,12 @@ export async function handleVoice(ctx: Context): Promise<void> {
 
       const msg = await ctx.reply(`目前有任務進行中${queueInfo}，請選擇：`, {
         reply_markup: {
-          inline_keyboard: [[
-            { text: "🛑 打斷並執行", callback_data: `abort:${task.id}` },
-            { text: "📋 排入佇列", callback_data: `queue:${task.id}` },
-          ]],
+          inline_keyboard: [
+            [
+              { text: "🛑 打斷並執行", callback_data: `abort:${task.id}` },
+              { text: "📋 排入佇列", callback_data: `queue:${task.id}` },
+            ],
+          ],
         },
       });
 
@@ -483,12 +489,14 @@ export async function handleVoice(ctx: Context): Promise<void> {
 
         await ctx.api.sendMessage(chatId, "已自動排入佇列");
 
-        queueManager.enqueue(task, async (t) => {
-          await executeClaudeTask(t, chatId, sender);
-        }).catch((error) => {
-          logger.error({ error, taskId: task.id }, "Queued task failed");
-          ctx.api.sendMessage(chatId, `❌ 任務執行失敗：${error.message}`).catch(() => {});
-        });
+        queueManager
+          .enqueue(task, async (t) => {
+            await executeClaudeTask(t, chatId, sender);
+          })
+          .catch((error) => {
+            logger.error({ error, taskId: task.id }, "Queued task failed");
+            ctx.api.sendMessage(chatId, `❌ 任務執行失敗：${error.message}`).catch(() => {});
+          });
       }, DECISION_TIMEOUT_MS);
 
       queueManager.setPendingDecision(userId, {

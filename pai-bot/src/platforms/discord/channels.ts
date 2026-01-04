@@ -3,10 +3,10 @@
  * 動態綁定/解綁頻道
  */
 
-import { getDb } from "../../storage/db";
 import { contextManager } from "../../context/manager";
-import { hashToNumeric } from "./context";
+import { getDb } from "../../storage/db";
 import { logger } from "../../utils/logger";
+import { hashToNumeric } from "./context";
 
 export interface BoundChannel {
   id: number;
@@ -24,7 +24,7 @@ export function bindChannel(channelId: string, guildId: string | null, boundBy: 
   try {
     db.run(
       "INSERT OR IGNORE INTO discord_channels (channel_id, guild_id, bound_by) VALUES (?, ?, ?)",
-      [channelId, guildId, boundBy]
+      [channelId, guildId, boundBy],
     );
     return true;
   } catch {
@@ -64,7 +64,9 @@ export function isChannelBound(channelId: string): boolean {
  */
 export function getBoundChannels(): BoundChannel[] {
   const db = getDb();
-  return db.query("SELECT * FROM discord_channels ORDER BY created_at DESC").all() as BoundChannel[];
+  return db
+    .query("SELECT * FROM discord_channels ORDER BY created_at DESC")
+    .all() as BoundChannel[];
 }
 
 /**

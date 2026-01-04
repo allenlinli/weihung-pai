@@ -1,7 +1,7 @@
 import { getDb } from "../storage/db";
 import { logger } from "../utils/logger";
-import { Memory } from "./manager";
 import { generateText } from "./llm";
+import type { Memory } from "./manager";
 
 const CONSOLIDATION_PROMPT = `你是記憶整合器。將以下相似的記憶合併成一條簡潔的陳述。
 
@@ -31,7 +31,7 @@ function findSimilarClusters(userId: number, threshold: number = 0.7): MemoryClu
       `SELECT id, user_id as userId, content, category, importance,
               created_at as createdAt, last_accessed as lastAccessed
        FROM memories WHERE user_id = ?
-       ORDER BY category, created_at`
+       ORDER BY category, created_at`,
     )
     .all(userId);
 
@@ -102,9 +102,7 @@ export async function consolidateMemories(userId: number): Promise<number> {
   for (const cluster of clusters) {
     try {
       // Format memories for prompt
-      const memoryList = cluster.memories
-        .map((m, i) => `${i + 1}. ${m.content}`)
-        .join("\n");
+      const memoryList = cluster.memories.map((m, i) => `${i + 1}. ${m.content}`).join("\n");
 
       // Call LLM to consolidate
       const { text } = await generateText(CONSOLIDATION_PROMPT + memoryList, 256);
@@ -125,7 +123,7 @@ export async function consolidateMemories(userId: number): Promise<number> {
       db.run(
         `INSERT INTO memories(user_id, content, category, importance, created_at, last_accessed)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [userId, consolidatedContent, cluster.category, maxImportance, now, now]
+        [userId, consolidatedContent, cluster.category, maxImportance, now, now],
       );
 
       consolidated++;
@@ -136,7 +134,7 @@ export async function consolidateMemories(userId: number): Promise<number> {
           category: cluster.category,
           result: consolidatedContent.slice(0, 50),
         },
-        "Memories consolidated"
+        "Memories consolidated",
       );
     } catch (error) {
       logger.error({ error, userId, cluster: cluster.category }, "Consolidation failed");

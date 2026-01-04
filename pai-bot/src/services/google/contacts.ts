@@ -1,20 +1,16 @@
 // Google Contacts (People API) 服務
 
-import { google, people_v1 } from "googleapis";
+import { google, type people_v1 } from "googleapis";
 import { getAuthClient } from "./auth";
 
 function getPeople() {
   return google.people({ version: "v1", auth: getAuthClient() });
 }
 
-const PERSON_FIELDS = "names,emailAddresses,phoneNumbers,organizations,addresses,birthdays,biographies";
+const PERSON_FIELDS =
+  "names,emailAddresses,phoneNumbers,organizations,addresses,birthdays,biographies";
 
-export async function listContacts(
-  options: {
-    pageSize?: number;
-    pageToken?: string;
-  } = {}
-) {
+export async function listContacts(options: { pageSize?: number; pageToken?: string } = {}) {
   const people = getPeople();
   const res = await people.people.connections.list({
     resourceName: "people/me",
@@ -94,7 +90,7 @@ export async function updateContact(
     email?: string;
     phone?: string;
   },
-  etag: string
+  etag: string,
 ) {
   const people = getPeople();
 

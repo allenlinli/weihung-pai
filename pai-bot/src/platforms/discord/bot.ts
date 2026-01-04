@@ -4,25 +4,33 @@
 
 import {
   Client,
+  Events,
   GatewayIntentBits,
+  type Interaction,
+  type Message,
   MessageFlags,
   Partials,
-  Events,
-  type Message,
-  type Interaction,
 } from "discord.js";
 import { config } from "../../config";
+import { migrateDatabase } from "../../storage/migrate";
 import { logger } from "../../utils/logger";
 import { isAuthorized } from "./auth";
-import { handleMessage, handleButtonInteraction, handleSelectMenuInteraction, handleModalSubmit, handleSlashCommand, handleAttachment, initializeTaskExecutor } from "./handlers";
 import { isChannelBound } from "./channels";
 import { registerSlashCommands } from "./commands";
-import { migrateDatabase } from "../../storage/migrate";
+import {
+  handleAttachment,
+  handleButtonInteraction,
+  handleMessage,
+  handleModalSubmit,
+  handleSelectMenuInteraction,
+  handleSlashCommand,
+  initializeTaskExecutor,
+} from "./handlers";
 
 /**
  * 檢查訊息是否為 mention 或 reply to bot
  */
-function isBotMentionOrReply(message: Message, botId: string): boolean {
+function _isBotMentionOrReply(message: Message, botId: string): boolean {
   // Check if message mentions the bot
   if (message.mentions.users.has(botId)) {
     return true;

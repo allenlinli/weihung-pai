@@ -2,12 +2,12 @@
  * Queue Task Interactions
  */
 
-import { MessageFlags, type ButtonInteraction } from "discord.js";
+import { type ButtonInteraction, MessageFlags } from "discord.js";
 import { abortUserProcess } from "../../../../claude/client";
 import { queueManager } from "../../../../claude/queue-manager";
 import { logger } from "../../../../utils/logger";
-import { toNumericId, isSendableChannel } from "../utils";
 import { executeClaudeTask, getPendingDecisions } from "../message";
+import { isSendableChannel, toNumericId } from "../utils";
 
 /**
  * Handle queue task button interactions (abort/queue)
@@ -16,7 +16,7 @@ export async function handleQueueButton(
   interaction: ButtonInteraction,
   discordUserId: string,
   action: string,
-  taskId: string
+  taskId: string,
 ): Promise<void> {
   const userId = toNumericId(discordUserId);
 
@@ -75,10 +75,12 @@ export async function handleQueueButton(
 
     logger.info({ userId, taskId, position: queueLength }, "Task queued");
 
-    queueManager.enqueue(task, async (t) => {
-      await executeClaudeTask(t, channel);
-    }).catch((error) => {
-      logger.error({ error, taskId }, "Queued task failed");
-    });
+    queueManager
+      .enqueue(task, async (t) => {
+        await executeClaudeTask(t, channel);
+      })
+      .catch((error) => {
+        logger.error({ error, taskId }, "Queued task failed");
+      });
   }
 }

@@ -21,7 +21,7 @@ export function cleanupExpiredMemories(): number {
         SUM(CASE WHEN last_accessed < ? THEN 1 ELSE 0 END) as expired
        FROM memories
        GROUP BY user_id
-       HAVING expired > 0`
+       HAVING expired > 0`,
     )
     .all(cutoffStr);
 
@@ -40,7 +40,7 @@ export function cleanupExpiredMemories(): number {
           ORDER BY importance ASC, last_accessed ASC
           LIMIT ?
         )`,
-        [userId, cutoffStr, toDelete]
+        [userId, cutoffStr, toDelete],
       );
       totalDeleted += toDelete;
     }
@@ -66,13 +66,13 @@ export function getMemoryStats(): {
 
   const stats = db
     .query<{ total: number; users: number }, []>(
-      `SELECT COUNT(*) as total, COUNT(DISTINCT user_id) as users FROM memories`
+      `SELECT COUNT(*) as total, COUNT(DISTINCT user_id) as users FROM memories`,
     )
     .get();
 
   const oldest = db
     .query<{ createdAt: string }, []>(
-      `SELECT created_at as createdAt FROM memories ORDER BY created_at ASC LIMIT 1`
+      `SELECT created_at as createdAt FROM memories ORDER BY created_at ASC LIMIT 1`,
     )
     .get();
 

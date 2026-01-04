@@ -10,9 +10,7 @@ export const config = {
   },
   discord: {
     token: process.env.DISCORD_BOT_TOKEN || "",
-    allowedUserIds: (process.env.DISCORD_ALLOWED_USER_IDS || "")
-      .split(",")
-      .filter(Boolean),
+    allowedUserIds: (process.env.DISCORD_ALLOWED_USER_IDS || "").split(",").filter(Boolean),
   },
   memory: {
     enabled: process.env.ENABLE_MEMORY === "true",
@@ -23,16 +21,21 @@ export const config = {
   },
   claude: {
     /** Claude 專案目錄（VPS 上是 ~/merlin/workspace，本地開發用 ../pai-claude/workspace） */
-    projectDir: process.env.CLAUDE_PROJECT_DIR ||
+    projectDir:
+      process.env.CLAUDE_PROJECT_DIR ||
       (process.env.HOME ? `${process.env.HOME}/merlin/workspace` : "../pai-claude/workspace"),
     /** Claude 執行檔路徑 */
-    bin: process.env.CLAUDE_BIN ||
+    bin:
+      process.env.CLAUDE_BIN ||
       (process.env.HOME ? `${process.env.HOME}/.local/bin/claude` : "claude"),
   },
   workspace: {
     /** 下載檔案存放目錄 */
-    downloadsDir: process.env.WORKSPACE_DOWNLOADS_DIR ||
-      (process.env.HOME ? `${process.env.HOME}/merlin/workspace/downloads` : "../pai-claude/workspace/downloads"),
+    downloadsDir:
+      process.env.WORKSPACE_DOWNLOADS_DIR ||
+      (process.env.HOME
+        ? `${process.env.HOME}/merlin/workspace/downloads`
+        : "../pai-claude/workspace/downloads"),
   },
   database: {
     path: process.env.DATABASE_PATH || "./data/pai.db",

@@ -10,6 +10,7 @@ import type {
 
 import { handleDiceButton, handleDiceModalSubmit, handleDiceSelectMenu } from "./dice";
 import { handleQueueButton } from "./queue";
+import { handleVolumeButton } from "./volume";
 
 /**
  * Handle button interactions
@@ -24,6 +25,12 @@ export async function handleButtonInteraction(interaction: ButtonInteraction): P
   // Handle dice buttons: dice:action:...:guildId
   if (parts[0] === "dice") {
     await handleDiceButton(interaction, discordUserId, parts);
+    return;
+  }
+
+  // Handle volume buttons: vol:action:guildId
+  if (parts[0] === "vol") {
+    await handleVolumeButton(interaction, parts);
     return;
   }
 
@@ -42,9 +49,7 @@ export async function handleButtonInteraction(interaction: ButtonInteraction): P
 /**
  * Handle modal submit interactions
  */
-export async function handleModalSubmit(
-  interaction: ModalSubmitInteraction
-): Promise<void> {
+export async function handleModalSubmit(interaction: ModalSubmitInteraction): Promise<void> {
   const customId = interaction.customId;
   const parts = customId.split(":");
   const discordUserId = interaction.user.id;
@@ -59,7 +64,7 @@ export async function handleModalSubmit(
  * Handle select menu interactions
  */
 export async function handleSelectMenuInteraction(
-  interaction: StringSelectMenuInteraction
+  interaction: StringSelectMenuInteraction,
 ): Promise<void> {
   const customId = interaction.customId;
   const parts = customId.split(":");

@@ -1,12 +1,17 @@
-import { config, validateConfig, isTelegramEnabled, isDiscordEnabled } from "./config";
-import { logger } from "./utils/logger";
-import { createTelegramBot, setupBotCommands } from "./platforms/telegram/bot";
-import { createDiscordBot, startDiscordBot, stopDiscordBot } from "./platforms/discord";
-import { getDb, closeDb } from "./storage/db";
-import { startApiServer, setTelegramBot, setDiscordClient } from "./api/server";
-import { startScheduler, stopScheduler, type Schedule, type TaskResult } from "./services/scheduler";
-import { callClaude } from "./claude/client";
 import type { Client } from "discord.js";
+import { setDiscordClient, setTelegramBot, startApiServer } from "./api/server";
+import { callClaude } from "./claude/client";
+import { config, isDiscordEnabled, isTelegramEnabled, validateConfig } from "./config";
+import { createDiscordBot, startDiscordBot, stopDiscordBot } from "./platforms/discord";
+import { createTelegramBot, setupBotCommands } from "./platforms/telegram/bot";
+import {
+  type Schedule,
+  startScheduler,
+  stopScheduler,
+  type TaskResult,
+} from "./services/scheduler";
+import { closeDb, getDb } from "./storage/db";
+import { logger } from "./utils/logger";
 
 // 全局錯誤處理 - 確保所有錯誤都記錄到 error log
 process.on("uncaughtException", (error) => {
@@ -48,7 +53,7 @@ async function main() {
             await telegramBot!.api.sendMessage(userId, text);
           },
         },
-        config.telegram.allowedUserIds
+        config.telegram.allowedUserIds,
       );
 
       logger.info("Telegram bot configured");
@@ -101,7 +106,7 @@ async function main() {
         try {
           await sendMessage(
             schedule.user_id,
-            `排程任務「${schedule.name}」執行失敗\n錯誤：${errorMessage}`
+            `排程任務「${schedule.name}」執行失敗\n錯誤：${errorMessage}`,
           );
         } catch {
           logger.error({ scheduleId: schedule.id }, "Failed to notify user about schedule error");

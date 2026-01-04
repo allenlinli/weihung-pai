@@ -1,6 +1,6 @@
 // Google Tasks 服務
 
-import { google, tasks_v1 } from "googleapis";
+import { google, type tasks_v1 } from "googleapis";
 import { getAuthClient } from "./auth";
 
 function getTasks() {
@@ -25,7 +25,7 @@ export async function listTasks(
     showCompleted?: boolean;
     showHidden?: boolean;
     maxResults?: number;
-  } = {}
+  } = {},
 ) {
   const tasks = getTasks();
   const res = await tasks.tasks.list({
@@ -58,7 +58,7 @@ export async function createTask(
     notes?: string;
     due?: string; // RFC 3339 timestamp
   },
-  taskListId = "@default"
+  taskListId = "@default",
 ) {
   const tasks = getTasks();
   const res = await tasks.tasks.insert({
@@ -74,7 +74,7 @@ export async function createTask(
 export async function updateTask(
   taskId: string,
   task: Partial<tasks_v1.Schema$Task>,
-  taskListId = "@default"
+  taskListId = "@default",
 ) {
   const tasks = getTasks();
   const res = await tasks.tasks.patch({

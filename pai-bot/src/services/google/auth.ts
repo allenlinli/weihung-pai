@@ -1,6 +1,6 @@
 // Google OAuth2 認證模組
 
-import { google, Auth } from "googleapis";
+import { type Auth, google } from "googleapis";
 
 let authClient: Auth.OAuth2Client | null = null;
 

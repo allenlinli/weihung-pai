@@ -1,7 +1,7 @@
 import { getDb } from "../storage/db";
 import { logger } from "../utils/logger";
-import { MAX_MEMORIES_PER_USER, CONSOLIDATION_THRESHOLD } from "./constants";
 import { consolidateMemories } from "./consolidation";
+import { CONSOLIDATION_THRESHOLD, MAX_MEMORIES_PER_USER } from "./constants";
 
 export interface Memory {
   id: number;
@@ -68,9 +68,7 @@ function initDb(): void {
 
 function ensureCategoryColumn(db: ReturnType<typeof getDb>): void {
   // Check if category column exists
-  const columns = db
-    .query<{ name: string }, []>("PRAGMA table_info(memories)")
-    .all();
+  const columns = db.query<{ name: string }, []>("PRAGMA table_info(memories)").all();
 
   const hasCategory = columns.some((col) => col.name === "category");
   if (hasCategory) return;
@@ -84,16 +82,14 @@ function migrateFromVecMemories(db: ReturnType<typeof getDb>): void {
   // Check if vec_memories exists
   const tableExists = db
     .query<{ name: string }, []>(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name='vec_memories'"
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='vec_memories'",
     )
     .get();
 
   if (!tableExists) return;
 
   // Check if already migrated (memories table has data)
-  const hasData = db
-    .query<{ count: number }, []>("SELECT COUNT(*) as count FROM memories")
-    .get();
+  const hasData = db.query<{ count: number }, []>("SELECT COUNT(*) as count FROM memories").get();
 
   if (hasData && hasData.count > 0) {
     logger.info("Migration already done, skipping");
@@ -104,12 +100,19 @@ function migrateFromVecMemories(db: ReturnType<typeof getDb>): void {
   try {
     const oldMemories = db
       .query<
-        { userId: number; content: string; category: string; importance: number; createdAt: string; lastAccessed: string },
+        {
+          userId: number;
+          content: string;
+          category: string;
+          importance: number;
+          createdAt: string;
+          lastAccessed: string;
+        },
         []
       >(
         `SELECT user_id as userId, content, category, importance,
                 created_at as createdAt, last_accessed as lastAccessed
-         FROM vec_memories`
+         FROM vec_memories`,
       )
       .all();
 
@@ -123,14 +126,14 @@ function migrateFromVecMemories(db: ReturnType<typeof getDb>): void {
       db.run(
         `INSERT INTO memories(user_id, content, category, importance, created_at, last_accessed)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [m.userId, m.content, m.category, m.importance, m.createdAt, m.lastAccessed]
+        [m.userId, m.content, m.category, m.importance, m.createdAt, m.lastAccessed],
       );
     }
 
     logger.info({ migrated: oldMemories.length }, "Migrated memories from vec_memories");
     db.run("DROP TABLE vec_memories");
     logger.info("Dropped old vec_memories table");
-  } catch (error) {
+  } catch (_error) {
     // Schema mismatch or virtual table without extension - try to drop
     try {
       db.run("DROP TABLE IF EXISTS vec_memories");
@@ -159,7 +162,7 @@ export class MemoryManager {
     // Simple text deduplication (exact match)
     const existing = db
       .query<{ id: number }, [number, string]>(
-        "SELECT id FROM memories WHERE user_id = ? AND content = ?"
+        "SELECT id FROM memories WHERE user_id = ? AND content = ?",
       )
       .get(userId, content);
 
@@ -172,7 +175,7 @@ export class MemoryManager {
     const result = db.run(
       `INSERT INTO memories(user_id, content, category, importance, created_at, last_accessed)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      [userId, content, category, importance, now, now]
+      [userId, content, category, importance, now, now],
     );
 
     const newId = Number(result.lastInsertRowid);
@@ -204,7 +207,7 @@ export class MemoryManager {
         `SELECT id, user_id as userId, content, category, importance,
                 created_at as createdAt, last_accessed as lastAccessed
          FROM memories WHERE user_id = ?
-         ORDER BY importance DESC, created_at DESC`
+         ORDER BY importance DESC, created_at DESC`,
       )
       .all(userId);
 
@@ -228,7 +231,7 @@ export class MemoryManager {
         `SELECT id, user_id as userId, content, category, importance,
                 created_at as createdAt, last_accessed as lastAccessed
          FROM memories WHERE user_id = ? AND content LIKE ?
-         ORDER BY importance DESC, created_at DESC LIMIT ?`
+         ORDER BY importance DESC, created_at DESC LIMIT ?`,
       )
       .all(userId, pattern, limit);
   }
@@ -251,7 +254,7 @@ export class MemoryManager {
         ORDER BY importance ASC, last_accessed ASC
         LIMIT ?
       )`,
-      [userId, toRemove]
+      [userId, toRemove],
     );
 
     logger.info({ userId, removed: toRemove }, "Enforced memory limit");
@@ -267,7 +270,7 @@ export class MemoryManager {
         `SELECT id, user_id as userId, content, category, importance,
                 created_at as createdAt, last_accessed as lastAccessed
          FROM memories WHERE user_id = ?
-         ORDER BY created_at DESC LIMIT ?`
+         ORDER BY created_at DESC LIMIT ?`,
       )
       .all(userId, limit);
   }
@@ -279,7 +282,7 @@ export class MemoryManager {
     const db = getDb();
     const result = db
       .query<{ count: number }, [number]>(
-        "SELECT COUNT(*) as count FROM memories WHERE user_id = ?"
+        "SELECT COUNT(*) as count FROM memories WHERE user_id = ?",
       )
       .get(userId);
     return result?.count ?? 0;
@@ -299,13 +302,15 @@ export class MemoryManager {
    */
   getById(id: number): Memory | null {
     const db = getDb();
-    return db
-      .query<Memory, [number]>(
-        `SELECT id, user_id as userId, content, category, importance,
+    return (
+      db
+        .query<Memory, [number]>(
+          `SELECT id, user_id as userId, content, category, importance,
                 created_at as createdAt, last_accessed as lastAccessed
-         FROM memories WHERE id = ?`
-      )
-      .get(id) ?? null;
+         FROM memories WHERE id = ?`,
+        )
+        .get(id) ?? null
+    );
   }
 
   /**
@@ -313,7 +318,7 @@ export class MemoryManager {
    */
   update(
     id: number,
-    updates: { content?: string; category?: string; importance?: number }
+    updates: { content?: string; category?: string; importance?: number },
   ): boolean {
     const db = getDb();
     const existing = this.getById(id);
@@ -323,10 +328,12 @@ export class MemoryManager {
     const category = updates.category ?? existing.category;
     const importance = updates.importance ?? existing.importance;
 
-    db.run(
-      `UPDATE memories SET content = ?, category = ?, importance = ? WHERE id = ?`,
-      [content, category, importance, id]
-    );
+    db.run(`UPDATE memories SET content = ?, category = ?, importance = ? WHERE id = ?`, [
+      content,
+      category,
+      importance,
+      id,
+    ]);
 
     logger.info({ id, updates }, "Memory updated");
     return true;
@@ -343,7 +350,7 @@ export class MemoryManager {
     const memories = db
       .query<Memory, [number]>(
         `SELECT id, content, category, importance, created_at as createdAt
-         FROM memories WHERE user_id = ?`
+         FROM memories WHERE user_id = ?`,
       )
       .all(userId);
 
@@ -354,7 +361,7 @@ export class MemoryManager {
       db.run(
         `INSERT INTO deleted_memories (user_id, content, category, importance, created_at, deleted_at)
          VALUES (?, ?, ?, ?, ?, ?)`,
-        [userId, m.content, m.category, m.importance, m.createdAt, now]
+        [userId, m.content, m.category, m.importance, m.createdAt, now],
       );
     }
 
@@ -383,7 +390,7 @@ export class MemoryManager {
 
     const archived = db
       .query<{ content: string; category: string; importance: number }, [number]>(
-        "SELECT content, category, importance FROM deleted_memories WHERE user_id = ?"
+        "SELECT content, category, importance FROM deleted_memories WHERE user_id = ?",
       )
       .all(userId);
 
@@ -415,7 +422,7 @@ export class MemoryManager {
     const db = getDb();
     const result = db
       .query<{ count: number }, [number]>(
-        "SELECT COUNT(*) as count FROM deleted_memories WHERE user_id = ?"
+        "SELECT COUNT(*) as count FROM deleted_memories WHERE user_id = ?",
       )
       .get(userId);
     return result?.count ?? 0;

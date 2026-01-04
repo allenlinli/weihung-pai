@@ -1,6 +1,6 @@
 // Google Calendar 服務
 
-import { google, calendar_v3 } from "googleapis";
+import { type calendar_v3, google } from "googleapis";
 import { getAuthClient } from "./auth";
 
 function getCalendar() {
@@ -20,7 +20,7 @@ export async function listEvents(
     timeMax?: string;
     maxResults?: number;
     q?: string;
-  } = {}
+  } = {},
 ) {
   const calendar = getCalendar();
   const res = await calendar.events.list({
@@ -41,10 +41,7 @@ export async function getEvent(eventId: string, calendarId = "primary") {
   return res.data;
 }
 
-export async function createEvent(
-  event: calendar_v3.Schema$Event,
-  calendarId = "primary"
-) {
+export async function createEvent(event: calendar_v3.Schema$Event, calendarId = "primary") {
   const calendar = getCalendar();
   const res = await calendar.events.insert({
     calendarId,
@@ -56,7 +53,7 @@ export async function createEvent(
 export async function updateEvent(
   eventId: string,
   event: calendar_v3.Schema$Event,
-  calendarId = "primary"
+  calendarId = "primary",
 ) {
   const calendar = getCalendar();
   const res = await calendar.events.patch({

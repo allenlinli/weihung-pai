@@ -44,10 +44,7 @@ class QueueManager {
       queue = new PQueue({ concurrency: 1 });
 
       queue.on("active", () => {
-        logger.debug(
-          { userId, size: queue!.size, pending: queue!.pending },
-          "Task started"
-        );
+        logger.debug({ userId, size: queue!.size, pending: queue!.pending }, "Task started");
       });
 
       queue.on("idle", () => {
@@ -75,10 +72,7 @@ class QueueManager {
    */
   storePendingTask(task: QueuedTask): void {
     this.pendingTasks.set(task.id, task);
-    logger.debug(
-      { taskId: task.id, userId: task.userId },
-      "Task stored pending decision"
-    );
+    logger.debug({ taskId: task.id, userId: task.userId }, "Task stored pending decision");
   }
 
   /**
@@ -98,19 +92,13 @@ class QueueManager {
   /**
    * 加入佇列
    */
-  async enqueue(
-    task: QueuedTask,
-    executor: (task: QueuedTask) => Promise<void>
-  ): Promise<void> {
+  async enqueue(task: QueuedTask, executor: (task: QueuedTask) => Promise<void>): Promise<void> {
     const queue = this.getQueue(task.userId);
 
     // 從暫存移除
     this.pendingTasks.delete(task.id);
 
-    logger.info(
-      { taskId: task.id, userId: task.userId, queueSize: queue.size },
-      "Task enqueued"
-    );
+    logger.info({ taskId: task.id, userId: task.userId, queueSize: queue.size }, "Task enqueued");
 
     // 加入佇列並執行
     await queue.add(async () => {
@@ -128,7 +116,7 @@ class QueueManager {
    */
   async executeImmediately(
     task: QueuedTask,
-    executor: (task: QueuedTask) => Promise<void>
+    executor: (task: QueuedTask) => Promise<void>,
   ): Promise<void> {
     // 從暫存移除
     this.pendingTasks.delete(task.id);

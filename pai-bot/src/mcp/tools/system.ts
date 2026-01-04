@@ -15,14 +15,14 @@ export function registerSystemTools(server: McpServer): void {
       // 修復檔案權限 (644)
       const fixFiles = Bun.spawn(
         ["find", siteDir, "-type", "f", "-exec", "chmod", "644", "{}", ";"],
-        { stdout: "pipe", stderr: "pipe" }
+        { stdout: "pipe", stderr: "pipe" },
       );
       await fixFiles.exited;
 
       // 修復目錄權限 (755)
       const fixDirs = Bun.spawn(
         ["find", siteDir, "-type", "d", "-exec", "chmod", "755", "{}", ";"],
-        { stdout: "pipe", stderr: "pipe" }
+        { stdout: "pipe", stderr: "pipe" },
       );
       await fixDirs.exited;
 
@@ -42,7 +42,7 @@ export function registerSystemTools(server: McpServer): void {
       return {
         content: [{ type: "text", text: "Caddy 已重載（權限已修復）" }],
       };
-    }
+    },
   );
 
   server.registerTool(
@@ -64,7 +64,7 @@ export function registerSystemTools(server: McpServer): void {
       return {
         content: [{ type: "text", text: stdout }],
       };
-    }
+    },
   );
 
   server.registerTool(
@@ -92,6 +92,6 @@ export function registerSystemTools(server: McpServer): void {
       return {
         content: [{ type: "text", text: `${service} 已重啟` }],
       };
-    }
+    },
   );
 }

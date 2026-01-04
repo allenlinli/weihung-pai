@@ -1,20 +1,15 @@
 // Google Drive 服務
 
-import { google, drive_v3 } from "googleapis";
+import { Readable } from "node:stream";
+import { type drive_v3, google } from "googleapis";
 import { getAuthClient } from "./auth";
-import { Readable } from "stream";
 
 function getDrive() {
   return google.drive({ version: "v3", auth: getAuthClient() });
 }
 
 export async function listFiles(
-  options: {
-    q?: string;
-    pageSize?: number;
-    folderId?: string;
-    orderBy?: string;
-  } = {}
+  options: { q?: string; pageSize?: number; folderId?: string; orderBy?: string } = {},
 ) {
   const drive = getDrive();
 
@@ -49,10 +44,7 @@ export async function getFile(fileId: string) {
 
 export async function getFileContent(fileId: string): Promise<string> {
   const drive = getDrive();
-  const res = await drive.files.get(
-    { fileId, alt: "media" },
-    { responseType: "text" }
-  );
+  const res = await drive.files.get({ fileId, alt: "media" }, { responseType: "text" });
   return res.data as string;
 }
 
@@ -60,7 +52,7 @@ export async function createFile(
   name: string,
   content: string,
   mimeType = "text/plain",
-  folderId?: string
+  folderId?: string,
 ) {
   const drive = getDrive();
 
@@ -83,11 +75,7 @@ export async function createFile(
   return res.data;
 }
 
-export async function updateFileContent(
-  fileId: string,
-  content: string,
-  mimeType = "text/plain"
-) {
+export async function updateFileContent(fileId: string, content: string, mimeType = "text/plain") {
   const drive = getDrive();
 
   const media = {

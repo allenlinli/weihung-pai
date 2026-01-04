@@ -1,6 +1,6 @@
 import { logger } from "../utils/logger";
-import { memoryManager } from "./manager";
 import { generateText } from "./llm";
+import { memoryManager } from "./manager";
 
 interface ExtractedFact {
   content: string;
@@ -26,7 +26,7 @@ const EXTRACTION_PROMPT = `你是一個記憶萃取器。分析以下對話，�
 export async function extractAndSaveMemories(
   userId: number,
   userMessage: string,
-  assistantMessage: string
+  assistantMessage: string,
 ): Promise<number> {
   try {
     const conversation = `用戶: ${userMessage}\n助手: ${assistantMessage}`;
@@ -78,7 +78,7 @@ export function formatMemoriesForPrompt(memories: { content: string; category: s
       acc[m.category].push(m.content);
       return acc;
     },
-    {} as Record<string, string[]>
+    {} as Record<string, string[]>,
   );
 
   const lines = ["[Long-term memories about this user]"];

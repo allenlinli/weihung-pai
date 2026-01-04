@@ -6,13 +6,13 @@
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { registerGarminTools } from "./tools/garmin";
 import { registerGoogleTools } from "./tools/google";
-import { registerSchedulerTools } from "./tools/scheduler";
-import { registerSystemTools } from "./tools/system";
 import { registerMemoryTools } from "./tools/memory";
 import { registerNotifyTools } from "./tools/notify";
-import { registerGarminTools } from "./tools/garmin";
 import { registerObsidianTools } from "./tools/obsidian";
+import { registerSchedulerTools } from "./tools/scheduler";
+import { registerSystemTools } from "./tools/system";
 
 // Simple stderr logger for MCP (stdout is reserved for protocol)
 const log = {

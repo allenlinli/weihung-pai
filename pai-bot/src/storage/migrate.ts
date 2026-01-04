@@ -3,8 +3,8 @@
  * Adds message_id column to conversations table
  */
 
-import { getDb } from "./db";
 import { logger } from "../utils/logger";
+import { getDb } from "./db";
 
 export function migrateDatabase() {
   const db = getDb();

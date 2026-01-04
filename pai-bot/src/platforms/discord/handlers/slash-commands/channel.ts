@@ -4,11 +4,11 @@
 
 import type { ChatInputCommandInteraction } from "discord.js";
 import { logger } from "../../../../utils/logger";
-import { bindChannel, unbindChannel, isChannelBound, getBoundChannels } from "../../channels";
+import { bindChannel, getBoundChannels, isChannelBound, unbindChannel } from "../../channels";
 
 export async function handleBind(
   interaction: ChatInputCommandInteraction,
-  discordUserId: string
+  discordUserId: string,
 ): Promise<void> {
   const channelId = interaction.channelId;
   const guildId = interaction.guildId;
@@ -28,7 +28,7 @@ export async function handleBind(
 
 export async function handleUnbind(
   interaction: ChatInputCommandInteraction,
-  discordUserId: string
+  discordUserId: string,
 ): Promise<void> {
   const channelId = interaction.channelId;
 

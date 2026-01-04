@@ -100,7 +100,7 @@ export function createSchedule(input: CreateScheduleInput): Schedule | null {
     input.taskType,
     input.taskData,
     input.userId,
-    nextRun
+    nextRun,
   );
 
   const id = Number(result.lastInsertRowid);
@@ -205,7 +205,7 @@ export function logScheduleExecution(
   scheduleId: number,
   status: "success" | "error",
   result?: string,
-  errorMessage?: string
+  errorMessage?: string,
 ): void {
   const db = getDb();
   const stmt = db.prepare(`

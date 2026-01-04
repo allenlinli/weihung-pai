@@ -31,5 +31,5 @@ const streams: pino.StreamEntry[] = [
 
 export const logger = pino(
   { level: config.logging.level },
-  pino.multistream(streams, { dedupe: true })
+  pino.multistream(streams, { dedupe: true }),
 );

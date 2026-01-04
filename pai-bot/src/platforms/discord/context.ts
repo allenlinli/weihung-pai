@@ -3,7 +3,7 @@
  * 即時從 Discord API 抓取頻道訊息作為對話背景
  */
 
-import type { TextBasedChannel, Collection, Message } from "discord.js";
+import type { Collection, Message, TextBasedChannel } from "discord.js";
 import { logger } from "../../utils/logger";
 
 export interface ChannelMessage {
@@ -26,12 +26,12 @@ const MAX_CONTEXT_MESSAGES = 10;
 export async function getChannelContext(
   channel: TextBasedChannel,
   excludeUserIds: string[] = [],
-  excludeMessageIds: Set<string> = new Set()
+  excludeMessageIds: Set<string> = new Set(),
 ): Promise<ChannelMessage[]> {
   try {
     // 從 Discord API 抓取最近 20 則訊息
     const fetchedMessages: Collection<string, Message> = await channel.messages.fetch({
-      limit: 20
+      limit: 20,
     });
 
     // 過濾並轉換格式
@@ -51,9 +51,7 @@ export async function getChannelContext(
       if (!msg.content || msg.content.trim().length === 0) continue;
 
       // 限制訊息長度避免 context 過長
-      const content = msg.content.length > 500
-        ? msg.content.slice(0, 500) + "..."
-        : msg.content;
+      const content = msg.content.length > 500 ? `${msg.content.slice(0, 500)}...` : msg.content;
 
       messages.push({
         author_id: msg.author.id,
@@ -70,7 +68,10 @@ export async function getChannelContext(
     // 按時間排序（舊到新）
     messages.sort((a, b) => a.created_at.getTime() - b.created_at.getTime());
 
-    logger.debug({ channelId: channel.id, messageCount: messages.length, excluded: excludeMessageIds.size }, "Fetched channel context from Discord API");
+    logger.debug(
+      { channelId: channel.id, messageCount: messages.length, excluded: excludeMessageIds.size },
+      "Fetched channel context from Discord API",
+    );
     return messages;
   } catch (error) {
     logger.error({ error, channelId: channel.id }, "Failed to fetch channel context");

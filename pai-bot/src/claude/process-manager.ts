@@ -14,11 +14,7 @@ class ProcessManager {
   /**
    * Register a new Claude process for a user
    */
-  register(
-    userId: number,
-    proc: Subprocess,
-    abortController: AbortController
-  ): void {
+  register(userId: number, proc: Subprocess, abortController: AbortController): void {
     // Kill any existing process for this user first
     this.abort(userId);
 

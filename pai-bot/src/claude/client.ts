@@ -1,5 +1,5 @@
+import { resolve } from "node:path";
 import { spawn } from "bun";
-import { resolve } from "path";
 import { config } from "../config";
 import { logger } from "../utils/logger";
 import { processManager } from "./process-manager";
@@ -38,7 +38,7 @@ interface ClaudeOptions {
 // Streaming version - yields events as they come
 export async function* streamClaude(
   prompt: string,
-  options?: ClaudeOptions
+  options?: ClaudeOptions,
 ): AsyncGenerator<StreamEvent> {
   let fullPrompt = prompt;
 
@@ -48,10 +48,7 @@ export async function* streamClaude(
 
   const projectDir = resolve(process.cwd(), config.claude.projectDir);
 
-  logger.debug(
-    { promptLength: fullPrompt.length, cwd: projectDir },
-    "Streaming Claude call"
-  );
+  logger.debug({ promptLength: fullPrompt.length, cwd: projectDir }, "Streaming Claude call");
 
   const proc = spawn({
     cmd: [
@@ -145,9 +142,9 @@ export async function* streamClaude(
           logger.debug(
             {
               line: line.substring(0, 100),
-              error: parseError instanceof Error ? parseError.message : String(parseError)
+              error: parseError instanceof Error ? parseError.message : String(parseError),
             },
-            "Failed to parse JSON line"
+            "Failed to parse JSON line",
           );
         }
       }
@@ -161,18 +158,16 @@ export async function* streamClaude(
     if (exitCode !== 0 && !abortController.signal.aborted) {
       logger.error(
         { exitCode, stderr: stderrBuffer.trim(), lastStdout: buffer.trim() },
-        "Claude process failed"
+        "Claude process failed",
       );
-      throw new Error(
-        `Claude 執行失敗 (exit ${exitCode}):\n${stderrBuffer || "(無錯誤訊息)"}`
-      );
+      throw new Error(`Claude 執行失敗 (exit ${exitCode}):\n${stderrBuffer || "(無錯誤訊息)"}`);
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
     logger.error(
       { error: errorMessage, stack: errorStack, stderr: stderrBuffer, exitCode: proc.exitCode },
-      "Stream error"
+      "Stream error",
     );
     yield { type: "error", content: errorMessage };
   } finally {
@@ -187,7 +182,7 @@ export async function* streamClaude(
 export async function callClaude(
   prompt: string,
   options?: ClaudeOptions,
-  retryCount = 0
+  retryCount = 0,
 ): Promise<ClaudeResult> {
   try {
     let thinking = "";

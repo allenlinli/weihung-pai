@@ -7,7 +7,11 @@
     "dev": "bun run --watch src/index.ts",
     "start": "bun run src/index.ts",
     "db:init": "bun run src/storage/init-db.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src",
+    "lint:fix": "biome check --write src",
+    "format": "biome format --write src",
+    "check": "biome check --write src"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",
@@ -29,6 +33,7 @@
     "zod": "^4.2.1"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.3.11",
     "@types/bun": "latest",
     "typescript": "^5.3.3"
   }

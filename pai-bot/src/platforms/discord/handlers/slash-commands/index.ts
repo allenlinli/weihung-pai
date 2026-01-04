@@ -6,29 +6,27 @@ import type { ChatInputCommandInteraction } from "discord.js";
 import { isChannelBound } from "../../channels";
 import { hashToNumeric } from "../../context";
 import { toNumericId } from "../utils";
-
+// Channel commands
+import { handleBind, handleChannels, handleUnbind } from "./channel";
 // General commands
 import {
-  handleHelp,
   handleClear,
+  handleForget,
+  handleHelp,
+  handleHQ,
+  handleMemory,
   handleStatus,
   handleStop,
-  handleMemory,
-  handleForget,
-  handleHQ,
 } from "./general";
-
-// Channel commands
-import { handleBind, handleUnbind, handleChannels } from "./channel";
 
 // Voice commands
 import {
   handleJoin,
   handleLeave,
-  handleSpotify,
-  handleSay,
   handlePanel,
   handleRoll,
+  handleSay,
+  handleSpotify,
 } from "./voice";
 
 /**

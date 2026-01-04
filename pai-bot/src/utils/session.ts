@@ -21,7 +21,7 @@ export function buildSessionContext(
   sessionId: string | number,
   platform: "telegram" | "discord",
   type: "dm" | "channel",
-  options?: { voice?: VoiceContext }
+  options?: { voice?: VoiceContext },
 ): string {
   const now = new Date();
   const taipeiTime = now.toLocaleString("zh-TW", {
@@ -50,5 +50,5 @@ time: ${taipeiTime}`;
     }
   }
 
-  return context + "\n";
+  return `${context}\n`;
 }

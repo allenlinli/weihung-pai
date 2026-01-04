@@ -4,9 +4,9 @@
  */
 
 import type { Client as DiscordClient, TextChannel } from "discord.js";
-import { logger } from "../utils/logger";
 import * as google from "../services/google";
-import { sessionService, type Session } from "../storage/sessions";
+import { type Session, sessionService } from "../storage/sessions";
+import { logger } from "../utils/logger";
 
 // Telegram bot 實例（稍後注入）
 let telegramBot: {
@@ -19,10 +19,7 @@ let discordClient: DiscordClient | null = null;
 // 允許的用戶 ID
 let allowedUserIds: number[] = [];
 
-export function setTelegramBot(
-  bot: typeof telegramBot,
-  userIds: number[]
-) {
+export function setTelegramBot(bot: typeof telegramBot, userIds: number[]) {
   telegramBot = bot;
   allowedUserIds = userIds;
 }
@@ -39,7 +36,7 @@ async function notifyBySession(session: Session, message: string): Promise<void>
     if (!telegramBot || !session.chat_id) {
       throw new Error("Telegram bot not configured or missing chat_id");
     }
-    await telegramBot.sendMessage(parseInt(session.chat_id), message);
+    await telegramBot.sendMessage(parseInt(session.chat_id, 10), message);
   } else if (session.platform === "discord") {
     if (!discordClient || !session.channel_id) {
       throw new Error("Discord client not configured or missing channel_id");
@@ -101,7 +98,10 @@ export function startApiServer(port = 3000) {
 
           // Fallback to allowedUserIds[0]
           if (!telegramBot || allowedUserIds.length === 0) {
-            return Response.json({ error: "No HQ configured and Telegram bot not available" }, { status: 500 });
+            return Response.json(
+              { error: "No HQ configured and Telegram bot not available" },
+              { status: 500 },
+            );
           }
 
           await telegramBot.sendMessage(allowedUserIds[0], formattedMessage);
@@ -137,8 +137,8 @@ export function startApiServer(port = 3000) {
 
         // Get session API
         if (path.startsWith("/api/sessions/") && method === "GET") {
-          const id = parseInt(path.split("/").pop()!);
-          if (isNaN(id)) {
+          const id = parseInt(path.split("/").pop()!, 10);
+          if (Number.isNaN(id)) {
             return Response.json({ error: "Invalid session ID" }, { status: 400 });
           }
           const session = sessionService.get(id);
@@ -167,7 +167,7 @@ export function startApiServer(port = 3000) {
             const calendarId = url.searchParams.get("calendarId") || "primary";
             const timeMin = url.searchParams.get("timeMin") || undefined;
             const timeMax = url.searchParams.get("timeMax") || undefined;
-            const maxResults = parseInt(url.searchParams.get("maxResults") || "10");
+            const maxResults = parseInt(url.searchParams.get("maxResults") || "10", 10);
             const q = url.searchParams.get("q") || undefined;
 
             const events = await google.calendar.listEvents(calendarId, {
@@ -190,7 +190,7 @@ export function startApiServer(port = 3000) {
         if (path === "/api/google/drive/files" && method === "GET") {
           const q = url.searchParams.get("q") || undefined;
           const folderId = url.searchParams.get("folderId") || undefined;
-          const pageSize = parseInt(url.searchParams.get("pageSize") || "20");
+          const pageSize = parseInt(url.searchParams.get("pageSize") || "20", 10);
 
           const files = await google.drive.listFiles({ q, folderId, pageSize });
           return Response.json({ files });
@@ -223,7 +223,7 @@ export function startApiServer(port = 3000) {
         // Gmail - list messages
         if (path === "/api/google/gmail/messages" && method === "GET") {
           const q = url.searchParams.get("q") || undefined;
-          const maxResults = parseInt(url.searchParams.get("maxResults") || "10");
+          const maxResults = parseInt(url.searchParams.get("maxResults") || "10", 10);
 
           const messages = await google.gmail.listMessages({ q, maxResults });
           return Response.json({ messages });
@@ -249,7 +249,7 @@ export function startApiServer(port = 3000) {
 
         // Contacts - list
         if (path === "/api/google/contacts" && method === "GET") {
-          const pageSize = parseInt(url.searchParams.get("pageSize") || "100");
+          const pageSize = parseInt(url.searchParams.get("pageSize") || "100", 10);
           const result = await google.contacts.listContacts({ pageSize });
           return Response.json(result);
         }
@@ -266,7 +266,6 @@ export function startApiServer(port = 3000) {
 
         // 404
         return Response.json({ error: "Not found" }, { status: 404 });
-
       } catch (error) {
         logger.error({ error, path }, "API error");
         return Response.json({ error: String(error) }, { status: 500 });

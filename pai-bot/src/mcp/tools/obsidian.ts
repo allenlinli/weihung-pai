@@ -1,8 +1,8 @@
+import { homedir } from "node:os";
+import { join } from "node:path";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
 import { $ } from "bun";
-import { homedir } from "os";
-import { join } from "path";
+import { z } from "zod";
 
 const VENV_PYTHON = join(homedir(), ".venv/bin/python");
 const RAG_SCRIPT = join(homedir(), "merlin/scripts/obsidian_rag.py");
@@ -21,7 +21,8 @@ export function registerObsidianTools(server: McpServer): void {
     },
     async ({ query, top_k = 5 }) => {
       try {
-        const result = await $`${VENV_PYTHON} ${RAG_SCRIPT} search --vault ${VAULT_PATH} -q ${query} -k ${top_k}`.quiet();
+        const result =
+          await $`${VENV_PYTHON} ${RAG_SCRIPT} search --vault ${VAULT_PATH} -q ${query} -k ${top_k}`.quiet();
         const output = result.stdout.toString();
 
         if (!output.trim()) {
@@ -33,7 +34,7 @@ export function registerObsidianTools(server: McpServer): void {
         const errorMsg = error instanceof Error ? error.message : String(error);
         return { content: [{ type: "text", text: `搜尋失敗: ${errorMsg}` }] };
       }
-    }
+    },
   );
 
   server.registerTool(
@@ -51,7 +52,7 @@ export function registerObsidianTools(server: McpServer): void {
         const errorMsg = error instanceof Error ? error.message : String(error);
         return { content: [{ type: "text", text: `統計失敗: ${errorMsg}` }] };
       }
-    }
+    },
   );
 
   server.registerTool(
@@ -69,6 +70,6 @@ export function registerObsidianTools(server: McpServer): void {
         const errorMsg = error instanceof Error ? error.message : String(error);
         return { content: [{ type: "text", text: `同步失敗: ${errorMsg}` }] };
       }
-    }
+    },
   );
 }

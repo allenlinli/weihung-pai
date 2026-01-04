@@ -2,28 +2,41 @@
  * Voice Slash Commands (join, leave, spotify, say, panel, roll)
  */
 
-import { ActivityType, MessageFlags, type ChatInputCommandInteraction, type Client } from "discord.js";
 import {
+  ActivityType,
+  type ChatInputCommandInteraction,
+  type Client,
+  MessageFlags,
+} from "discord.js";
+import {
+  isInVoiceChannel,
+  isSpotifyConnected,
   joinChannel,
   leaveChannel,
+  speakTts,
   startSpotifyConnect,
   stopSpotifyConnect,
-  isSpotifyConnected,
-  isInVoiceChannel,
-  speakTts,
 } from "../../voice";
-import { buildPanelContent, buildPanelComponents, parseAndRoll, setDicePanel } from "../panels";
+import {
+  buildPanelComponents,
+  buildPanelContent,
+  buildVolumeComponents,
+  buildVolumeContent,
+  parseAndRoll,
+  setDicePanel,
+  setVolumePanel,
+} from "../panels";
 
 // Discord client reference (set by index.ts)
-let discordClient: Client | null = null;
+let _discordClient: Client | null = null;
 
 export function setDiscordClient(client: Client): void {
-  discordClient = client;
+  _discordClient = client;
 }
 
 export async function handleJoin(
   interaction: ChatInputCommandInteraction,
-  discordUserId: string
+  discordUserId: string,
 ): Promise<void> {
   if (!interaction.guild) {
     await interaction.reply({ content: "此指令只能在伺服器中使用", flags: MessageFlags.Ephemeral });
@@ -66,7 +79,7 @@ export async function handleLeave(interaction: ChatInputCommandInteraction): Pro
 
 export async function handleSpotify(
   interaction: ChatInputCommandInteraction,
-  discordUserId: string
+  discordUserId: string,
 ): Promise<void> {
   if (!interaction.guildId) {
     await interaction.reply({ content: "此指令只能在伺服器中使用", flags: MessageFlags.Ephemeral });
@@ -89,7 +102,10 @@ export async function handleSpotify(
     const voiceChannel = member.voice.channel;
 
     if (!voiceChannel) {
-      await interaction.reply({ content: "請先加入一個語音頻道，或使用 /join", flags: MessageFlags.Ephemeral });
+      await interaction.reply({
+        content: "請先加入一個語音頻道，或使用 /join",
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
 
@@ -109,11 +125,29 @@ export async function handleSpotify(
   if (result.ok) {
     // Set presence to listening
     interaction.client.user?.setActivity("Spotify Connect", { type: ActivityType.Listening });
+
+    // Send info message
     await interaction.editReply(
       "🎵 **Spotify Connect 已啟動**\n\n" +
-      "在 Spotify app 中選擇 **Merlin DJ** 設備即可播放音樂\n" +
-      "再次使用 `/spotify` 可停止"
+        "在 Spotify app 中選擇 **Merlin DJ** 設備即可播放音樂\n" +
+        "再次使用 `/spotify` 可停止",
     );
+
+    // Send volume control panel
+    const volumeContent = buildVolumeContent(interaction.guildId);
+    const volumeComponents = buildVolumeComponents(interaction.guildId);
+    const panelMsg = await interaction.followUp({
+      content: volumeContent,
+      components: volumeComponents,
+      fetchReply: true,
+    });
+
+    // Track the volume panel
+    setVolumePanel(interaction.channelId, {
+      messageId: panelMsg.id,
+      channelId: interaction.channelId,
+      guildId: interaction.guildId,
+    });
   } else {
     await interaction.editReply(`錯誤: ${result.error}`);
   }
@@ -126,7 +160,10 @@ export async function handleSay(interaction: ChatInputCommandInteraction): Promi
   }
 
   if (!isInVoiceChannel(interaction.guildId)) {
-    await interaction.reply({ content: "Bot 不在語音頻道中，請先使用 /join", flags: MessageFlags.Ephemeral });
+    await interaction.reply({
+      content: "Bot 不在語音頻道中，請先使用 /join",
+      flags: MessageFlags.Ephemeral,
+    });
     return;
   }
 
@@ -144,7 +181,7 @@ export async function handleSay(interaction: ChatInputCommandInteraction): Promi
 
 export async function handlePanel(
   interaction: ChatInputCommandInteraction,
-  _discordUserId: string
+  _discordUserId: string,
 ): Promise<void> {
   if (!interaction.guildId) {
     await interaction.reply({ content: "此指令只能在伺服器中使用", flags: MessageFlags.Ephemeral });

@@ -3,8 +3,8 @@
  * Manages platform info for notifications
  */
 
-import { getDb } from "./db";
 import { logger } from "../utils/logger";
+import { getDb } from "./db";
 
 export type Platform = "telegram" | "discord";
 export type SessionType = "dm" | "channel";
@@ -61,13 +61,10 @@ class SessionService {
         params.sessionType,
         now,
         now,
-      ]
+      ],
     );
 
-    logger.debug(
-      { sessionId: params.sessionId, platform: params.platform },
-      "Session upserted"
-    );
+    logger.debug({ sessionId: params.sessionId, platform: params.platform }, "Session upserted");
   }
 
   /**
@@ -87,9 +84,7 @@ class SessionService {
   getByPlatform(platform: Platform): Session[] {
     const db = getDb();
     return db
-      .query(
-        "SELECT * FROM sessions WHERE platform = ? ORDER BY updated_at DESC"
-      )
+      .query("SELECT * FROM sessions WHERE platform = ? ORDER BY updated_at DESC")
       .all(platform) as Session[];
   }
 
@@ -98,9 +93,7 @@ class SessionService {
    */
   getAll(): Session[] {
     const db = getDb();
-    return db
-      .query("SELECT * FROM sessions ORDER BY updated_at DESC")
-      .all() as Session[];
+    return db.query("SELECT * FROM sessions ORDER BY updated_at DESC").all() as Session[];
   }
 
   /**
@@ -108,9 +101,7 @@ class SessionService {
    */
   delete(sessionId: number): boolean {
     const db = getDb();
-    const result = db.run("DELETE FROM sessions WHERE session_id = ?", [
-      sessionId,
-    ]);
+    const result = db.run("DELETE FROM sessions WHERE session_id = ?", [sessionId]);
     return result.changes > 0;
   }
 
@@ -124,10 +115,7 @@ class SessionService {
     db.run("UPDATE sessions SET is_hq = 0 WHERE is_hq = 1");
 
     // Set new HQ
-    const result = db.run(
-      "UPDATE sessions SET is_hq = 1 WHERE session_id = ?",
-      [sessionId]
-    );
+    const result = db.run("UPDATE sessions SET is_hq = 1 WHERE session_id = ?", [sessionId]);
 
     if (result.changes > 0) {
       logger.info({ sessionId }, "HQ session set");
@@ -141,9 +129,7 @@ class SessionService {
    */
   getHQ(): Session | null {
     const db = getDb();
-    return db
-      .query("SELECT * FROM sessions WHERE is_hq = 1 LIMIT 1")
-      .get() as Session | null;
+    return db.query("SELECT * FROM sessions WHERE is_hq = 1 LIMIT 1").get() as Session | null;
   }
 
   /**

@@ -3,10 +3,7 @@ import { z } from "zod";
 import * as scheduler from "../../services/scheduler";
 
 // 從環境變數取得預設 user_id（Telegram bot 主人）
-const DEFAULT_USER_ID = parseInt(
-  process.env.TELEGRAM_ALLOWED_USER_IDS?.split(",")[0] || "0",
-  10
-);
+const DEFAULT_USER_ID = parseInt(process.env.TELEGRAM_ALLOWED_USER_IDS?.split(",")[0] || "0", 10);
 
 export function registerSchedulerTools(server: McpServer): void {
   server.registerTool(
@@ -20,9 +17,7 @@ export function registerSchedulerTools(server: McpServer): void {
         cronExpression: z
           .string()
           .optional()
-          .describe(
-            "Cron 表達式，如 '0 9 * * *' (每天早上9點)，'0 9 * * 1' (每週一早上9點)"
-          ),
+          .describe("Cron 表達式，如 '0 9 * * *' (每天早上9點)，'0 9 * * 1' (每週一早上9點)"),
         runAt: z
           .string()
           .optional()
@@ -38,9 +33,7 @@ export function registerSchedulerTools(server: McpServer): void {
     async ({ name, cronExpression, runAt, taskType, taskData }) => {
       if (!cronExpression && !runAt) {
         return {
-          content: [
-            { type: "text", text: "錯誤：必須提供 cronExpression 或 runAt" },
-          ],
+          content: [{ type: "text", text: "錯誤：必須提供 cronExpression 或 runAt" }],
         };
       }
 
@@ -55,16 +48,14 @@ export function registerSchedulerTools(server: McpServer): void {
 
       if (!result) {
         return {
-          content: [
-            { type: "text", text: "錯誤：創建排程失敗，請檢查 cron 表達式是否正確" },
-          ],
+          content: [{ type: "text", text: "錯誤：創建排程失敗，請檢查 cron 表達式是否正確" }],
         };
       }
 
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
-    }
+    },
   );
 
   server.registerTool(
@@ -79,7 +70,7 @@ export function registerSchedulerTools(server: McpServer): void {
       return {
         content: [{ type: "text", text: JSON.stringify(schedules, null, 2) }],
       };
-    }
+    },
   );
 
   server.registerTool(
@@ -96,7 +87,7 @@ export function registerSchedulerTools(server: McpServer): void {
       return {
         content: [{ type: "text", text: success ? "排程已刪除" : "找不到該排程" }],
       };
-    }
+    },
   );
 
   server.registerTool(
@@ -119,7 +110,7 @@ export function registerSchedulerTools(server: McpServer): void {
           },
         ],
       };
-    }
+    },
   );
 
   server.registerTool(
@@ -158,16 +149,14 @@ export function registerSchedulerTools(server: McpServer): void {
 
       if (!result) {
         return {
-          content: [
-            { type: "text", text: "錯誤：找不到該排程或 cron 表達式無效" },
-          ],
+          content: [{ type: "text", text: "錯誤：找不到該排程或 cron 表達式無效" }],
         };
       }
 
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
-    }
+    },
   );
 
   server.registerTool(
@@ -185,6 +174,6 @@ export function registerSchedulerTools(server: McpServer): void {
       return {
         content: [{ type: "text", text: JSON.stringify(logs, null, 2) }],
       };
-    }
+    },
   );
 }

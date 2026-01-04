@@ -3,18 +3,14 @@
  * 核心任務執行邏輯，與平台無關
  */
 
-import { streamClaude } from "./client";
-import { queueManager, type QueuedTask } from "./queue-manager";
-import { contextManager } from "../context/manager";
-import { logger } from "../utils/logger";
-import { escapeMarkdownV2 } from "../utils/telegram";
-import { buildSessionContext } from "../utils/session";
 import { config } from "../config";
-import {
-  memoryManager,
-  extractAndSaveMemories,
-  formatMemoriesForPrompt,
-} from "../memory";
+import { contextManager } from "../context/manager";
+import { extractAndSaveMemories, formatMemoriesForPrompt, memoryManager } from "../memory";
+import { logger } from "../utils/logger";
+import { buildSessionContext } from "../utils/session";
+import { escapeMarkdownV2 } from "../utils/telegram";
+import { streamClaude } from "./client";
+import { type QueuedTask, queueManager } from "./queue-manager";
 
 /**
  * 將 Claude 的 Markdown 轉換為 Telegram MarkdownV2
@@ -104,7 +100,7 @@ function splitMessage(text: string, maxLength: number): string[] {
 export async function executeClaudeTask(
   task: QueuedTask,
   chatId: number,
-  sender: MessageSender
+  sender: MessageSender,
 ): Promise<void> {
   const { userId, prompt, history } = task;
 
@@ -188,7 +184,7 @@ export async function prepareTask(
   chatId: number,
   text: string,
   prompt: string,
-  session: SessionInfo
+  session: SessionInfo,
 ): Promise<QueuedTask> {
   // Save user message
   contextManager.saveMessage(userId, "user", text);
@@ -214,7 +210,7 @@ export async function prepareTask(
   const sessionContext = buildSessionContext(
     session.sessionId,
     session.platform as "telegram" | "discord",
-    session.sessionType as "dm" | "channel"
+    session.sessionType as "dm" | "channel",
   );
 
   // Combine memory context with history

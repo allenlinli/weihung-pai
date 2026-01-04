@@ -14,8 +14,12 @@ export function initializeTaskExecutor(client: Client): void {
   setDiscordClient(client);
 }
 
+export { handleAttachment } from "./attachments";
+export {
+  handleButtonInteraction,
+  handleModalSubmit,
+  handleSelectMenuInteraction,
+} from "./interactions";
 // Re-export handlers
 export { handleMessage } from "./message";
-export { handleButtonInteraction, handleSelectMenuInteraction, handleModalSubmit } from "./interactions";
 export { handleSlashCommand } from "./slash-commands";
-export { handleAttachment } from "./attachments";

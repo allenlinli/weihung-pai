@@ -45,7 +45,7 @@ export function registerNotifyTools(server: McpServer): void {
           isError: true,
         };
       }
-    }
+    },
   );
 
   server.registerTool(
@@ -59,9 +59,10 @@ export function registerNotifyTools(server: McpServer): void {
     },
     async ({ platform }) => {
       try {
-        const url = platform && platform !== "all"
-          ? `${API_BASE}/api/sessions?platform=${platform}`
-          : `${API_BASE}/api/sessions`;
+        const url =
+          platform && platform !== "all"
+            ? `${API_BASE}/api/sessions?platform=${platform}`
+            : `${API_BASE}/api/sessions`;
 
         const response = await fetch(url);
         const data = await response.json();
@@ -93,9 +94,8 @@ export function registerNotifyTools(server: McpServer): void {
           const id = `[${s.session_id}]`;
           const platform = s.platform.toUpperCase();
           const type = s.session_type;
-          const target = s.platform === "telegram"
-            ? `chat:${s.chat_id}`
-            : `channel:${s.channel_id}`;
+          const target =
+            s.platform === "telegram" ? `chat:${s.chat_id}` : `channel:${s.channel_id}`;
           return `${id} ${platform}/${type} - ${target}`;
         });
 
@@ -108,7 +108,7 @@ export function registerNotifyTools(server: McpServer): void {
           isError: true,
         };
       }
-    }
+    },
   );
 
   server.registerTool(
@@ -153,6 +153,6 @@ export function registerNotifyTools(server: McpServer): void {
           isError: true,
         };
       }
-    }
+    },
   );
 }

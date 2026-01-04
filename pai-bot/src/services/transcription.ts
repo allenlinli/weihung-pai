@@ -18,7 +18,7 @@ interface TranscriptionResult {
  */
 export async function transcribeAudio(
   audioBuffer: Buffer,
-  mimeType: string = "audio/ogg"
+  mimeType: string = "audio/ogg",
 ): Promise<TranscriptionResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -55,14 +55,14 @@ export async function transcribeAudio(
 
     logger.info(
       { mimeType, audioSize: audioBuffer.length, textLength: text.length },
-      "Audio transcribed"
+      "Audio transcribed",
     );
 
     return { text };
   } catch (error) {
     logger.error(
       { error, mimeType, audioSize: audioBuffer.length },
-      "Transcription API call failed"
+      "Transcription API call failed",
     );
     throw error;
   }

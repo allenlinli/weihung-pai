@@ -17,7 +17,7 @@ export function registerGoogleTools(server: McpServer): void {
       return {
         content: [{ type: "text", text: JSON.stringify(calendars, null, 2) }],
       };
-    }
+    },
   );
 
   server.registerTool(
@@ -43,7 +43,7 @@ export function registerGoogleTools(server: McpServer): void {
       return {
         content: [{ type: "text", text: JSON.stringify(events, null, 2) }],
       };
-    }
+    },
   );
 
   server.registerTool(
@@ -54,22 +54,13 @@ export function registerGoogleTools(server: McpServer): void {
       inputSchema: {
         summary: z.string().describe("行程標題"),
         description: z.string().optional().describe("行程描述"),
-        startDateTime: z
-          .string()
-          .describe("開始時間 (ISO 8601，如 2024-01-15T10:00:00+08:00)"),
+        startDateTime: z.string().describe("開始時間 (ISO 8601，如 2024-01-15T10:00:00+08:00)"),
         endDateTime: z.string().describe("結束時間 (ISO 8601)"),
         location: z.string().optional().describe("地點"),
         calendarId: z.string().optional().describe("日曆 ID，預設 primary"),
       },
     },
-    async ({
-      summary,
-      description,
-      startDateTime,
-      endDateTime,
-      location,
-      calendarId,
-    }) => {
+    async ({ summary, description, startDateTime, endDateTime, location, calendarId }) => {
       const event = await google.calendar.createEvent(
         {
           summary,
@@ -78,12 +69,12 @@ export function registerGoogleTools(server: McpServer): void {
           end: { dateTime: endDateTime },
           location,
         },
-        calendarId || "primary"
+        calendarId || "primary",
       );
       return {
         content: [{ type: "text", text: JSON.stringify(event, null, 2) }],
       };
-    }
+    },
   );
 
   server.registerTool(
@@ -104,15 +95,7 @@ export function registerGoogleTools(server: McpServer): void {
         calendarId: z.string().optional().describe("日曆 ID，預設 primary"),
       },
     },
-    async ({
-      eventId,
-      summary,
-      description,
-      startDateTime,
-      endDateTime,
-      location,
-      calendarId,
-    }) => {
+    async ({ eventId, summary, description, startDateTime, endDateTime, location, calendarId }) => {
       const updateData: any = {};
       if (summary) updateData.summary = summary;
       if (description) updateData.description = description;
@@ -120,15 +103,11 @@ export function registerGoogleTools(server: McpServer): void {
       if (endDateTime) updateData.end = { dateTime: endDateTime };
       if (location) updateData.location = location;
 
-      const event = await google.calendar.updateEvent(
-        eventId,
-        updateData,
-        calendarId || "primary"
-      );
+      const event = await google.calendar.updateEvent(eventId, updateData, calendarId || "primary");
       return {
         content: [{ type: "text", text: JSON.stringify(event, null, 2) }],
       };
-    }
+    },
   );
 
   // === Drive Tools ===
@@ -148,7 +127,7 @@ export function registerGoogleTools(server: McpServer): void {
       return {
         content: [{ type: "text", text: JSON.stringify(files, null, 2) }],
       };
-    }
+    },
   );
 
   server.registerTool(
@@ -165,7 +144,7 @@ export function registerGoogleTools(server: McpServer): void {
       return {
         content: [{ type: "text", text: JSON.stringify(files, null, 2) }],
       };
-    }
+    },
   );
 
   server.registerTool(
@@ -175,10 +154,7 @@ export function registerGoogleTools(server: McpServer): void {
       description: "取得檔案資訊或內容",
       inputSchema: {
         fileId: z.string().describe("檔案 ID"),
-        getContent: z
-          .boolean()
-          .optional()
-          .describe("是否取得檔案內容（僅純文字檔案）"),
+        getContent: z.boolean().optional().describe("是否取得檔案內容（僅純文字檔案）"),
       },
     },
     async ({ fileId, getContent }) => {
@@ -191,7 +167,7 @@ export function registerGoogleTools(server: McpServer): void {
           content: [{ type: "text", text: JSON.stringify(file, null, 2) }],
         };
       }
-    }
+    },
   );
 
   // === Gmail Tools ===
@@ -202,10 +178,7 @@ export function registerGoogleTools(server: McpServer): void {
       title: "List Gmail Messages",
       description: "列出 Gmail 郵件",
       inputSchema: {
-        q: z
-          .string()
-          .optional()
-          .describe("搜尋條件（如 from:someone@example.com）"),
+        q: z.string().optional().describe("搜尋條件（如 from:someone@example.com）"),
         maxResults: z.number().optional().describe("最多回傳幾筆，預設 10"),
       },
     },
@@ -214,7 +187,7 @@ export function registerGoogleTools(server: McpServer): void {
       return {
         content: [{ type: "text", text: JSON.stringify(messages, null, 2) }],
       };
-    }
+    },
   );
 
   server.registerTool(
@@ -231,7 +204,7 @@ export function registerGoogleTools(server: McpServer): void {
       return {
         content: [{ type: "text", text: JSON.stringify(message, null, 2) }],
       };
-    }
+    },
   );
 
   server.registerTool(
@@ -255,7 +228,7 @@ export function registerGoogleTools(server: McpServer): void {
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
-    }
+    },
   );
 
   // === Contacts Tools ===
@@ -274,7 +247,7 @@ export function registerGoogleTools(server: McpServer): void {
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };
-    }
+    },
   );
 
   server.registerTool(
@@ -291,7 +264,7 @@ export function registerGoogleTools(server: McpServer): void {
       return {
         content: [{ type: "text", text: JSON.stringify(contacts, null, 2) }],
       };
-    }
+    },
   );
 
   // === Tasks Tools ===
@@ -308,7 +281,7 @@ export function registerGoogleTools(server: McpServer): void {
       return {
         content: [{ type: "text", text: JSON.stringify(taskLists, null, 2) }],
       };
-    }
+    },
   );
 
   server.registerTool(
@@ -330,7 +303,7 @@ export function registerGoogleTools(server: McpServer): void {
       return {
         content: [{ type: "text", text: JSON.stringify(tasks, null, 2) }],
       };
-    }
+    },
   );
 
   server.registerTool(
@@ -346,14 +319,11 @@ export function registerGoogleTools(server: McpServer): void {
       },
     },
     async ({ title, notes, due, taskListId }) => {
-      const task = await google.tasks.createTask(
-        { title, notes, due },
-        taskListId || "@default"
-      );
+      const task = await google.tasks.createTask({ title, notes, due }, taskListId || "@default");
       return {
         content: [{ type: "text", text: JSON.stringify(task, null, 2) }],
       };
-    }
+    },
   );
 
   server.registerTool(
@@ -371,7 +341,7 @@ export function registerGoogleTools(server: McpServer): void {
       return {
         content: [{ type: "text", text: JSON.stringify(task, null, 2) }],
       };
-    }
+    },
   );
 
   server.registerTool(
@@ -389,6 +359,6 @@ export function registerGoogleTools(server: McpServer): void {
       return {
         content: [{ type: "text", text: "工作已刪除" }],
       };
-    }
+    },
   );
 }

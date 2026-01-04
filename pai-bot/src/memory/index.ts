@@ -1,15 +1,14 @@
 // Core
-export { memoryManager, MemoryManager } from "./manager";
-export type { Memory, MemoryInput } from "./manager";
+
+// Consolidation
+export { consolidateAllUsers, consolidateMemories } from "./consolidation";
+// Config
+export * from "./constants";
 
 // Extraction
 export { extractAndSaveMemories, formatMemoriesForPrompt } from "./extractor";
 
 // Maintenance
 export { cleanupExpiredMemories, getMemoryStats } from "./maintenance";
-
-// Consolidation
-export { consolidateMemories, consolidateAllUsers } from "./consolidation";
-
-// Config
-export * from "./constants";
+export type { Memory, MemoryInput } from "./manager";
+export { MemoryManager, memoryManager } from "./manager";

@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
-import { readFileSync } from "fs";
-import { join } from "path";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { config } from "../config";
 import { logger } from "../utils/logger";
 
@@ -15,9 +15,9 @@ function runMigrations(db: Database): void {
 
   // Check if table exists helper
   const hasTable = (table: string): boolean => {
-    const result = db.query(
-      "SELECT name FROM sqlite_master WHERE type='table' AND name=?"
-    ).get(table);
+    const result = db
+      .query("SELECT name FROM sqlite_master WHERE type='table' AND name=?")
+      .get(table);
     return !!result;
   };
 
@@ -26,7 +26,7 @@ function runMigrations(db: Database): void {
     try {
       db.run("ALTER TABLE conversations ADD COLUMN message_id TEXT");
       logger.info("Migration: Added message_id column to conversations");
-    } catch (e) {
+    } catch (_e) {
       // Table might not exist yet, will be created by schema
     }
   }
@@ -36,7 +36,7 @@ function runMigrations(db: Database): void {
     try {
       db.run("ALTER TABLE sessions ADD COLUMN is_hq INTEGER DEFAULT 0");
       logger.info("Migration: Added is_hq column to sessions");
-    } catch (e) {
+    } catch (_e) {
       // Ignore if table doesn't exist yet
     }
   }

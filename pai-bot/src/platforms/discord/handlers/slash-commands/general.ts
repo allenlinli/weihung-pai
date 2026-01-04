@@ -5,33 +5,31 @@
 import type { ChatInputCommandInteraction } from "discord.js";
 import { abortUserProcess } from "../../../../claude/client";
 import { queueManager } from "../../../../claude/queue-manager";
-import { contextManager } from "../../../../context/manager";
-import { logger } from "../../../../utils/logger";
 import { config } from "../../../../config";
+import { contextManager } from "../../../../context/manager";
 import { memoryManager } from "../../../../memory";
-import { isChannelBound } from "../../channels";
-import { hashToNumeric } from "../../context";
 import { sessionService } from "../../../../storage/sessions";
-import { toNumericId, splitMessage } from "../utils";
+import { logger } from "../../../../utils/logger";
+import { splitMessage } from "../utils";
 
 export async function handleHelp(interaction: ChatInputCommandInteraction): Promise<void> {
   await interaction.reply(
     `**Merlin**\n\n` +
-    `Commands:\n` +
-    `- \`/bind\` - 綁定此頻道\n` +
-    `- \`/unbind\` - 解綁此頻道\n` +
-    `- \`/channels\` - 查看已綁定頻道\n` +
-    `- \`/clear\` - 清除對話歷史\n` +
-    `- \`/memory\` - 查看長期記憶\n` +
-    `- \`/forget\` - 清除長期記憶\n` +
-    `- \`/status\` - 查看狀態\n` +
-    `- \`/stop\` - 中斷當前任務`
+      `Commands:\n` +
+      `- \`/bind\` - 綁定此頻道\n` +
+      `- \`/unbind\` - 解綁此頻道\n` +
+      `- \`/channels\` - 查看已綁定頻道\n` +
+      `- \`/clear\` - 清除對話歷史\n` +
+      `- \`/memory\` - 查看長期記憶\n` +
+      `- \`/forget\` - 清除長期記憶\n` +
+      `- \`/status\` - 查看狀態\n` +
+      `- \`/stop\` - 中斷當前任務`,
   );
 }
 
 export async function handleClear(
   interaction: ChatInputCommandInteraction,
-  sessionKey: number
+  sessionKey: number,
 ): Promise<void> {
   contextManager.clearHistory(sessionKey);
   await interaction.reply("Conversation history cleared");
@@ -42,24 +40,24 @@ export async function handleStatus(
   sessionKey: number,
   isChannelMode: boolean,
   channelId: string,
-  discordUserId: string
+  discordUserId: string,
 ): Promise<void> {
   const messageCount = contextManager.getMessageCount(sessionKey);
   const { queueSize, isProcessing } = queueManager.getStatus(sessionKey);
   const modeInfo = isChannelMode ? `Channel: <#${channelId}>` : `User: \`${discordUserId}\``;
   await interaction.reply(
     `**Status**\n\n` +
-    `- Mode: ${isChannelMode ? "Channel" : "DM"}\n` +
-    `- ${modeInfo}\n` +
-    `- Messages: ${messageCount}\n` +
-    `- Processing: ${isProcessing ? "Yes" : "No"}\n` +
-    `- Queued: ${queueSize}`
+      `- Mode: ${isChannelMode ? "Channel" : "DM"}\n` +
+      `- ${modeInfo}\n` +
+      `- Messages: ${messageCount}\n` +
+      `- Processing: ${isProcessing ? "Yes" : "No"}\n` +
+      `- Queued: ${queueSize}`,
   );
 }
 
 export async function handleStop(
   interaction: ChatInputCommandInteraction,
-  sessionKey: number
+  sessionKey: number,
 ): Promise<void> {
   const wasAborted = abortUserProcess(sessionKey);
   const clearedCount = queueManager.clearQueue(sessionKey);
@@ -77,7 +75,7 @@ export async function handleStop(
 
 export async function handleMemory(
   interaction: ChatInputCommandInteraction,
-  userId: number
+  userId: number,
 ): Promise<void> {
   if (!config.memory.enabled) {
     await interaction.reply("Memory feature is disabled");
@@ -108,7 +106,7 @@ export async function handleMemory(
 
 export async function handleForget(
   interaction: ChatInputCommandInteraction,
-  userId: number
+  userId: number,
 ): Promise<void> {
   if (!config.memory.enabled) {
     await interaction.reply("Memory feature is disabled");
@@ -124,7 +122,7 @@ export async function handleHQ(
   sessionKey: number,
   isChannelMode: boolean,
   discordUserId: string,
-  channelId: string
+  channelId: string,
 ): Promise<void> {
   sessionService.upsert({
     sessionId: sessionKey,

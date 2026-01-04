@@ -2,22 +2,28 @@
  * Dice Panel Interactions
  */
 
-import { MessageFlags, type ButtonInteraction, type ModalSubmitInteraction, type StringSelectMenuInteraction, type TextBasedChannel } from "discord.js";
-import { isSendableChannel } from "../utils";
 import {
+  type ButtonInteraction,
+  MessageFlags,
+  type ModalSubmitInteraction,
+  type StringSelectMenuInteraction,
+  type TextBasedChannel,
+} from "discord.js";
+import {
+  addDie,
   buildCustomDiceModal,
   buildDiceComponents,
-  addDie,
-  undoLastDie,
   clearDiceState,
-  rollAccumulatedDice,
-  formatAccumulatedDice,
-  parseAndRoll,
-  getDicePanel,
-  setGameSystem,
   type DiceType,
+  formatAccumulatedDice,
   type GameSystem,
+  getDicePanel,
+  parseAndRoll,
+  rollAccumulatedDice,
+  setGameSystem,
+  undoLastDie,
 } from "../panels";
+import { isSendableChannel } from "../utils";
 
 /**
  * Append roll result to history message
@@ -27,7 +33,7 @@ async function appendToHistory(
   channelId: string,
   discordUserId: string,
   resultText: string,
-  interaction: ButtonInteraction | ModalSubmitInteraction
+  interaction: ButtonInteraction | ModalSubmitInteraction,
 ): Promise<boolean> {
   const dicePanel = getDicePanel(channelId);
   if (!dicePanel || !("messages" in channel)) return false;
@@ -40,14 +46,15 @@ async function appendToHistory(
     if (currentContent.length + newEntry.length + 2 > 1900) {
       await interaction.reply({
         content: "歷史訊息已滿，請使用 `/panel dice` 重新建立面板",
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
       return true; // Handled, but as error
     }
 
-    const newContent = currentContent === "**擲骰歷史**\n—"
-      ? `**擲骰歷史**\n${newEntry}`
-      : `${currentContent}\n${newEntry}`;
+    const newContent =
+      currentContent === "**擲骰歷史**\n—"
+        ? `**擲骰歷史**\n${newEntry}`
+        : `${currentContent}\n${newEntry}`;
 
     await historyMsg.edit(newContent);
     return true;
@@ -62,7 +69,7 @@ async function appendToHistory(
 export async function handleDiceButton(
   interaction: ButtonInteraction,
   discordUserId: string,
-  parts: string[]
+  parts: string[],
 ): Promise<void> {
   const action = parts[1];
   const channel = interaction.channel;
@@ -78,10 +85,19 @@ export async function handleDiceButton(
         return;
       }
 
-      const handled = await appendToHistory(channel, interaction.channelId, discordUserId, result.text, interaction);
+      const handled = await appendToHistory(
+        channel,
+        interaction.channelId,
+        discordUserId,
+        result.text,
+        interaction,
+      );
       if (handled) {
         if (!interaction.replied) {
-          await interaction.reply({ content: `你的結果: ${result.text}`, flags: MessageFlags.Ephemeral });
+          await interaction.reply({
+            content: `你的結果: ${result.text}`,
+            flags: MessageFlags.Ephemeral,
+          });
         }
         return;
       }
@@ -103,7 +119,10 @@ export async function handleDiceButton(
       const guildId = parts[3];
       const state = addDie(discordUserId, diceType, guildId);
       const accumulated = formatAccumulatedDice(state);
-      await interaction.reply({ content: `你的累積: ${accumulated}`, flags: MessageFlags.Ephemeral });
+      await interaction.reply({
+        content: `你的累積: ${accumulated}`,
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
 
@@ -116,10 +135,19 @@ export async function handleDiceButton(
       }
 
       const historyText = rollResult.replace(/\n\n\*\*Total:.*\*\*$/, "").replace(/\n/g, " | ");
-      const handled = await appendToHistory(channel, interaction.channelId, discordUserId, historyText, interaction);
+      const handled = await appendToHistory(
+        channel,
+        interaction.channelId,
+        discordUserId,
+        historyText,
+        interaction,
+      );
       if (handled) {
         if (!interaction.replied) {
-          await interaction.reply({ content: `你的結果:\n${rollResult}`, flags: MessageFlags.Ephemeral });
+          await interaction.reply({
+            content: `你的結果:\n${rollResult}`,
+            flags: MessageFlags.Ephemeral,
+          });
         }
         return;
       }
@@ -140,7 +168,10 @@ export async function handleDiceButton(
         return;
       }
       const accumulated = formatAccumulatedDice(state);
-      await interaction.reply({ content: `你的累積: ${accumulated}`, flags: MessageFlags.Ephemeral });
+      await interaction.reply({
+        content: `你的累積: ${accumulated}`,
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
 
@@ -155,7 +186,7 @@ export async function handleDiceButton(
  */
 export async function handleDiceModalSubmit(
   interaction: ModalSubmitInteraction,
-  discordUserId: string
+  discordUserId: string,
 ): Promise<void> {
   const expression = interaction.fields.getTextInputValue("dice_expression");
   const result = parseAndRoll(expression);
@@ -183,19 +214,20 @@ export async function handleDiceModalSubmit(
         if (currentContent.length + newEntry.length + 2 > 1900) {
           await interaction.reply({
             content: "歷史訊息已滿，請使用 `/panel dice` 重新建立面板",
-            flags: MessageFlags.Ephemeral
+            flags: MessageFlags.Ephemeral,
           });
           return;
         }
 
-        const newContent = currentContent === "**擲骰歷史**\n—"
-          ? `**擲骰歷史**\n${newEntry}`
-          : `${currentContent}\n${newEntry}`;
+        const newContent =
+          currentContent === "**擲骰歷史**\n—"
+            ? `**擲骰歷史**\n${newEntry}`
+            : `${currentContent}\n${newEntry}`;
 
         await historyMsg.edit(newContent);
         await interaction.reply({
           content: `你的結果: ${result.text}\n複製: \`${expression}\``,
-          flags: MessageFlags.Ephemeral
+          flags: MessageFlags.Ephemeral,
         });
         return;
       } catch {
@@ -212,8 +244,8 @@ export async function handleDiceModalSubmit(
  */
 export async function handleDiceSelectMenu(
   interaction: StringSelectMenuInteraction,
-  discordUserId: string,
-  parts: string[]
+  _discordUserId: string,
+  parts: string[],
 ): Promise<void> {
   const guildId = parts[2];
   const selectedSystem = interaction.values[0] as GameSystem;

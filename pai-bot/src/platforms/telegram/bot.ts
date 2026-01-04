@@ -2,20 +2,20 @@ import { Bot } from "grammy";
 import { config } from "../../config";
 import { logger } from "../../utils/logger";
 import { isAuthorized } from "./auth";
+import { handleCallbackQuery } from "./callbacks";
 import {
-  handleStart,
   handleClear,
-  handleStatus,
-  handleStop,
-  handleMemory,
+  handleDocument,
   handleForget,
   handleHQ,
+  handleMemory,
   handleMessage,
-  handleDocument,
   handlePhoto,
+  handleStart,
+  handleStatus,
+  handleStop,
   handleVoice,
 } from "./handlers";
-import { handleCallbackQuery } from "./callbacks";
 
 export async function setupBotCommands(bot: Bot): Promise<void> {
   await bot.api.setMyCommands([

@@ -5,14 +5,14 @@
 import type { Message } from "discord.js";
 import { abortUserProcess } from "../../../claude/client";
 import { queueManager } from "../../../claude/queue-manager";
-import { contextManager } from "../../../context/manager";
-import { logger } from "../../../utils/logger";
 import { config } from "../../../config";
+import { contextManager } from "../../../context/manager";
 import { memoryManager } from "../../../memory";
-import { bindChannel, unbindChannel, isChannelBound, getBoundChannels } from "../channels";
-import { hashToNumeric } from "../context";
 import { sessionService } from "../../../storage/sessions";
-import { toNumericId, splitMessage } from "./utils";
+import { logger } from "../../../utils/logger";
+import { bindChannel, getBoundChannels, isChannelBound, unbindChannel } from "../channels";
+import { hashToNumeric } from "../context";
+import { splitMessage, toNumericId } from "./utils";
 
 /**
  * Handle text commands (starting with /)
@@ -20,7 +20,7 @@ import { toNumericId, splitMessage } from "./utils";
 export async function handleCommand(
   message: Message,
   text: string,
-  isChannelMode: boolean = false
+  isChannelMode: boolean = false,
 ): Promise<void> {
   const discordUserId = message.author.id;
   const channelId = message.channel.id;
@@ -33,15 +33,15 @@ export async function handleCommand(
     case "/help":
       await message.reply(
         `**Merlin**\n\n` +
-        `Commands:\n` +
-        `- \`/bind\` - Bind this channel\n` +
-        `- \`/unbind\` - Unbind this channel\n` +
-        `- \`/channels\` - List bound channels\n` +
-        `- \`/clear\` - Clear conversation history\n` +
-        `- \`/memory\` - View long-term memories\n` +
-        `- \`/forget\` - Clear long-term memories\n` +
-        `- \`/status\` - View status\n` +
-        `- \`/stop\` - Stop current task`
+          `Commands:\n` +
+          `- \`/bind\` - Bind this channel\n` +
+          `- \`/unbind\` - Unbind this channel\n` +
+          `- \`/channels\` - List bound channels\n` +
+          `- \`/clear\` - Clear conversation history\n` +
+          `- \`/memory\` - View long-term memories\n` +
+          `- \`/forget\` - Clear long-term memories\n` +
+          `- \`/status\` - View status\n` +
+          `- \`/stop\` - Stop current task`,
       );
       break;
 
@@ -100,11 +100,11 @@ export async function handleCommand(
       const modeInfo = isChannelMode ? `Channel: <#${channelId}>` : `User: \`${discordUserId}\``;
       await message.reply(
         `**Status**\n\n` +
-        `- Mode: ${isChannelMode ? "Channel" : "DM"}\n` +
-        `- ${modeInfo}\n` +
-        `- Messages: ${messageCount}\n` +
-        `- Processing: ${isProcessing ? "Yes" : "No"}\n` +
-        `- Queued: ${queueSize}`
+          `- Mode: ${isChannelMode ? "Channel" : "DM"}\n` +
+          `- ${modeInfo}\n` +
+          `- Messages: ${messageCount}\n` +
+          `- Processing: ${isProcessing ? "Yes" : "No"}\n` +
+          `- Queued: ${queueSize}`,
       );
       break;
     }

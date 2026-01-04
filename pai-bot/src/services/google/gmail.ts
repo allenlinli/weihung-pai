@@ -1,6 +1,6 @@
 // Gmail 服務
 
-import { google, gmail_v1 } from "googleapis";
+import { type gmail_v1, google } from "googleapis";
 import { getAuthClient } from "./auth";
 
 function getGmail() {
@@ -8,11 +8,7 @@ function getGmail() {
 }
 
 export async function listMessages(
-  options: {
-    q?: string;
-    maxResults?: number;
-    labelIds?: string[];
-  } = {}
+  options: { q?: string; maxResults?: number; labelIds?: string[] } = {},
 ) {
   const gmail = getGmail();
   const res = await gmail.users.messages.list({
@@ -24,7 +20,10 @@ export async function listMessages(
   return res.data.messages || [];
 }
 
-export async function getMessage(messageId: string, format: "full" | "metadata" | "minimal" = "full") {
+export async function getMessage(
+  messageId: string,
+  format: "full" | "metadata" | "minimal" = "full",
+) {
   const gmail = getGmail();
   const res = await gmail.users.messages.get({
     userId: "me",
@@ -74,15 +73,11 @@ export async function sendMessage(
   to: string,
   subject: string,
   body: string,
-  options: { cc?: string; bcc?: string; replyTo?: string } = {}
+  options: { cc?: string; bcc?: string; replyTo?: string } = {},
 ) {
   const gmail = getGmail();
 
-  const headers = [
-    `To: ${to}`,
-    `Subject: ${subject}`,
-    "Content-Type: text/plain; charset=utf-8",
-  ];
+  const headers = [`To: ${to}`, `Subject: ${subject}`, "Content-Type: text/plain; charset=utf-8"];
 
   if (options.cc) headers.push(`Cc: ${options.cc}`);
   if (options.bcc) headers.push(`Bcc: ${options.bcc}`);
@@ -99,10 +94,7 @@ export async function sendMessage(
   return res.data;
 }
 
-export async function replyToMessage(
-  messageId: string,
-  body: string
-) {
+export async function replyToMessage(messageId: string, body: string) {
   const gmail = getGmail();
   const original = await getMessage(messageId, "metadata");
 

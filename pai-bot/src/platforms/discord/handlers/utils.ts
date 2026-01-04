@@ -16,7 +16,7 @@ export function toNumericId(discordId: string): number {
  * Check if channel is sendable
  */
 export function isSendableChannel(
-  channel: TextBasedChannel
+  channel: TextBasedChannel,
 ): channel is Extract<TextBasedChannel, { send: (content: string) => Promise<Message> }> {
   return "send" in channel && typeof (channel as any).send === "function";
 }

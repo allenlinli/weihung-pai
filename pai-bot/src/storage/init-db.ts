@@ -1,9 +1,9 @@
 #!/usr/bin/env bun
 
-import { getDb, closeDb } from "./db";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { logger } from "../utils/logger";
-import { readFileSync } from "fs";
-import { join } from "path";
+import { closeDb, getDb } from "./db";
 
 async function initDatabase() {
   try {

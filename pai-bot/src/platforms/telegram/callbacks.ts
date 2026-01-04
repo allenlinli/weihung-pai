@@ -4,9 +4,8 @@
  */
 
 import type { Context } from "grammy";
-import { queueManager, type QueuedTask } from "../../claude/queue-manager";
-import { executeClaudeTask, type MessageSender } from "../../claude/task-executor";
 import { abortUserProcess } from "../../claude/client";
+import { type QueuedTask, queueManager } from "../../claude/queue-manager";
 import { logger } from "../../utils/logger";
 
 // 任務執行器（由 handlers.ts 設定）
@@ -16,7 +15,7 @@ let taskExecutor: ((task: QueuedTask, chatId: number) => Promise<void>) | null =
  * 設定任務執行器
  */
 export function setTaskExecutor(
-  executor: (task: QueuedTask, chatId: number) => Promise<void>
+  executor: (task: QueuedTask, chatId: number) => Promise<void>,
 ): void {
   taskExecutor = executor;
 }
@@ -97,11 +96,13 @@ export async function handleCallbackQuery(ctx: Context): Promise<void> {
 
     // 加入佇列
     if (taskExecutor) {
-      queueManager.enqueue(task, async (t) => {
-        await taskExecutor!(t, chatId);
-      }).catch((error) => {
-        logger.error({ error, taskId }, "Queued task failed");
-      });
+      queueManager
+        .enqueue(task, async (t) => {
+          await taskExecutor!(t, chatId);
+        })
+        .catch((error) => {
+          logger.error({ error, taskId }, "Queued task failed");
+        });
     }
   }
 }

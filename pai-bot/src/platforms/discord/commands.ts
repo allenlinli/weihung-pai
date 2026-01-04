@@ -19,27 +19,25 @@ const slashCommands = [
   new SlashCommandBuilder().setName("stop").setDescription("中斷當前任務"),
   new SlashCommandBuilder().setName("hq").setDescription("設定為管理中心"),
   // Voice commands
-  new SlashCommandBuilder().setName("join").setDescription("加入語音頻道"),
-  new SlashCommandBuilder().setName("leave").setDescription("離開語音頻道"),
   new SlashCommandBuilder()
-    .setName("spotify")
-    .setDescription("啟動/停止 Spotify Connect"),
+    .setName("join")
+    .setDescription("加入語音頻道"),
+  new SlashCommandBuilder().setName("leave").setDescription("離開語音頻道"),
+  new SlashCommandBuilder().setName("spotify").setDescription("啟動/停止 Spotify Connect"),
   new SlashCommandBuilder()
     .setName("say")
     .setDescription("讓 Bot 在語音頻道說話（TTS）")
-    .addStringOption(option =>
-      option.setName("text").setDescription("要說的文字").setRequired(true)
+    .addStringOption((option) =>
+      option.setName("text").setDescription("要說的文字").setRequired(true),
     ),
-  new SlashCommandBuilder()
-    .setName("panel")
-    .setDescription("顯示擲骰面板"),
+  new SlashCommandBuilder().setName("panel").setDescription("顯示擲骰面板"),
   new SlashCommandBuilder()
     .setName("roll")
     .setDescription("擲骰子 (例: d20, 2d6+3)")
-    .addStringOption(option =>
-      option.setName("dice").setDescription("骰子表達式 (例: d20, 2d6+3)").setRequired(true)
+    .addStringOption((option) =>
+      option.setName("dice").setDescription("骰子表達式 (例: d20, 2d6+3)").setRequired(true),
     ),
-].map(cmd => cmd.toJSON());
+].map((cmd) => cmd.toJSON());
 
 /**
  * Register slash commands with Discord API (global)

@@ -6,11 +6,11 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  type MessageActionRowComponentBuilder,
   ModalBuilder,
   StringSelectMenuBuilder,
   TextInputBuilder,
   TextInputStyle,
-  type MessageActionRowComponentBuilder,
 } from "discord.js";
 
 // Dice types
@@ -18,7 +18,7 @@ const DICE_ROW_1 = ["d4", "d6", "d8", "d10", "d12"] as const;
 const DICE_ROW_2 = ["d20", "d100"] as const;
 const ALL_DICE = [...DICE_ROW_1, ...DICE_ROW_2] as const;
 
-export type DiceType = typeof ALL_DICE[number];
+export type DiceType = (typeof ALL_DICE)[number];
 
 // Game system types and presets
 export type GameSystem = "generic" | "coc" | "dnd" | "fate";
@@ -39,10 +39,10 @@ const BASIC_PRESETS: DicePreset[] = [
 const SYSTEM_SPECIFIC_PRESETS: Record<GameSystem, DicePreset[]> = {
   generic: [],
   coc: [
-    { label: "獎1", expression: "10*2d10kl1+1d10" },  // keep lowest tens = lower result (better in CoC)
-    { label: "罰1", expression: "10*2d10k1+1d10" },   // keep highest tens = higher result (worse in CoC)
-    { label: "獎2", expression: "10*3d10kl1+1d10" },  // keep lowest from 3 tens dice
-    { label: "罰2", expression: "10*3d10k1+1d10" },   // keep highest from 3 tens dice
+    { label: "獎1", expression: "10*2d10kl1+1d10" }, // keep lowest tens = lower result (better in CoC)
+    { label: "罰1", expression: "10*2d10k1+1d10" }, // keep highest tens = higher result (worse in CoC)
+    { label: "獎2", expression: "10*3d10kl1+1d10" }, // keep lowest from 3 tens dice
+    { label: "罰2", expression: "10*3d10k1+1d10" }, // keep highest from 3 tens dice
     { label: "3d6", expression: "3d6" },
   ],
   dnd: [
@@ -50,9 +50,7 @@ const SYSTEM_SPECIFIC_PRESETS: Record<GameSystem, DicePreset[]> = {
     { label: "劣勢", expression: "2d20kl1" },
     { label: "4d6k3", expression: "4d6k3" },
   ],
-  fate: [
-    { label: "4dF", expression: "4dF" },
-  ],
+  fate: [{ label: "4dF", expression: "4dF" }],
 };
 
 // Combined presets: system-specific first, then basic
@@ -200,7 +198,7 @@ export function rollAccumulatedDice(userId: string): string | null {
   // Clear state after rolling
   clearDiceState(userId);
 
-  return results.join("\n") + `\n\n**Total: ${grandTotal}**`;
+  return `${results.join("\n")}\n\n**Total: ${grandTotal}**`;
 }
 
 export interface DiceResult {
@@ -282,17 +280,17 @@ function rollSingleDice(term: string): { value: number; text: string } | null {
   }
 
   // Apply keep/drop
-  let droppedIndices: Set<number> = new Set();
+  const droppedIndices: Set<number> = new Set();
   if (keepDropOp) {
     const sorted = rolls.map((v, i) => ({ v, i })).sort((a, b) => a.v - b.v);
     if (keepDropOp === "k" || keepDropOp === "kh") {
-      sorted.slice(0, count - keepDropCount).forEach((x) => droppedIndices.add(x.i));
+      for (const x of sorted.slice(0, count - keepDropCount)) droppedIndices.add(x.i);
     } else if (keepDropOp === "kl") {
-      sorted.slice(keepDropCount).forEach((x) => droppedIndices.add(x.i));
+      for (const x of sorted.slice(keepDropCount)) droppedIndices.add(x.i);
     } else if (keepDropOp === "d" || keepDropOp === "dl") {
-      sorted.slice(0, keepDropCount).forEach((x) => droppedIndices.add(x.i));
+      for (const x of sorted.slice(0, keepDropCount)) droppedIndices.add(x.i);
     } else if (keepDropOp === "dh") {
-      sorted.slice(count - keepDropCount).forEach((x) => droppedIndices.add(x.i));
+      for (const x of sorted.slice(count - keepDropCount)) droppedIndices.add(x.i);
     }
   }
 
@@ -303,7 +301,7 @@ function rollSingleDice(term: string): { value: number; text: string } | null {
   let diceStr = `${count}d${sides}`;
   if (keepDropOp) diceStr += `${keepDropOp}${keepDropCount}`;
 
-  const formattedRolls = rolls.map((r, i) => droppedIndices.has(i) ? `~~${r}~~` : `${r}`);
+  const formattedRolls = rolls.map((r, i) => (droppedIndices.has(i) ? `~~${r}~~` : `${r}`));
   return { value, text: `${diceStr}[${formattedRolls.join(",")}]=${value}` };
 }
 
@@ -411,7 +409,7 @@ export function formatResult(result: DiceResult): string {
  */
 function buildSystemSelector(
   guildId: string,
-  currentSystem: GameSystem
+  currentSystem: GameSystem,
 ): ActionRowBuilder<StringSelectMenuBuilder> {
   const options = (Object.keys(GAME_SYSTEM_LABELS) as GameSystem[]).map((sys) => ({
     label: GAME_SYSTEM_LABELS[sys],
@@ -431,10 +429,7 @@ function buildSystemSelector(
  * Build preset rows (based on current game system)
  * Returns 1-2 rows depending on number of presets
  */
-function buildPresetRows(
-  guildId: string,
-  system: GameSystem
-): ActionRowBuilder<ButtonBuilder>[] {
+function buildPresetRows(guildId: string, system: GameSystem): ActionRowBuilder<ButtonBuilder>[] {
   const presets = GAME_SYSTEM_PRESETS[system];
   const rows: ActionRowBuilder<ButtonBuilder>[] = [];
 
@@ -446,7 +441,7 @@ function buildPresetRows(
       new ButtonBuilder()
         .setCustomId(`dice:quick:${preset.expression}:${guildId}`)
         .setLabel(preset.label)
-        .setStyle(ButtonStyle.Primary)
+        .setStyle(ButtonStyle.Primary),
     );
   }
   rows.push(new ActionRowBuilder<ButtonBuilder>().addComponents(...row1Buttons));
@@ -459,7 +454,7 @@ function buildPresetRows(
       new ButtonBuilder()
         .setCustomId(`dice:quick:${preset.expression}:${guildId}`)
         .setLabel(preset.label)
-        .setStyle(ButtonStyle.Primary)
+        .setStyle(ButtonStyle.Primary),
     );
   }
   // Add Custom button
@@ -467,7 +462,7 @@ function buildPresetRows(
     new ButtonBuilder()
       .setCustomId(`dice:custom:${guildId}`)
       .setLabel("Custom")
-      .setStyle(ButtonStyle.Success)
+      .setStyle(ButtonStyle.Success),
   );
   rows.push(new ActionRowBuilder<ButtonBuilder>().addComponents(...row2Buttons));
 
@@ -483,8 +478,8 @@ function buildDiceRow1(guildId: string): ActionRowBuilder<ButtonBuilder> {
       new ButtonBuilder()
         .setCustomId(`dice:add:${dice}:${guildId}`)
         .setLabel(dice)
-        .setStyle(ButtonStyle.Secondary)
-    )
+        .setStyle(ButtonStyle.Secondary),
+    ),
   );
 }
 
@@ -497,7 +492,7 @@ function buildDiceRow2(guildId: string): ActionRowBuilder<ButtonBuilder> {
       new ButtonBuilder()
         .setCustomId(`dice:add:${dice}:${guildId}`)
         .setLabel(dice)
-        .setStyle(ButtonStyle.Secondary)
+        .setStyle(ButtonStyle.Secondary),
     ),
     new ButtonBuilder()
       .setCustomId(`dice:undo:${guildId}`)
@@ -510,7 +505,7 @@ function buildDiceRow2(guildId: string): ActionRowBuilder<ButtonBuilder> {
     new ButtonBuilder()
       .setCustomId(`dice:clear:${guildId}`)
       .setLabel("✕")
-      .setStyle(ButtonStyle.Danger)
+      .setStyle(ButtonStyle.Danger),
   );
 }
 
@@ -525,9 +520,7 @@ export function buildDiceContent(): string {
  * Build custom dice modal
  */
 export function buildCustomDiceModal(guildId: string): ModalBuilder {
-  const modal = new ModalBuilder()
-    .setCustomId(`dice:modal:${guildId}`)
-    .setTitle("自定義骰子");
+  const modal = new ModalBuilder().setCustomId(`dice:modal:${guildId}`).setTitle("自定義骰子");
 
   const diceInput = new TextInputBuilder()
     .setCustomId("dice_expression")
@@ -555,7 +548,7 @@ export function buildCustomDiceModal(guildId: string): ModalBuilder {
  */
 export function buildDiceComponents(
   guildId: string,
-  channelId?: string
+  channelId?: string,
 ): ActionRowBuilder<MessageActionRowComponentBuilder>[] {
   // Get current game system from panel, default to generic
   let gameSystem: GameSystem = "generic";
@@ -570,7 +563,7 @@ export function buildDiceComponents(
 
   return [
     buildSystemSelector(guildId, gameSystem) as ActionRowBuilder<MessageActionRowComponentBuilder>,
-    ...presetRows.map(row => row as ActionRowBuilder<MessageActionRowComponentBuilder>),
+    ...presetRows.map((row) => row as ActionRowBuilder<MessageActionRowComponentBuilder>),
     buildDiceRow1(guildId) as ActionRowBuilder<MessageActionRowComponentBuilder>,
     buildDiceRow2(guildId) as ActionRowBuilder<MessageActionRowComponentBuilder>,
   ];

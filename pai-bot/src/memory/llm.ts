@@ -3,8 +3,8 @@
  * Supports Gemini and Haiku
  */
 
-import { GoogleGenAI } from "@google/genai";
 import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI } from "@google/genai";
 import { config } from "../config";
 import { logger } from "../utils/logger";
 
@@ -42,7 +42,10 @@ async function generateWithGemini(prompt: string, maxTokens: number): Promise<LL
   });
 
   const text = response.text ?? "";
-  logger.debug({ provider: "gemini", promptLength: prompt.length, responseLength: text.length }, "LLM response");
+  logger.debug(
+    { provider: "gemini", promptLength: prompt.length, responseLength: text.length },
+    "LLM response",
+  );
 
   return { text };
 }
@@ -57,7 +60,10 @@ async function generateWithHaiku(prompt: string, maxTokens: number): Promise<LLM
   });
 
   const text = response.content[0].type === "text" ? response.content[0].text : "";
-  logger.debug({ provider: "haiku", promptLength: prompt.length, responseLength: text.length }, "LLM response");
+  logger.debug(
+    { provider: "haiku", promptLength: prompt.length, responseLength: text.length },
+    "LLM response",
+  );
 
   return { text };
 }

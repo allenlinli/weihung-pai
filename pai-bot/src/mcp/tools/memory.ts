@@ -3,10 +3,7 @@ import { z } from "zod";
 import { memoryManager } from "../../memory";
 
 // 從環境變數取得預設 user_id（Telegram bot 主人）
-const DEFAULT_USER_ID = parseInt(
-  process.env.TELEGRAM_ALLOWED_USER_IDS?.split(",")[0] || "0",
-  10
-);
+const DEFAULT_USER_ID = parseInt(process.env.TELEGRAM_ALLOWED_USER_IDS?.split(",")[0] || "0", 10);
 
 export function registerMemoryTools(server: McpServer): void {
   server.registerTool(
@@ -32,7 +29,7 @@ export function registerMemoryTools(server: McpServer): void {
       }
 
       return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+    },
   );
 
   server.registerTool(
@@ -58,7 +55,7 @@ export function registerMemoryTools(server: McpServer): void {
       }
 
       return { content: [{ type: "text", text: lines.join("\n") }] };
-    }
+    },
   );
 
   server.registerTool(
@@ -97,7 +94,7 @@ export function registerMemoryTools(server: McpServer): void {
       }
 
       return { content: [{ type: "text", text: `記憶已儲存 (ID: ${result})` }] };
-    }
+    },
   );
 
   server.registerTool(
@@ -122,7 +119,7 @@ export function registerMemoryTools(server: McpServer): void {
         };
       }
       return { content: [{ type: "text", text: `刪除失敗` }] };
-    }
+    },
   );
 
   server.registerTool(
@@ -168,7 +165,7 @@ export function registerMemoryTools(server: McpServer): void {
         };
       }
       return { content: [{ type: "text", text: `更新失敗` }] };
-    }
+    },
   );
 
   server.registerTool(
@@ -202,6 +199,6 @@ export function registerMemoryTools(server: McpServer): void {
       ];
 
       return { content: [{ type: "text", text: info.join("\n") }] };
-    }
+    },
   );
 }

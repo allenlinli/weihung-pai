@@ -20,7 +20,7 @@ export class ContextManager {
         WHERE user_id = ?
         ORDER BY created_at DESC
         LIMIT ?
-      `
+      `,
       )
       .all(userId, this.maxMessages);
 
@@ -38,14 +38,19 @@ export class ContextManager {
   }
 
   // Save a message
-  saveMessage(userId: number, role: "user" | "assistant", content: string, messageId?: string): void {
+  saveMessage(
+    userId: number,
+    role: "user" | "assistant",
+    content: string,
+    messageId?: string,
+  ): void {
     const db = getDb();
     db.run(
       `
       INSERT INTO conversations (user_id, role, content, message_id)
       VALUES (?, ?, ?, ?)
     `,
-      [userId, role, content, messageId || null]
+      [userId, role, content, messageId || null],
     );
   }
 
@@ -58,10 +63,10 @@ export class ContextManager {
         SELECT message_id
         FROM conversations
         WHERE user_id = ? AND message_id IS NOT NULL
-      `
+      `,
       )
       .all(userId);
-    return new Set(results.map(r => r.message_id));
+    return new Set(results.map((r) => r.message_id));
   }
 
   // Clear conversation history
@@ -72,7 +77,7 @@ export class ContextManager {
       DELETE FROM conversations
       WHERE user_id = ?
     `,
-      [userId]
+      [userId],
     );
   }
 
@@ -85,7 +90,7 @@ export class ContextManager {
         SELECT COUNT(*) as count
         FROM conversations
         WHERE user_id = ?
-      `
+      `,
       )
       .get(userId);
     return result?.count || 0;

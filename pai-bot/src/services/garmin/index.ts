@@ -1,13 +1,13 @@
 // Garmin Connect 服務
 
+import { join } from "node:path";
 import { $ } from "bun";
-import { join } from "path";
 import type {
-  GarminStats,
-  GarminSleep,
   GarminActivity,
-  GarminHeartRateSummary,
   GarminHealthSummary,
+  GarminHeartRateSummary,
+  GarminSleep,
+  GarminStats,
 } from "./types";
 
 const SYNC_SCRIPT = join(import.meta.dir, "sync.py");
@@ -32,8 +32,7 @@ async function runSync<T>(command: string, args: string[] = []): Promise<T> {
   const allArgs = [GARMIN_EMAIL!, GARMIN_PASSWORD!, command, ...args];
 
   try {
-    const result =
-      await $`uv run --with garminconnect python3 ${SYNC_SCRIPT} ${allArgs}`.text();
+    const result = await $`uv run --with garminconnect python3 ${SYNC_SCRIPT} ${allArgs}`.text();
     const parsed = JSON.parse(result.trim());
 
     if (parsed.error) {
@@ -52,10 +51,7 @@ async function runSync<T>(command: string, args: string[] = []): Promise<T> {
 /**
  * 取得日期範圍內的每日統計數據
  */
-export async function getStats(
-  startDate?: string,
-  endDate?: string
-): Promise<GarminStats[]> {
+export async function getStats(startDate?: string, endDate?: string): Promise<GarminStats[]> {
   const start = startDate || getToday();
   const end = endDate || start;
   return runSync<GarminStats[]>("stats", [start, end]);
@@ -64,10 +60,7 @@ export async function getStats(
 /**
  * 取得日期範圍內的睡眠數據
  */
-export async function getSleep(
-  startDate?: string,
-  endDate?: string
-): Promise<GarminSleep[]> {
+export async function getSleep(startDate?: string, endDate?: string): Promise<GarminSleep[]> {
   const start = startDate || getToday();
   const end = endDate || start;
   return runSync<GarminSleep[]>("sleep", [start, end]);
@@ -85,7 +78,7 @@ export async function getActivities(limit = 10): Promise<GarminActivity[]> {
  */
 export async function getHeartRates(
   startDate?: string,
-  endDate?: string
+  endDate?: string,
 ): Promise<GarminHeartRateSummary[]> {
   const start = startDate || getToday();
   const end = endDate || start;
@@ -97,7 +90,7 @@ export async function getHeartRates(
  */
 export async function getAll(
   startDate?: string,
-  endDate?: string
+  endDate?: string,
 ): Promise<{
   stats: GarminStats[];
   sleep: GarminSleep[];
@@ -113,7 +106,7 @@ export async function getAll(
  */
 export async function getHealthSummary(
   startDate?: string,
-  endDate?: string
+  endDate?: string,
 ): Promise<GarminHealthSummary[]> {
   const { stats, sleep } = await getAll(startDate, endDate);
 
@@ -135,9 +128,7 @@ export async function getHealthSummary(
       steps: {
         current: stat.steps || 0,
         goal: stat.stepGoal || 10000,
-        percentage: Math.round(
-          ((stat.steps || 0) / (stat.stepGoal || 10000)) * 100
-        ),
+        percentage: Math.round(((stat.steps || 0) / (stat.stepGoal || 10000)) * 100),
       },
       sleep: {
         totalHours: Math.round(sleepHours * 10) / 10,

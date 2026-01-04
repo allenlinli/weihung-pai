@@ -2,24 +2,24 @@
  * Discord Attachment Handler
  */
 
-import type { Message, TextBasedChannel } from "discord.js";
 import { mkdir } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import type { Message, TextBasedChannel } from "discord.js";
 import { queueManager } from "../../../claude/queue-manager";
-import { contextManager } from "../../../context/manager";
-import { logger } from "../../../utils/logger";
 import { config } from "../../../config";
+import { contextManager } from "../../../context/manager";
 import { transcribeAudio } from "../../../services/transcription";
+import { logger } from "../../../utils/logger";
 import { hashToNumeric } from "../context";
-import { toNumericId, isSendableChannel } from "./utils";
-import { prepareTask, executeClaudeTask } from "./message";
+import { executeClaudeTask, prepareTask } from "./message";
+import { isSendableChannel, toNumericId } from "./utils";
 
 /**
  * Handle attachments (files, images, voice)
  */
 export async function handleAttachment(
   message: Message,
-  isChannelMode: boolean = false
+  isChannelMode: boolean = false,
 ): Promise<void> {
   const discordUserId = message.author.id;
   const channelId = message.channel.id;
@@ -64,7 +64,7 @@ export async function handleAttachment(
           isChannelMode,
           message.channel,
           message.id,
-          guildId
+          guildId,
         );
 
         if (!isSendableChannel(message.channel)) return;
