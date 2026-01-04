@@ -75,26 +75,53 @@ export async function joinChannel(
       logger.error({ error }, "Audio player error");
     });
 
-    // 監聽連接狀態變化，自動清理失效的連接
+    // 監聽連接狀態變化，自動重連（最多 3 次）
     connection.on(VoiceConnectionStatus.Disconnected, async () => {
-      logger.warn({ guildId: channel.guild.id }, "Voice connection disconnected");
-      try {
-        // 嘗試等待重新連接（5 秒）
-        await Promise.race([
-          entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
-          entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
-        ]);
-        // 成功重新連接
-        logger.info({ guildId: channel.guild.id }, "Voice connection reconnecting");
-      } catch {
-        // 無法重新連接，清理資源
-        logger.info(
-          { guildId: channel.guild.id },
-          "Voice connection failed to reconnect, cleaning up",
-        );
-        connection.destroy();
-        guildQueues.delete(channel.guild.id);
+      const guildId = channel.guild.id;
+      const guildQueue = guildQueues.get(guildId);
+      const wasSpotifyConnected = guildQueue?.spotifyConnected ?? false;
+
+      logger.warn({ guildId, wasSpotifyConnected }, "Voice connection disconnected");
+
+      const MAX_RETRIES = 3;
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          logger.info({ guildId, attempt, maxRetries: MAX_RETRIES }, "Attempting to reconnect");
+
+          // 嘗試等待重新連接（5 秒）
+          await Promise.race([
+            entersState(connection, VoiceConnectionStatus.Signalling, 5_000),
+            entersState(connection, VoiceConnectionStatus.Connecting, 5_000),
+          ]);
+
+          // 等待連接完全就緒
+          await entersState(connection, VoiceConnectionStatus.Ready, 10_000);
+          logger.info({ guildId, attempt }, "Voice connection ready after reconnect");
+
+          // 如果之前有 Spotify Connect，自動重啟
+          if (wasSpotifyConnected) {
+            logger.info({ guildId }, "Auto-restarting Spotify Connect after reconnect");
+            const result = await startSpotifyConnect(guildId);
+            if (!result.ok) {
+              logger.error(
+                { guildId, error: result.error },
+                "Failed to auto-restart Spotify Connect",
+              );
+            }
+          }
+          return; // 成功，退出
+        } catch {
+          logger.warn({ guildId, attempt, maxRetries: MAX_RETRIES }, "Reconnect attempt failed");
+          if (attempt < MAX_RETRIES) {
+            await new Promise((r) => setTimeout(r, 2000)); // 等 2 秒再試
+          }
+        }
       }
+
+      // 3 次都失敗，清理資源
+      logger.info({ guildId }, "All reconnect attempts failed, cleaning up");
+      connection.destroy();
+      guildQueues.delete(guildId);
     });
 
     connection.on(VoiceConnectionStatus.Destroyed, () => {
@@ -184,6 +211,8 @@ export async function startSpotifyConnect(
         "--initial-volume",
         "100",
         "--enable-volume-normalisation",
+        "--normalisation-pregain",
+        "1",
         "--format",
         "S16",
         "--bitrate",
@@ -210,7 +239,11 @@ export async function startSpotifyConnect(
     // 保存音量控制引用
     if (resource.volume) {
       guildQueue.volumeResource = resource.volume;
-      resource.volume.setVolume(guildQueue.muted ? 0 : guildQueue.volume / 100);
+      const vol = guildQueue.muted ? 0 : guildQueue.volume / 100;
+      resource.volume.setVolume(vol);
+      logger.info({ volume: guildQueue.volume, actualVolume: vol }, "Volume resource initialized");
+    } else {
+      logger.warn("Volume resource not available - inlineVolume may not be working");
     }
 
     guildQueue.player.play(resource);
@@ -481,9 +514,20 @@ export function setVolume(guildId: string, volume: number): boolean {
 
   guildQueue.volume = Math.max(0, Math.min(100, volume));
   if (!guildQueue.muted && guildQueue.volumeResource) {
-    guildQueue.volumeResource.setVolume(guildQueue.volume / 100);
+    const actualVol = guildQueue.volume / 100;
+    guildQueue.volumeResource.setVolume(actualVol);
+    logger.info({ guildId, volume: guildQueue.volume, actualVol }, "Volume set");
+  } else {
+    logger.warn(
+      {
+        guildId,
+        volume: guildQueue.volume,
+        muted: guildQueue.muted,
+        hasResource: !!guildQueue.volumeResource,
+      },
+      "Volume set but not applied",
+    );
   }
-  logger.info({ guildId, volume: guildQueue.volume }, "Volume set");
   return true;
 }
 
