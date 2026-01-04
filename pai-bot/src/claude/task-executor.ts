@@ -66,6 +66,38 @@ export interface MessageSender {
   sendMessage(chatId: number, text: string, options?: { parse_mode?: string }): Promise<void>;
 }
 
+// Telegram 單則訊息上限
+const TELEGRAM_MESSAGE_LIMIT = 4096;
+
+/**
+ * 切斷訊息（避免超過平台限制）
+ */
+function splitMessage(text: string, maxLength: number): string[] {
+  const chunks: string[] = [];
+  let remaining = text;
+
+  while (remaining.length > 0) {
+    if (remaining.length <= maxLength) {
+      chunks.push(remaining);
+      break;
+    }
+
+    // 尋找適合的切斷點
+    let breakPoint = remaining.lastIndexOf("\n", maxLength);
+    if (breakPoint === -1 || breakPoint < maxLength / 2) {
+      breakPoint = remaining.lastIndexOf(" ", maxLength);
+    }
+    if (breakPoint === -1 || breakPoint < maxLength / 2) {
+      breakPoint = maxLength;
+    }
+
+    chunks.push(remaining.slice(0, breakPoint));
+    remaining = remaining.slice(breakPoint).trimStart();
+  }
+
+  return chunks;
+}
+
 /**
  * 執行 Claude 任務
  */
@@ -115,13 +147,16 @@ export async function executeClaudeTask(
   // Send final response
   const finalContent = currentText.trim();
   if (finalContent) {
-    try {
-      await sender.sendMessage(chatId, toMarkdownV2(finalContent), {
-        parse_mode: "MarkdownV2",
-      });
-    } catch (error) {
-      logger.debug({ error }, "MarkdownV2 parsing failed, fallback to plain text");
-      await sender.sendMessage(chatId, finalContent);
+    const chunks = splitMessage(finalContent, TELEGRAM_MESSAGE_LIMIT);
+    for (const chunk of chunks) {
+      try {
+        await sender.sendMessage(chatId, toMarkdownV2(chunk), {
+          parse_mode: "MarkdownV2",
+        });
+      } catch (error) {
+        logger.debug({ error }, "MarkdownV2 parsing failed, fallback to plain text");
+        await sender.sendMessage(chatId, chunk);
+      }
     }
 
     // Save assistant response
