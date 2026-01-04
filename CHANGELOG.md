@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.28.5 (2026-01-04)
+
+### Bug Fixes
+
+- **spotify**: Only clear audio cache, preserve credentials
+  ([`1c4200e`](https://github.com/wayne930242/weihung-pai/commit/1c4200ec674a18a9016c731e4c311e0da0920b36))
+
+
 ## v1.28.4 (2026-01-04)
 
 ### Bug Fixes
