@@ -45,6 +45,9 @@ const DEFAULT_VOLUME = 100;
 // Per-guild voice state
 const guildQueues = new Map<string, GuildQueue>();
 
+// Track reconnect sessions to cancel stale reconnects
+const reconnectSessions = new Map<string, number>();
+
 /**
  * 加入語音頻道
  */
@@ -52,9 +55,15 @@ export async function joinChannel(
   channel: VoiceBasedChannel,
 ): Promise<{ ok: true; connection: VoiceConnection } | { ok: false; error: string }> {
   try {
+    const guildId = channel.guild.id;
+
+    // Cancel any ongoing reconnect attempts
+    const sessionId = Date.now();
+    reconnectSessions.set(guildId, sessionId);
+
     const connection = joinVoiceChannel({
       channelId: channel.id,
-      guildId: channel.guild.id,
+      guildId: guildId,
       adapterCreator: channel.guild.voiceAdapterCreator,
     });
 
@@ -81,10 +90,19 @@ export async function joinChannel(
       const guildQueue = guildQueues.get(guildId);
       const wasSpotifyConnected = guildQueue?.spotifyConnected ?? false;
 
+      // Record current session to detect if a new join happens during reconnect
+      const mySession = reconnectSessions.get(guildId) ?? 0;
+
       logger.warn({ guildId, wasSpotifyConnected }, "Voice connection disconnected");
 
       const MAX_RETRIES = 3;
       for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        // Check if a new connection was established (user manually rejoined)
+        if (reconnectSessions.get(guildId) !== mySession) {
+          logger.info({ guildId }, "New connection detected, cancelling reconnect");
+          return;
+        }
+
         try {
           logger.info({ guildId, attempt, maxRetries: MAX_RETRIES }, "Attempting to reconnect");
 
@@ -116,6 +134,12 @@ export async function joinChannel(
             await new Promise((r) => setTimeout(r, 2000)); // 等 2 秒再試
           }
         }
+      }
+
+      // Check again before cleanup
+      if (reconnectSessions.get(guildId) !== mySession) {
+        logger.info({ guildId }, "New connection detected, skipping cleanup");
+        return;
       }
 
       // 3 次都失敗，清理資源
