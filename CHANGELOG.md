@@ -1,6 +1,33 @@
 # CHANGELOG
 
 
+## v1.26.0 (2026-01-04)
+
+### Bug Fixes
+
+- **discord**: Use MessageFlags.Ephemeral instead of deprecated ephemeral option
+  ([`6c8aa5a`](https://github.com/wayne930242/weihung-pai/commit/6c8aa5a7613facfc33c8b89e2b4623c2f2fdafd3))
+
+### Features
+
+- **garmin**: Add date range query support for all MCP tools
+  ([`0ee714d`](https://github.com/wayne930242/weihung-pai/commit/0ee714d5278e2d1bff693f5d15cfb7f9bded0fe2))
+
+- **logging**: Split stdout/stderr streams and add global error handlers
+  ([`cb75dfa`](https://github.com/wayne930242/weihung-pai/commit/cb75dfa0e7fb97f32956397fa1374b3a2f181195))
+
+- **mcp**: Add memory_delete and memory_update tools
+  ([`9f8aff2`](https://github.com/wayne930242/weihung-pai/commit/9f8aff2a6da17d321d5b28036671c305c9629033))
+
+- **telegram**: Add message splitting for long responses
+  ([`ac0cb4a`](https://github.com/wayne930242/weihung-pai/commit/ac0cb4a32e71d5357e795c19053579699f379135))
+
+### Refactoring
+
+- **discord**: Remove YouTube playback remnants from voice module
+  ([`b82224a`](https://github.com/wayne930242/weihung-pai/commit/b82224adb1260cca8e99ade46e511f050ce3fc95))
+
+
 ## v1.25.0 (2026-01-03)
 
 ### Bug Fixes
