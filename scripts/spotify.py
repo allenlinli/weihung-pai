@@ -26,9 +26,12 @@ def _check_credentials() -> bool:
 
 
 def do_auth() -> int:
-    """OAuth authentication for librespot (headless mode)"""
+    """OAuth authentication for librespot with SSH tunnel"""
+    import subprocess
+    import os
+
     print("=" * 50)
-    print("  Spotify OAuth 認證 (Headless Mode)")
+    print("  Spotify OAuth 認證 (SSH Tunnel Mode)")
     print("=" * 50)
     print()
 
@@ -39,24 +42,48 @@ def do_auth() -> int:
 
     print("步驟：")
     print("  1. 等待出現 'Browse to: https://...' 的 URL")
-    print("  2. 在瀏覽器開啟這個 URL 並授權")
-    print("  3. 授權後會跳轉到失敗頁面 (無法連線)")
-    print("  4. 複製瀏覽器網址列的完整 URL (http://127.0.0.1/login?code=...)")
-    print("  5. 貼回這裡按 Enter")
-    print()
-    print("提示：看到 'Provide redirect URL' 後貼上 URL")
+    print("  2. 複製並在瀏覽器開啟這個 URL")
+    print("  3. 授權後會自動跳轉回來完成認證")
     print()
     print("-" * 50)
 
-    # Run librespot OAuth (使用 pipe backend 避免 ALSA 錯誤)
-    exit_code = ssh_to_vps(
+    # Get SSH key path
+    ssh_key = os.path.expanduser("~/.ssh/pai-agent")
+    if not os.path.exists(ssh_key):
+        print(f"✗ SSH key 不存在: {ssh_key}")
+        print("  請執行: uv run pai ssh setup")
+        return 1
+
+    # Get server IP from vault
+    from .vault import get_vault_value
+    server_ip = get_vault_value("vault_server_ip")
+    if not server_ip:
+        print("✗ 無法取得 server IP")
+        return 1
+
+    # Run librespot with SSH tunnel for OAuth callback
+    # Port 5588 is librespot's default OAuth port
+    cmd = [
+        "ssh",
+        "-i", ssh_key,
+        "-o", "StrictHostKeyChecking=no",
+        "-L", "5588:127.0.0.1:5588",
+        f"pai@{server_ip}",
         f"{LIBRESPOT_PATH} "
         f"--name '{DEVICE_NAME}' "
         f"--cache {CACHE_DIR} "
         "--backend pipe "
-        "--enable-oauth "
-        "--oauth-port 0"
-    )
+        "--format S16 "
+        "--bitrate 160 "
+        "--enable-oauth"
+    ]
+
+    try:
+        result = subprocess.run(cmd)
+        exit_code = result.returncode
+    except KeyboardInterrupt:
+        print("\n已取消")
+        exit_code = 130
 
     print()
     print("-" * 50)
