@@ -119,9 +119,7 @@ export async function joinChannel(
     // Handle player state changes
     player.on(AudioPlayerStatus.Idle, () => {
       const guildQueue = guildQueues.get(channel.guild.id);
-      if (guildQueue && guildQueue.queue.length > 0) {
-        playNext(channel.guild.id);
-      } else if (guildQueue) {
+      if (guildQueue) {
         guildQueue.playing = false;
         guildQueue.currentItem = null;
         // 通知控制面板：播放結束
@@ -133,10 +131,6 @@ export async function joinChannel(
 
     player.on("error", (error) => {
       logger.error({ error }, "Audio player error");
-      const guildQueue = guildQueues.get(channel.guild.id);
-      if (guildQueue && guildQueue.queue.length > 0) {
-        playNext(channel.guild.id);
-      }
     });
 
     // 監聽連接狀態變化，自動清理失效的連接
@@ -418,11 +412,7 @@ export async function speakTts(
     }
 
     // 如果設定中斷，先暫停目前播放
-    const wasPlaying = guildQueue.playing;
-    const savedQueue = interrupt ? [...guildQueue.queue] : guildQueue.queue;
-    const savedCurrent = interrupt ? guildQueue.currentItem : null;
-
-    if (interrupt && wasPlaying) {
+    if (interrupt && guildQueue.playing) {
       guildQueue.player.stop();
       guildQueue.playing = false;
     }
@@ -457,13 +447,6 @@ export async function speakTts(
     // 清理暫存檔
     const fsPromises = await import("node:fs/promises");
     await fsPromises.unlink(filename).catch(() => {});
-
-    // 如果之前有音樂在播放，恢復播放
-    if (interrupt && wasPlaying && savedCurrent) {
-      // 把之前的歌曲放回佇列開頭
-      guildQueue.queue = [savedCurrent, ...savedQueue];
-      await playNext(guildId);
-    }
 
     logger.info({ text: text.slice(0, 50), voice }, "TTS played");
     return { ok: true };

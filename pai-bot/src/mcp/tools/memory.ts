@@ -28,7 +28,7 @@ export function registerMemoryTools(server: McpServer): void {
 
       const lines = [`長期記憶（共 ${count} 條，顯示 ${memories.length} 條）：\n`];
       for (const m of memories) {
-        lines.push(`- [${m.category}] ${m.content} (重要性: ${m.importance})`);
+        lines.push(`- [ID:${m.id}] [${m.category}] ${m.content} (重要性: ${m.importance})`);
       }
 
       return { content: [{ type: "text", text: lines.join("\n") }] };
@@ -55,7 +55,7 @@ export function registerMemoryTools(server: McpServer): void {
       const lines = [`與「${query}」相關的記憶：\n`];
       for (const m of memories) {
         const distance = m.distance?.toFixed(2) || "?";
-        lines.push(`- [${m.category}] ${m.content} (距離: ${distance})`);
+        lines.push(`- [ID:${m.id}] [${m.category}] ${m.content} (距離: ${distance})`);
       }
 
       return { content: [{ type: "text", text: lines.join("\n") }] };
@@ -102,32 +102,73 @@ export function registerMemoryTools(server: McpServer): void {
   );
 
   server.registerTool(
-    "memory_archive",
+    "memory_delete",
     {
-      title: "Archive All Memories",
-      description: "封存所有長期記憶（軟刪除，可恢復）",
-      inputSchema: {},
+      title: "Delete Memory",
+      description: "刪除單則記憶（需要先用 memory_list 或 memory_search 取得 ID）",
+      inputSchema: {
+        id: z.number().describe("記憶 ID"),
+      },
     },
-    async () => {
-      const archived = memoryManager.archiveByUser(DEFAULT_USER_ID);
-      return {
-        content: [{ type: "text", text: `已封存 ${archived} 條記憶` }],
-      };
+    async ({ id }) => {
+      const memory = memoryManager.getById(id);
+      if (!memory) {
+        return { content: [{ type: "text", text: `找不到 ID 為 ${id} 的記憶` }] };
+      }
+
+      const deleted = memoryManager.delete(id);
+      if (deleted) {
+        return {
+          content: [{ type: "text", text: `已刪除記憶 (ID: ${id}): ${memory.content}` }],
+        };
+      }
+      return { content: [{ type: "text", text: `刪除失敗` }] };
     }
   );
 
   server.registerTool(
-    "memory_restore",
+    "memory_update",
     {
-      title: "Restore Archived Memories",
-      description: "恢復所有已封存的記憶",
-      inputSchema: {},
+      title: "Update Memory",
+      description: "更新單則記憶的內容、分類或重要性",
+      inputSchema: {
+        id: z.number().describe("記憶 ID"),
+        content: z.string().optional().describe("新內容（會重新計算 embedding）"),
+        category: z
+          .enum([
+            "preference",
+            "personal",
+            "event",
+            "work",
+            "health",
+            "investment",
+            "watchlist",
+            "general",
+          ])
+          .optional()
+          .describe("新分類"),
+        importance: z.number().min(1).max(5).optional().describe("新重要性 1-5"),
+      },
     },
-    async () => {
-      const restored = memoryManager.restoreByUser(DEFAULT_USER_ID);
-      return {
-        content: [{ type: "text", text: `已恢復 ${restored} 條記憶` }],
-      };
+    async ({ id, content, category, importance }) => {
+      const memory = memoryManager.getById(id);
+      if (!memory) {
+        return { content: [{ type: "text", text: `找不到 ID 為 ${id} 的記憶` }] };
+      }
+
+      const updated = await memoryManager.update(id, { content, category, importance });
+      if (updated) {
+        const newMemory = memoryManager.getById(id);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `已更新記憶 (ID: ${id}):\n舊: ${memory.content}\n新: ${newMemory?.content}`,
+            },
+          ],
+        };
+      }
+      return { content: [{ type: "text", text: `更新失敗` }] };
     }
   );
 

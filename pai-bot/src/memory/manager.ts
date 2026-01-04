@@ -240,6 +240,54 @@ export class MemoryManager {
   }
 
   /**
+   * Get a single memory by ID
+   */
+  getById(id: number): Memory | null {
+    const db = getDb();
+    return db
+      .query<Memory, [number]>(
+        `SELECT rowid as id, user_id as userId, content, category, importance,
+                created_at as createdAt, last_accessed as lastAccessed
+         FROM vec_memories WHERE rowid = ?`
+      )
+      .get(id) ?? null;
+  }
+
+  /**
+   * Update a single memory's content (regenerates embedding)
+   */
+  async update(
+    id: number,
+    updates: { content?: string; category?: string; importance?: number }
+  ): Promise<boolean> {
+    const db = getDb();
+    const existing = this.getById(id);
+    if (!existing) return false;
+
+    const content = updates.content ?? existing.content;
+    const category = updates.category ?? existing.category;
+    const importance = updates.importance ?? existing.importance;
+
+    // If content changed, regenerate embedding
+    if (updates.content && updates.content !== existing.content) {
+      const { embedding } = await getEmbedding(content);
+      const embeddingBytes = new Uint8Array(embedding.buffer);
+      db.run(
+        `UPDATE vec_memories SET content = ?, category = ?, importance = ?, embedding = ? WHERE rowid = ?`,
+        [content, category, importance, embeddingBytes, id]
+      );
+    } else {
+      db.run(
+        `UPDATE vec_memories SET category = ?, importance = ? WHERE rowid = ?`,
+        [category, importance, id]
+      );
+    }
+
+    logger.info({ id, updates }, "Memory updated");
+    return true;
+  }
+
+  /**
    * Soft delete all memories for a user (archive them)
    */
   archiveByUser(userId: number): number {
