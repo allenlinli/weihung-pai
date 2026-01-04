@@ -280,6 +280,7 @@ export async function startSpotifyConnect(
       if (!proc.stderr) return;
       const reader = proc.stderr.getReader();
       const decoder = new TextDecoder();
+      let errorCount = 0;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -289,6 +290,33 @@ export async function startSpotifyConnect(
         // 解析 librespot 日誌
         if (line.includes("now playing")) {
           logger.info({ line: line.trim() }, "Spotify now playing");
+          errorCount = 0; // Reset on successful playback
+        } else if (line.includes("audio key error") || line.includes("Service unavailable")) {
+          errorCount++;
+          logger.warn({ line: line.trim(), errorCount }, "Librespot auth error");
+
+          // Auto-recover: clear cache and restart after 3 consecutive errors
+          if (errorCount >= 3) {
+            logger.info({ guildId }, "Too many auth errors, clearing cache and restarting");
+            proc.kill();
+
+            // Clear cache
+            const fs = await import("node:fs/promises");
+            try {
+              await fs.rm(LIBRESPOT_CACHE, { recursive: true, force: true });
+              await fs.mkdir(LIBRESPOT_CACHE, { recursive: true });
+            } catch {
+              // ignore
+            }
+
+            // Restart after a short delay
+            setTimeout(() => {
+              if (guildQueues.has(guildId)) {
+                startSpotifyConnect(guildId);
+              }
+            }, 2000);
+            return;
+          }
         } else if (line.includes("ERROR") || line.includes("error")) {
           logger.warn({ line: line.trim() }, "Librespot warning");
         }
