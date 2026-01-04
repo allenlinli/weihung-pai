@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.28.4 (2026-01-04)
+
+### Bug Fixes
+
+- **spotify**: Kill stale librespot before starting new one
+  ([`e71283f`](https://github.com/wayne930242/weihung-pai/commit/e71283f707105e07eb8e4530e6d0491a7fd732d2))
+
+
 ## v1.28.3 (2026-01-04)
 
 ### Bug Fixes
