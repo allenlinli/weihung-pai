@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.29.0 (2026-01-04)
+
+### Features
+
+- Migrate to Hostinger VPS and improve Spotify auth
+  ([`81f21bd`](https://github.com/wayne930242/weihung-pai/commit/81f21bd849446dc422c1d6c460101cccd604c70c))
+
+
 ## v1.28.6 (2026-01-04)
 
 ### Performance Improvements
