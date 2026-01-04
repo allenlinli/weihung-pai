@@ -222,6 +222,13 @@ export async function startSpotifyConnect(
   }
 
   try {
+    // 先殺掉所有舊的 librespot 進程，避免累積
+    try {
+      Bun.spawnSync(["pkill", "-9", "librespot"]);
+    } catch {
+      // ignore
+    }
+
     // 啟動 librespot，使用 cached credentials
     const proc = Bun.spawn(
       [
