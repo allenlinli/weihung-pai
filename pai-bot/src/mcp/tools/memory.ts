@@ -54,8 +54,7 @@ export function registerMemoryTools(server: McpServer): void {
 
       const lines = [`與「${query}」相關的記憶：\n`];
       for (const m of memories) {
-        const distance = m.distance?.toFixed(2) || "?";
-        lines.push(`- [ID:${m.id}] [${m.category}] ${m.content} (距離: ${distance})`);
+        lines.push(`- [ID:${m.id}] [${m.category}] ${m.content}`);
       }
 
       return { content: [{ type: "text", text: lines.join("\n") }] };
@@ -133,7 +132,7 @@ export function registerMemoryTools(server: McpServer): void {
       description: "更新單則記憶的內容、分類或重要性",
       inputSchema: {
         id: z.number().describe("記憶 ID"),
-        content: z.string().optional().describe("新內容（會重新計算 embedding）"),
+        content: z.string().optional().describe("新內容"),
         category: z
           .enum([
             "preference",

@@ -1,6 +1,5 @@
 import { getDb } from "../storage/db";
 import { logger } from "../utils/logger";
-import { getEmbedding } from "./embedding";
 import { Memory } from "./manager";
 import { generateText } from "./llm";
 
@@ -29,9 +28,9 @@ function findSimilarClusters(userId: number, threshold: number = 0.7): MemoryClu
   // Get all memories for user
   const memories = db
     .query<Memory, [number]>(
-      `SELECT rowid as id, user_id as userId, content, category, importance,
+      `SELECT id, user_id as userId, content, category, importance,
               created_at as createdAt, last_accessed as lastAccessed
-       FROM vec_memories WHERE user_id = ?
+       FROM memories WHERE user_id = ?
        ORDER BY category, created_at`
     )
     .all(userId);
@@ -87,7 +86,7 @@ function findSimilarClusters(userId: number, threshold: number = 0.7): MemoryClu
 }
 
 /**
- * Consolidate similar memories using Haiku
+ * Consolidate similar memories using LLM
  */
 export async function consolidateMemories(userId: number): Promise<number> {
   const clusters = findSimilarClusters(userId);
@@ -117,20 +116,16 @@ export async function consolidateMemories(userId: number): Promise<number> {
       const maxImportance = Math.max(...cluster.memories.map((m) => m.importance));
       const now = new Date().toISOString();
 
-      // Generate embedding for consolidated memory
-      const { embedding } = await getEmbedding(consolidatedContent);
-      const embeddingBytes = new Uint8Array(embedding.buffer);
-
       // Delete old memories
       const ids = cluster.memories.map((m) => m.id);
       const placeholders = ids.map(() => "?").join(",");
-      db.run(`DELETE FROM vec_memories WHERE rowid IN (${placeholders})`, ids);
+      db.run(`DELETE FROM memories WHERE id IN (${placeholders})`, ids);
 
       // Insert consolidated memory
       db.run(
-        `INSERT INTO vec_memories(user_id, embedding, content, category, importance, created_at, last_accessed)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [userId, embeddingBytes, consolidatedContent, cluster.category, maxImportance, now, now]
+        `INSERT INTO memories(user_id, content, category, importance, created_at, last_accessed)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [userId, consolidatedContent, cluster.category, maxImportance, now, now]
       );
 
       consolidated++;
@@ -158,7 +153,7 @@ export async function consolidateAllUsers(): Promise<number> {
   const db = getDb();
 
   const users = db
-    .query<{ userId: number }, []>("SELECT DISTINCT user_id as userId FROM vec_memories")
+    .query<{ userId: number }, []>("SELECT DISTINCT user_id as userId FROM memories")
     .all();
 
   let total = 0;

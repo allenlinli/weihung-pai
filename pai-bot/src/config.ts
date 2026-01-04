@@ -37,10 +37,6 @@ export const config = {
   database: {
     path: process.env.DATABASE_PATH || "./data/pai.db",
   },
-  ollama: {
-    baseUrl: process.env.OLLAMA_BASE_URL || "http://localhost:11434",
-    embeddingModel: process.env.OLLAMA_EMBEDDING_MODEL || "nomic-embed-text",
-  },
   spotify: {
     username: process.env.SPOTIFY_USERNAME || "",
     password: process.env.SPOTIFY_PASSWORD || "",

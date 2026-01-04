@@ -19,7 +19,7 @@ export function cleanupExpiredMemories(): number {
         user_id as userId,
         COUNT(*) as total,
         SUM(CASE WHEN last_accessed < ? THEN 1 ELSE 0 END) as expired
-       FROM vec_memories
+       FROM memories
        GROUP BY user_id
        HAVING expired > 0`
     )
@@ -34,8 +34,8 @@ export function cleanupExpiredMemories(): number {
 
     if (toDelete > 0) {
       db.run(
-        `DELETE FROM vec_memories WHERE rowid IN (
-          SELECT rowid FROM vec_memories
+        `DELETE FROM memories WHERE id IN (
+          SELECT id FROM memories
           WHERE user_id = ? AND last_accessed < ?
           ORDER BY importance ASC, last_accessed ASC
           LIMIT ?
@@ -66,13 +66,13 @@ export function getMemoryStats(): {
 
   const stats = db
     .query<{ total: number; users: number }, []>(
-      `SELECT COUNT(*) as total, COUNT(DISTINCT user_id) as users FROM vec_memories`
+      `SELECT COUNT(*) as total, COUNT(DISTINCT user_id) as users FROM memories`
     )
     .get();
 
   const oldest = db
     .query<{ createdAt: string }, []>(
-      `SELECT created_at as createdAt FROM vec_memories ORDER BY created_at ASC LIMIT 1`
+      `SELECT created_at as createdAt FROM memories ORDER BY created_at ASC LIMIT 1`
     )
     .get();
 

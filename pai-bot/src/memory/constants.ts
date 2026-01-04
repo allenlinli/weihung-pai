@@ -6,9 +6,6 @@ export const MAX_MEMORIES_PER_USER = 50;
 /** Trigger consolidation when memories exceed this count */
 export const CONSOLIDATION_THRESHOLD = 30;
 
-/** Maximum L2 distance for deduplication (lower = stricter) */
-export const DEDUP_MAX_DISTANCE = 8.0;
-
 /** Days until memory expires if not accessed (0 = never expire) */
 export const EXPIRY_DAYS = 0;
 

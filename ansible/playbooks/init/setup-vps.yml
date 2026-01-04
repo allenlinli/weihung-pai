@@ -163,53 +163,6 @@
         job: "{{ home_dir }}/.local/bin/claude update > /dev/null 2>&1"
         user: "{{ app_user }}"
 
-    # Ollama - Local embedding for memory system
-    - name: Check if Ollama is installed
-      ansible.builtin.stat:
-        path: /usr/local/bin/ollama
-      register: ollama_installed
-
-    - name: Install Ollama
-      ansible.builtin.shell:
-        cmd: |
-          set -o pipefail
-          curl -fsSL https://ollama.com/install.sh | sh
-        executable: /bin/bash
-      when: not ollama_installed.stat.exists
-      changed_when: true
-
-    - name: Create Ollama systemd override directory
-      ansible.builtin.file:
-        path: /etc/systemd/system/ollama.service.d
-        state: directory
-        mode: "0755"
-
-    - name: Configure Ollama for low memory usage
-      ansible.builtin.copy:
-        dest: /etc/systemd/system/ollama.service.d/override.conf
-        content: |
-          [Service]
-          Environment="OLLAMA_MAX_LOADED_MODELS=1"
-          Environment="OLLAMA_NUM_PARALLEL=1"
-          Environment="OLLAMA_KEEP_ALIVE=5m"
-        mode: "0644"
-      notify: Restart Ollama
-
-    - name: Enable and start Ollama service
-      ansible.builtin.systemd:
-        name: ollama
-        enabled: true
-        state: started
-        daemon_reload: true
-
-    - name: Pull embedding model (nomic-embed-text)
-      ansible.builtin.command:
-        cmd: ollama pull nomic-embed-text
-      register: ollama_pull
-      changed_when: "'pulling' in ollama_pull.stdout"
-      retries: 3
-      delay: 10
-
     - name: Install pm2 globally via bun
       ansible.builtin.command:
         cmd: "{{ home_dir }}/.bun/bin/bun install -g pm2"
@@ -299,10 +252,3 @@
           Next steps:
           1. Run: ansible-playbook playbooks/setup-claude-auth.yml
           2. Run: ansible-playbook playbooks/deploy-bot.yml
-
-  handlers:
-    - name: Restart Ollama
-      ansible.builtin.systemd:
-        name: ollama
-        state: restarted
-        daemon_reload: true

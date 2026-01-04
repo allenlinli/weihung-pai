@@ -1,9 +1,7 @@
 import { getDb } from "../storage/db";
 import { logger } from "../utils/logger";
-import { getEmbedding, EMBEDDING_DIMENSION } from "./embedding";
-import { DEDUP_MAX_DISTANCE, MAX_MEMORIES_PER_USER, CONSOLIDATION_THRESHOLD } from "./constants";
+import { MAX_MEMORIES_PER_USER, CONSOLIDATION_THRESHOLD } from "./constants";
 import { consolidateMemories } from "./consolidation";
-import * as sqliteVec from "sqlite-vec";
 
 export interface Memory {
   id: number;
@@ -13,7 +11,6 @@ export interface Memory {
   importance: number;
   createdAt: string;
   lastAccessed?: string;
-  distance?: number;
 }
 
 export interface MemoryInput {
@@ -23,25 +20,31 @@ export interface MemoryInput {
   importance?: number;
 }
 
-let vecInitialized = false;
+let initialized = false;
 
-function initVec(): void {
-  if (vecInitialized) return;
+function initDb(): void {
+  if (initialized) return;
 
   const db = getDb();
-  sqliteVec.load(db);
 
+  // Simple memory table (no vector embedding)
   db.run(`
-    CREATE VIRTUAL TABLE IF NOT EXISTS vec_memories USING vec0(
-      user_id INTEGER,
-      embedding FLOAT[${EMBEDDING_DIMENSION}],
-      +content TEXT,
-      +category TEXT,
-      +importance INTEGER,
-      +created_at TEXT,
-      +last_accessed TEXT
+    CREATE TABLE IF NOT EXISTS memories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      category TEXT DEFAULT 'general',
+      importance INTEGER DEFAULT 0,
+      created_at TEXT NOT NULL,
+      last_accessed TEXT NOT NULL
     )
   `);
+
+  // Ensure category column exists (for existing tables created before this schema)
+  ensureCategoryColumn(db);
+
+  db.run(`CREATE INDEX IF NOT EXISTS idx_memories_user ON memories(user_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_memories_category ON memories(user_id, category)`);
 
   // Soft delete archive table
   db.run(`
@@ -56,41 +59,120 @@ function initVec(): void {
     )
   `);
 
-  vecInitialized = true;
-  logger.info("Vector memory table initialized");
+  // Migrate from vec_memories if exists
+  migrateFromVecMemories(db);
+
+  initialized = true;
+  logger.info("Memory table initialized");
+}
+
+function ensureCategoryColumn(db: ReturnType<typeof getDb>): void {
+  // Check if category column exists
+  const columns = db
+    .query<{ name: string }, []>("PRAGMA table_info(memories)")
+    .all();
+
+  const hasCategory = columns.some((col) => col.name === "category");
+  if (hasCategory) return;
+
+  // Add category column
+  db.run("ALTER TABLE memories ADD COLUMN category TEXT DEFAULT 'general'");
+  logger.info("Added category column to memories table");
+}
+
+function migrateFromVecMemories(db: ReturnType<typeof getDb>): void {
+  // Check if vec_memories exists
+  const tableExists = db
+    .query<{ name: string }, []>(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='vec_memories'"
+    )
+    .get();
+
+  if (!tableExists) return;
+
+  // Check if already migrated (memories table has data)
+  const hasData = db
+    .query<{ count: number }, []>("SELECT COUNT(*) as count FROM memories")
+    .get();
+
+  if (hasData && hasData.count > 0) {
+    logger.info("Migration already done, skipping");
+    return;
+  }
+
+  // Migrate data from vec_memories
+  try {
+    const oldMemories = db
+      .query<
+        { userId: number; content: string; category: string; importance: number; createdAt: string; lastAccessed: string },
+        []
+      >(
+        `SELECT user_id as userId, content, category, importance,
+                created_at as createdAt, last_accessed as lastAccessed
+         FROM vec_memories`
+      )
+      .all();
+
+    if (oldMemories.length === 0) {
+      logger.info("No memories to migrate from vec_memories, dropping table");
+      db.run("DROP TABLE vec_memories");
+      return;
+    }
+
+    for (const m of oldMemories) {
+      db.run(
+        `INSERT INTO memories(user_id, content, category, importance, created_at, last_accessed)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [m.userId, m.content, m.category, m.importance, m.createdAt, m.lastAccessed]
+      );
+    }
+
+    logger.info({ migrated: oldMemories.length }, "Migrated memories from vec_memories");
+    db.run("DROP TABLE vec_memories");
+    logger.info("Dropped old vec_memories table");
+  } catch (error) {
+    // Schema mismatch or virtual table without extension - try to drop
+    try {
+      db.run("DROP TABLE IF EXISTS vec_memories");
+      logger.info("Dropped incompatible vec_memories table");
+    } catch {
+      // Virtual table without vec0 module - can't drop, just ignore
+      // The table is unusable anyway without sqlite-vec
+      logger.debug("Could not drop vec_memories (virtual table without extension)");
+    }
+  }
 }
 
 export class MemoryManager {
   constructor() {
-    initVec();
+    initDb();
   }
 
   /**
-   * Save a memory with semantic deduplication
-   * Returns existing id if similar memory found, new id otherwise
+   * Save a memory with simple text deduplication
+   * Returns null if identical memory exists, new id otherwise
    */
   async save(input: MemoryInput): Promise<number | null> {
     const db = getDb();
     const { userId, content, category = "general", importance = 0 } = input;
 
-    const { embedding } = await getEmbedding(content);
-    const embeddingBytes = new Uint8Array(embedding.buffer);
+    // Simple text deduplication (exact match)
+    const existing = db
+      .query<{ id: number }, [number, string]>(
+        "SELECT id FROM memories WHERE user_id = ? AND content = ?"
+      )
+      .get(userId, content);
 
-    // Check for semantically similar memories
-    const similar = await this.findSimilar(userId, embedding, DEDUP_MAX_DISTANCE);
-    if (similar) {
-      logger.debug(
-        { userId, existingId: similar.id, distance: similar.distance },
-        "Similar memory exists, skipping"
-      );
+    if (existing) {
+      logger.debug({ userId, existingId: existing.id }, "Duplicate memory exists, skipping");
       return null;
     }
 
     const now = new Date().toISOString();
     const result = db.run(
-      `INSERT INTO vec_memories(user_id, embedding, content, category, importance, created_at, last_accessed)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [userId, embeddingBytes, content, category, importance, now, now]
+      `INSERT INTO memories(user_id, content, category, importance, created_at, last_accessed)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [userId, content, category, importance, now, now]
     );
 
     const newId = Number(result.lastInsertRowid);
@@ -105,83 +187,56 @@ export class MemoryManager {
     }
 
     // Enforce capacity limit
-    await this.enforceLimit(userId);
+    this.enforceLimit(userId);
 
     return newId;
   }
 
   /**
-   * Find similar memory by embedding (L2 distance)
+   * Get all memories for a user (no search, just retrieve all)
    */
-  private async findSimilar(
-    userId: number,
-    embedding: Float32Array,
-    maxDistance: number
-  ): Promise<Memory | null> {
+  getAll(userId: number): Memory[] {
     const db = getDb();
-    const embeddingBytes = new Uint8Array(embedding.buffer);
-
-    const result = db
-      .query<Memory, [Uint8Array, number]>(
-        `SELECT rowid as id, user_id as userId, content, category, importance,
-                created_at as createdAt, last_accessed as lastAccessed, distance
-         FROM vec_memories
-         WHERE embedding MATCH ? AND user_id = ?
-         ORDER BY distance LIMIT 1`
-      )
-      .get(embeddingBytes, userId);
-
-    if (result && (result.distance ?? Infinity) < maxDistance) {
-      return result;
-    }
-    return null;
-  }
-
-  /**
-   * Search memories by semantic similarity
-   */
-  async search(userId: number, query: string, limit: number = 5): Promise<Memory[]> {
-    const db = getDb();
-    const { embedding } = await getEmbedding(query);
-    const embeddingBytes = new Uint8Array(embedding.buffer);
+    const now = new Date().toISOString();
 
     const results = db
-      .query<Memory, [Uint8Array, number, number]>(
-        `SELECT rowid as id, user_id as userId, content, category, importance,
-                created_at as createdAt, last_accessed as lastAccessed, distance
-         FROM vec_memories
-         WHERE embedding MATCH ? AND user_id = ?
-         ORDER BY distance LIMIT ?`
+      .query<Memory, [number]>(
+        `SELECT id, user_id as userId, content, category, importance,
+                created_at as createdAt, last_accessed as lastAccessed
+         FROM memories WHERE user_id = ?
+         ORDER BY importance DESC, created_at DESC`
       )
-      .all(embeddingBytes, userId, limit);
+      .all(userId);
 
-    // Update last_accessed for retrieved memories
+    // Update last_accessed for all retrieved memories
     if (results.length > 0) {
-      const ids = results.map((r) => r.id);
-      this.touchMemories(ids);
+      db.run(`UPDATE memories SET last_accessed = ? WHERE user_id = ?`, [now, userId]);
     }
 
     return results;
   }
 
   /**
-   * Update last_accessed timestamp
+   * Search memories by keyword (simple text search)
    */
-  private touchMemories(ids: number[]): void {
-    if (ids.length === 0) return;
+  search(userId: number, query: string, limit: number = 5): Memory[] {
     const db = getDb();
-    const now = new Date().toISOString();
-    const placeholders = ids.map(() => "?").join(",");
-    db.run(
-      `UPDATE vec_memories SET last_accessed = ? WHERE rowid IN (${placeholders})`,
-      [now, ...ids]
-    );
+    const pattern = `%${query}%`;
+
+    return db
+      .query<Memory, [number, string, number]>(
+        `SELECT id, user_id as userId, content, category, importance,
+                created_at as createdAt, last_accessed as lastAccessed
+         FROM memories WHERE user_id = ? AND content LIKE ?
+         ORDER BY importance DESC, created_at DESC LIMIT ?`
+      )
+      .all(userId, pattern, limit);
   }
 
   /**
    * Enforce per-user memory limit by removing lowest priority memories
    */
-  private async enforceLimit(userId: number): Promise<void> {
+  private enforceLimit(userId: number): void {
     const count = this.count(userId);
     if (count <= MAX_MEMORIES_PER_USER) return;
 
@@ -190,8 +245,8 @@ export class MemoryManager {
 
     // Delete lowest importance, then oldest last_accessed
     db.run(
-      `DELETE FROM vec_memories WHERE rowid IN (
-        SELECT rowid FROM vec_memories
+      `DELETE FROM memories WHERE id IN (
+        SELECT id FROM memories
         WHERE user_id = ?
         ORDER BY importance ASC, last_accessed ASC
         LIMIT ?
@@ -209,9 +264,9 @@ export class MemoryManager {
     const db = getDb();
     return db
       .query<Memory, [number, number]>(
-        `SELECT rowid as id, user_id as userId, content, category, importance,
+        `SELECT id, user_id as userId, content, category, importance,
                 created_at as createdAt, last_accessed as lastAccessed
-         FROM vec_memories WHERE user_id = ?
+         FROM memories WHERE user_id = ?
          ORDER BY created_at DESC LIMIT ?`
       )
       .all(userId, limit);
@@ -224,7 +279,7 @@ export class MemoryManager {
     const db = getDb();
     const result = db
       .query<{ count: number }, [number]>(
-        "SELECT COUNT(*) as count FROM vec_memories WHERE user_id = ?"
+        "SELECT COUNT(*) as count FROM memories WHERE user_id = ?"
       )
       .get(userId);
     return result?.count ?? 0;
@@ -235,7 +290,7 @@ export class MemoryManager {
    */
   delete(id: number): boolean {
     const db = getDb();
-    const result = db.run("DELETE FROM vec_memories WHERE rowid = ?", [id]);
+    const result = db.run("DELETE FROM memories WHERE id = ?", [id]);
     return result.changes > 0;
   }
 
@@ -246,20 +301,20 @@ export class MemoryManager {
     const db = getDb();
     return db
       .query<Memory, [number]>(
-        `SELECT rowid as id, user_id as userId, content, category, importance,
+        `SELECT id, user_id as userId, content, category, importance,
                 created_at as createdAt, last_accessed as lastAccessed
-         FROM vec_memories WHERE rowid = ?`
+         FROM memories WHERE id = ?`
       )
       .get(id) ?? null;
   }
 
   /**
-   * Update a single memory's content (regenerates embedding)
+   * Update a single memory's content
    */
-  async update(
+  update(
     id: number,
     updates: { content?: string; category?: string; importance?: number }
-  ): Promise<boolean> {
+  ): boolean {
     const db = getDb();
     const existing = this.getById(id);
     if (!existing) return false;
@@ -268,20 +323,10 @@ export class MemoryManager {
     const category = updates.category ?? existing.category;
     const importance = updates.importance ?? existing.importance;
 
-    // If content changed, regenerate embedding
-    if (updates.content && updates.content !== existing.content) {
-      const { embedding } = await getEmbedding(content);
-      const embeddingBytes = new Uint8Array(embedding.buffer);
-      db.run(
-        `UPDATE vec_memories SET content = ?, category = ?, importance = ?, embedding = ? WHERE rowid = ?`,
-        [content, category, importance, embeddingBytes, id]
-      );
-    } else {
-      db.run(
-        `UPDATE vec_memories SET category = ?, importance = ? WHERE rowid = ?`,
-        [category, importance, id]
-      );
-    }
+    db.run(
+      `UPDATE memories SET content = ?, category = ?, importance = ? WHERE id = ?`,
+      [content, category, importance, id]
+    );
 
     logger.info({ id, updates }, "Memory updated");
     return true;
@@ -297,8 +342,8 @@ export class MemoryManager {
     // Get memories to archive
     const memories = db
       .query<Memory, [number]>(
-        `SELECT rowid as id, content, category, importance, created_at as createdAt
-         FROM vec_memories WHERE user_id = ?`
+        `SELECT id, content, category, importance, created_at as createdAt
+         FROM memories WHERE user_id = ?`
       )
       .all(userId);
 
@@ -313,8 +358,8 @@ export class MemoryManager {
       );
     }
 
-    // Delete from vec_memories
-    db.run("DELETE FROM vec_memories WHERE user_id = ?", [userId]);
+    // Delete from memories
+    db.run("DELETE FROM memories WHERE user_id = ?", [userId]);
 
     logger.info({ userId, archived: memories.length }, "User memories archived");
     return memories.length;
@@ -325,7 +370,7 @@ export class MemoryManager {
    */
   deleteByUser(userId: number): number {
     const db = getDb();
-    const result = db.run("DELETE FROM vec_memories WHERE user_id = ?", [userId]);
+    const result = db.run("DELETE FROM memories WHERE user_id = ?", [userId]);
     logger.info({ userId, deleted: result.changes }, "User memories deleted");
     return result.changes;
   }
@@ -333,7 +378,7 @@ export class MemoryManager {
   /**
    * Restore archived memories for a user
    */
-  restoreByUser(userId: number): number {
+  async restoreByUser(userId: number): Promise<number> {
     const db = getDb();
 
     const archived = db
@@ -344,22 +389,23 @@ export class MemoryManager {
 
     if (archived.length === 0) return 0;
 
-    // Re-save each memory (will generate new embeddings)
+    // Re-save each memory
     let restored = 0;
     for (const m of archived) {
-      this.save({
+      const id = await this.save({
         userId,
         content: m.content,
         category: m.category,
         importance: m.importance,
-      }).then(() => restored++).catch(() => {});
+      });
+      if (id) restored++;
     }
 
     // Clear archive
     db.run("DELETE FROM deleted_memories WHERE user_id = ?", [userId]);
 
-    logger.info({ userId, restored: archived.length }, "User memories restored");
-    return archived.length;
+    logger.info({ userId, restored }, "User memories restored");
+    return restored;
   }
 
   /**

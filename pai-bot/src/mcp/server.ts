@@ -12,6 +12,7 @@ import { registerSystemTools } from "./tools/system";
 import { registerMemoryTools } from "./tools/memory";
 import { registerNotifyTools } from "./tools/notify";
 import { registerGarminTools } from "./tools/garmin";
+import { registerObsidianTools } from "./tools/obsidian";
 
 // Simple stderr logger for MCP (stdout is reserved for protocol)
 const log = {
@@ -35,6 +36,7 @@ registerSystemTools(server);
 registerMemoryTools(server);
 registerNotifyTools(server);
 registerGarminTools(server);
+registerObsidianTools(server);
 
 // Start server
 log.info("Connecting to transport...");

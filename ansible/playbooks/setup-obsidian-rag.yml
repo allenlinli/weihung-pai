@@ -1,0 +1,88 @@
+---
+# Setup Obsidian RAG (Optional)
+# 設定 Obsidian 語意搜尋功能
+#
+# 前置需求:
+# - Obsidian vault 已同步到 ~/obsidian
+# - Python venv 已建立 (~/.venv)
+#
+# 使用方式:
+# uv run pai ansible ansible-playbook ansible/playbooks/setup-obsidian-rag.yml
+
+- name: Setup Obsidian RAG
+  hosts: pai-server
+  become: false
+
+  vars:
+    home_dir: "/home/{{ ansible_user }}"
+    venv_path: "{{ home_dir }}/.venv"
+    scripts_dir: "{{ home_dir }}/merlin/scripts"
+    vault_path: "{{ home_dir }}/obsidian"
+
+  tasks:
+    - name: Ensure Python venv exists
+      ansible.builtin.stat:
+        path: "{{ venv_path }}/bin/python"
+      register: venv_exists
+
+    - name: Create Python venv if not exists
+      ansible.builtin.command:
+        cmd: python3 -m venv {{ venv_path }}
+        creates: "{{ venv_path }}/bin/python"
+      when: not venv_exists.stat.exists
+
+    - name: Install ChromaDB in venv
+      ansible.builtin.pip:
+        name: chromadb
+        virtualenv: "{{ venv_path }}"
+        state: present
+
+    - name: Check if Obsidian vault exists
+      ansible.builtin.stat:
+        path: "{{ vault_path }}"
+      register: vault_exists
+
+    - name: Fail if vault not synced
+      ansible.builtin.fail:
+        msg: "Obsidian vault not found at {{ vault_path }}. Please sync first."
+      when: not vault_exists.stat.exists
+
+    - name: Check if RAG script exists
+      ansible.builtin.stat:
+        path: "{{ scripts_dir }}/obsidian_rag.py"
+      register: script_exists
+
+    - name: Fail if RAG script not synced
+      ansible.builtin.fail:
+        msg: "RAG script not found at {{ scripts_dir }}. Please sync pai-claude first."
+      when: not script_exists.stat.exists
+
+    - name: Run initial RAG sync
+      ansible.builtin.command:
+        cmd: "{{ venv_path }}/bin/python {{ scripts_dir }}/obsidian_rag.py sync --vault {{ vault_path }}"
+      register: rag_sync
+      changed_when: "'added' in rag_sync.stdout or 'updated' in rag_sync.stdout"
+
+    - name: Display sync result
+      ansible.builtin.debug:
+        msg: "{{ rag_sync.stdout_lines }}"
+
+    - name: Create RAG sync cron job
+      ansible.builtin.cron:
+        name: "Obsidian RAG sync"
+        minute: "0"
+        hour: "*/4"
+        job: "{{ venv_path }}/bin/python {{ scripts_dir }}/obsidian_rag.py sync --vault {{ vault_path }} > /dev/null 2>&1"
+        user: "{{ ansible_user }}"
+
+    - name: Print next steps
+      ansible.builtin.debug:
+        msg: |
+          Obsidian RAG setup complete!
+
+          你可以使用以下 MCP tools:
+          - obsidian_search: 語意搜尋 Obsidian 筆記
+          - obsidian_stats: 查看索引統計
+          - obsidian_sync: 手動同步索引
+
+          自動同步已設定為每 4 小時執行一次。
