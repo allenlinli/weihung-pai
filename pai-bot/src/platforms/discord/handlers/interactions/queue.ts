@@ -2,7 +2,7 @@
  * Queue Task Interactions
  */
 
-import type { ButtonInteraction } from "discord.js";
+import { MessageFlags, type ButtonInteraction } from "discord.js";
 import { abortUserProcess } from "../../../../claude/client";
 import { queueManager } from "../../../../claude/queue-manager";
 import { logger } from "../../../../utils/logger";
@@ -24,7 +24,7 @@ export async function handleQueueButton(
 
   // Check if task already started
   if (queueManager.isTaskStarted(taskId)) {
-    await interaction.reply({ content: "Task already started", ephemeral: true });
+    await interaction.reply({ content: "Task already started", flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -39,7 +39,7 @@ export async function handleQueueButton(
   // Get pending task
   const task = queueManager.getPendingTask(taskId);
   if (!task) {
-    await interaction.reply({ content: "Task expired", ephemeral: true });
+    await interaction.reply({ content: "Task expired", flags: MessageFlags.Ephemeral });
     return;
   }
 

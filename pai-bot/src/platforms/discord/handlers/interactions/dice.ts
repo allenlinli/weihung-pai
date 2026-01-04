@@ -2,7 +2,7 @@
  * Dice Panel Interactions
  */
 
-import type { ButtonInteraction, ModalSubmitInteraction, StringSelectMenuInteraction, TextBasedChannel } from "discord.js";
+import { MessageFlags, type ButtonInteraction, type ModalSubmitInteraction, type StringSelectMenuInteraction, type TextBasedChannel } from "discord.js";
 import { isSendableChannel } from "../utils";
 import {
   buildCustomDiceModal,
@@ -40,7 +40,7 @@ async function appendToHistory(
     if (currentContent.length + newEntry.length + 2 > 1900) {
       await interaction.reply({
         content: "歷史訊息已滿，請使用 `/panel dice` 重新建立面板",
-        ephemeral: true
+        flags: MessageFlags.Ephemeral
       });
       return true; // Handled, but as error
     }
@@ -74,14 +74,14 @@ export async function handleDiceButton(
       const expression = parts[2];
       const result = parseAndRoll(expression);
       if (!result) {
-        await interaction.reply({ content: "無效的骰子表達式", ephemeral: true });
+        await interaction.reply({ content: "無效的骰子表達式", flags: MessageFlags.Ephemeral });
         return;
       }
 
       const handled = await appendToHistory(channel, interaction.channelId, discordUserId, result.text, interaction);
       if (handled) {
         if (!interaction.replied) {
-          await interaction.reply({ content: `你的結果: ${result.text}`, ephemeral: true });
+          await interaction.reply({ content: `你的結果: ${result.text}`, flags: MessageFlags.Ephemeral });
         }
         return;
       }
@@ -103,7 +103,7 @@ export async function handleDiceButton(
       const guildId = parts[3];
       const state = addDie(discordUserId, diceType, guildId);
       const accumulated = formatAccumulatedDice(state);
-      await interaction.reply({ content: `你的累積: ${accumulated}`, ephemeral: true });
+      await interaction.reply({ content: `你的累積: ${accumulated}`, flags: MessageFlags.Ephemeral });
       return;
     }
 
@@ -111,7 +111,7 @@ export async function handleDiceButton(
       // dice:roll:guildId
       const rollResult = rollAccumulatedDice(discordUserId);
       if (!rollResult) {
-        await interaction.reply({ content: "沒有累積的骰子", ephemeral: true });
+        await interaction.reply({ content: "沒有累積的骰子", flags: MessageFlags.Ephemeral });
         return;
       }
 
@@ -119,7 +119,7 @@ export async function handleDiceButton(
       const handled = await appendToHistory(channel, interaction.channelId, discordUserId, historyText, interaction);
       if (handled) {
         if (!interaction.replied) {
-          await interaction.reply({ content: `你的結果:\n${rollResult}`, ephemeral: true });
+          await interaction.reply({ content: `你的結果:\n${rollResult}`, flags: MessageFlags.Ephemeral });
         }
         return;
       }
@@ -129,23 +129,23 @@ export async function handleDiceButton(
 
     case "clear": {
       clearDiceState(discordUserId);
-      await interaction.reply({ content: "已清除累積", ephemeral: true });
+      await interaction.reply({ content: "已清除累積", flags: MessageFlags.Ephemeral });
       return;
     }
 
     case "undo": {
       const state = undoLastDie(discordUserId);
       if (!state) {
-        await interaction.reply({ content: "沒有可撤銷的骰子", ephemeral: true });
+        await interaction.reply({ content: "沒有可撤銷的骰子", flags: MessageFlags.Ephemeral });
         return;
       }
       const accumulated = formatAccumulatedDice(state);
-      await interaction.reply({ content: `你的累積: ${accumulated}`, ephemeral: true });
+      await interaction.reply({ content: `你的累積: ${accumulated}`, flags: MessageFlags.Ephemeral });
       return;
     }
 
     default:
-      await interaction.reply({ content: "Unknown action", ephemeral: true });
+      await interaction.reply({ content: "Unknown action", flags: MessageFlags.Ephemeral });
       return;
   }
 }
@@ -161,13 +161,13 @@ export async function handleDiceModalSubmit(
   const result = parseAndRoll(expression);
 
   if (!result) {
-    await interaction.reply({ content: "無效的骰子表達式", ephemeral: true });
+    await interaction.reply({ content: "無效的骰子表達式", flags: MessageFlags.Ephemeral });
     return;
   }
 
   const channel = interaction.channel;
   if (!channel || !isSendableChannel(channel)) {
-    await interaction.reply({ content: result.text, ephemeral: true });
+    await interaction.reply({ content: result.text, flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -183,7 +183,7 @@ export async function handleDiceModalSubmit(
         if (currentContent.length + newEntry.length + 2 > 1900) {
           await interaction.reply({
             content: "歷史訊息已滿，請使用 `/panel dice` 重新建立面板",
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
           });
           return;
         }
@@ -195,7 +195,7 @@ export async function handleDiceModalSubmit(
         await historyMsg.edit(newContent);
         await interaction.reply({
           content: `你的結果: ${result.text}\n複製: \`${expression}\``,
-          ephemeral: true
+          flags: MessageFlags.Ephemeral
         });
         return;
       } catch {

@@ -5,6 +5,7 @@
 import {
   Client,
   GatewayIntentBits,
+  MessageFlags,
   Partials,
   Events,
   type Message,
@@ -145,7 +146,7 @@ export function createDiscordBot(): Client {
     // Check authorization
     if (!shouldSkipAuth && !isAuthorized(interaction.user.id)) {
       if (interaction.isRepliable()) {
-        await interaction.reply({ content: "Unauthorized", ephemeral: true });
+        await interaction.reply({ content: "Unauthorized", flags: MessageFlags.Ephemeral });
       }
       return;
     }
