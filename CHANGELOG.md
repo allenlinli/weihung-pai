@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.27.1 (2026-01-04)
+
+### Bug Fixes
+
+- **spotify**: Add pipe backend to auth, increase default volume to 75%
+  ([`b6c9577`](https://github.com/wayne930242/weihung-pai/commit/b6c9577ae3459dd836ab707edd668f0d4b891d8f))
+
+
 ## v1.27.0 (2026-01-04)
 
 ### Features
