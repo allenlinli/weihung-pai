@@ -70,6 +70,13 @@ export interface GarminHeartRate {
   }>;
 }
 
+export interface GarminHeartRateSummary {
+  date: string;
+  restingHeartRate: number;
+  minHeartRate: number;
+  maxHeartRate: number;
+}
+
 export interface GarminSyncResult {
   success: boolean;
   stats?: GarminStats;

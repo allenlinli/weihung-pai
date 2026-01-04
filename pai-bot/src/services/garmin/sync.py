@@ -3,7 +3,7 @@
 
 import json
 import sys
-from datetime import date
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 # Token 快取路徑
@@ -153,9 +153,60 @@ def get_heart_rates(client, target_date: str | None = None) -> dict:
         return {"date": d, "error": str(e)}
 
 
+def parse_date_range(start_date: str, end_date: str) -> list[str]:
+    """解析日期範圍，回傳日期列表"""
+    start = datetime.strptime(start_date, "%Y-%m-%d").date()
+    end = datetime.strptime(end_date, "%Y-%m-%d").date()
+    dates = []
+    current = start
+    while current <= end:
+        dates.append(current.isoformat())
+        current += timedelta(days=1)
+    return dates
+
+
+def get_stats_range(client, start_date: str, end_date: str) -> list[dict]:
+    """取得日期範圍內的每日統計"""
+    dates = parse_date_range(start_date, end_date)
+    results = []
+    for d in dates:
+        results.append(get_stats(client, d))
+    return results
+
+
+def get_sleep_range(client, start_date: str, end_date: str) -> list[dict]:
+    """取得日期範圍內的睡眠數據"""
+    dates = parse_date_range(start_date, end_date)
+    results = []
+    for d in dates:
+        results.append(get_sleep(client, d))
+    return results
+
+
+def get_heart_rates_range(client, start_date: str, end_date: str) -> list[dict]:
+    """取得日期範圍內的心率數據"""
+    dates = parse_date_range(start_date, end_date)
+    results = []
+    for d in dates:
+        result = get_heart_rates(client, d)
+        # 範圍查詢時不回傳完整心率值，只回傳摘要
+        result.pop("heartRateValues", None)
+        results.append(result)
+    return results
+
+
+def get_all_range(client, start_date: str, end_date: str, activities_limit: int = 20) -> dict:
+    """取得日期範圍內的所有健康數據"""
+    return {
+        "stats": get_stats_range(client, start_date, end_date),
+        "sleep": get_sleep_range(client, start_date, end_date),
+        "activities": get_activities(client, activities_limit),
+    }
+
+
 def main():
     if len(sys.argv) < 4:
-        print(json.dumps({"error": "Usage: sync.py <email> <password> <command> [args]"}))
+        print(json.dumps({"error": "Usage: sync.py <email> <pw> <cmd> [start] [end]"}))
         sys.exit(1)
 
     email = sys.argv[1]
@@ -163,26 +214,26 @@ def main():
     command = sys.argv[3]
     args = sys.argv[4:] if len(sys.argv) > 4 else []
 
+    # 預設日期範圍：今天
+    today = date.today().isoformat()
+    start_date = args[0] if len(args) > 0 else today
+    end_date = args[1] if len(args) > 1 else start_date
+
     try:
         client = get_client(email, password)
 
         if command == "stats":
-            result = get_stats(client, args[0] if args else None)
+            result = get_stats_range(client, start_date, end_date)
         elif command == "sleep":
-            result = get_sleep(client, args[0] if args else None)
+            result = get_sleep_range(client, start_date, end_date)
         elif command == "activities":
             limit = int(args[0]) if args else 10
             result = get_activities(client, limit)
         elif command == "heart":
-            result = get_heart_rates(client, args[0] if args else None)
+            result = get_heart_rates_range(client, start_date, end_date)
         elif command == "all":
-            # 取得所有數據
-            target_date = args[0] if args else None
-            result = {
-                "stats": get_stats(client, target_date),
-                "sleep": get_sleep(client, target_date),
-                "activities": get_activities(client, 5),
-            }
+            activities_limit = int(args[2]) if len(args) > 2 else 20
+            result = get_all_range(client, start_date, end_date, activities_limit)
         else:
             result = {"error": f"Unknown command: {command}"}
 
