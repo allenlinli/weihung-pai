@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.28.3 (2026-01-04)
+
+### Bug Fixes
+
+- **spotify**: Auto-clear cache on auth errors
+  ([`f3dc982`](https://github.com/wayne930242/weihung-pai/commit/f3dc9823d29360129505a0e53ec9d719e8216f5c))
+
+
 ## v1.28.2 (2026-01-04)
 
 ### Bug Fixes
