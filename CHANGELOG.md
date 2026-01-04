@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.28.1 (2026-01-04)
+
+### Bug Fixes
+
+- **spotify**: Add auto-reconnect and reduce pregain to +1dB
+  ([`08bb68b`](https://github.com/wayne930242/weihung-pai/commit/08bb68bf2153e60d3f866f044984c55d6ec22788))
+
+
 ## v1.28.0 (2026-01-04)
 
 ### Bug Fixes
