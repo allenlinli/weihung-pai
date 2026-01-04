@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.28.6 (2026-01-04)
+
+### Performance Improvements
+
+- **spotify**: Reduce bitrate to 160 for lower resource usage
+  ([`0aa207d`](https://github.com/wayne930242/weihung-pai/commit/0aa207d4f286b58afb612b5285d9bc11cf74cd57))
+
+
 ## v1.28.5 (2026-01-04)
 
 ### Bug Fixes
