@@ -1,6 +1,24 @@
 # CHANGELOG
 
 
+## v1.45.0 (2026-01-05)
+
+### Bug Fixes
+
+- Internal broadcast add to notification buffer
+  ([`bda121c`](https://github.com/wayne930242/weihung-pai/commit/bda121c9a48c3a70cecb2e4a5037c2a8ed836788))
+
+### Continuous Integration
+
+- Add Bun dependency cache for faster deploys
+  ([`fa376e3`](https://github.com/wayne930242/weihung-pai/commit/fa376e3512f82a6e0fb63301695eed4fcbe1b0ea))
+
+### Features
+
+- **pai-web**: Add browser notification support
+  ([`1ac108c`](https://github.com/wayne930242/weihung-pai/commit/1ac108c3919390edc0ec9f2a10c4564407678f68))
+
+
 ## v1.44.0 (2026-01-05)
 
 ### Bug Fixes
