@@ -4,57 +4,63 @@
  * Session Stop Hook
  *
  * 功能：
- * 1. 記錄 Session 結束時間
- * 2. 提示保存 Session（手動觸發）
+ * 1. 分析 Claude 回應內容
+ * 2. 自動分類（session / learning / decision）
+ * 3. 保存到對應的 history 目錄
  *
- * 注意：自動 Session 記錄需要更複雜的實作（讀取對話內容）
- * 目前採用手動方式：在對話結束前請 AI 生成摘要並保存
+ * 參考：PAI (Personal AI Infrastructure) 的 Stop Hook 設計
+ * - 自動捕捉工作脈絡，零手動成本
+ * - 基於關鍵字分析自動分類
  */
 
-import { join } from "node:path";
-import { mkdir } from "node:fs/promises";
+import { classifyResponse, saveToHistory, extractSummary } from "./lib/history";
 
-const PAI_ROOT = join(import.meta.dir, "..");
+interface StopEvent {
+  stop_response?: string;
+  session_id?: string;
+}
 
 async function main() {
-  const now = new Date();
-  const timestamp = now.toISOString();
-  const dateStr = now.toISOString().split("T")[0];
-  const timeStr = now.toTimeString().split(" ")[0].replace(/:/g, "");
+  // 從 stdin 讀取事件資料
+  const input = await Bun.stdin.text();
+  if (!input.trim()) return;
 
-  console.log(`[PAI] Session ended: ${timestamp}`);
-
-  // 確保 sessions 目錄存在
-  const sessionsDir = join(PAI_ROOT, "history", "sessions");
+  let data: StopEvent;
   try {
-    await mkdir(sessionsDir, { recursive: true });
+    data = JSON.parse(input);
   } catch {
-    // 目錄已存在
+    // 無法解析 JSON
+    return;
   }
 
-  // 生成 Session 模板檔名
-  const sessionFile = `${dateStr}-${timeStr}-session.md`;
-  console.log(`[PAI] To save this session, create: history/sessions/${sessionFile}`);
+  const response = data.stop_response;
+  if (!response || response.length < 100) {
+    // 回應太短，不值得保存
+    return;
+  }
 
-  // 輸出 Session 模板提示
-  console.log(`[PAI] Session template:`);
-  console.log(`---`);
-  console.log(`# Session: [topic]`);
-  console.log(`Date: ${dateStr}`);
-  console.log(`Duration: [minutes]`);
-  console.log(``);
-  console.log(`## Summary`);
-  console.log(`[1-3 sentence summary]`);
-  console.log(``);
-  console.log(`## Key Actions`);
-  console.log(`- [action 1]`);
-  console.log(``);
-  console.log(`## Learnings`);
-  console.log(`- [learning 1]`);
-  console.log(``);
-  console.log(`## Follow-ups`);
-  console.log(`- [ ] [todo 1]`);
-  console.log(`---`);
+  // 分析回應類型
+  const { type, confidence } = classifyResponse(response);
+
+  // 只保存有意義的內容（confidence >= 0.5 或類型不是 sessions）
+  if (type === "sessions" && confidence < 0.5) {
+    return;
+  }
+
+  // 提取摘要
+  const summary = extractSummary(response, 1000);
+
+  // 保存到 history
+  try {
+    const filePath = await saveToHistory(type, summary, {
+      session_id: data.session_id || "unknown",
+      confidence: String(confidence.toFixed(2)),
+    });
+
+    console.log(`[History] Saved ${type}: ${filePath.split("/").pop()}`);
+  } catch (error) {
+    console.error(`[History] Failed to save: ${error}`);
+  }
 }
 
 main().catch(console.error);
