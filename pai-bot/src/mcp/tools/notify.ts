@@ -5,7 +5,6 @@
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { emitEvent } from "../../events";
 
 const API_BASE = process.env.API_BASE || "http://127.0.0.1:3000";
 
@@ -37,12 +36,15 @@ export function registerNotifyTools(server: McpServer): void {
           };
         }
 
-        // 廣播通知事件到 web
-        emitEvent("notify:message", {
-          sessionId,
-          platform: data.platform,
-          message,
-        });
+        // 廣播通知事件到 web（透過內部 API，因為 MCP 是獨立 process）
+        await fetch(`${API_BASE}/internal/broadcast`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event: "notify:message",
+            data: { sessionId, platform: data.platform, message, timestamp: Date.now() },
+          }),
+        }).catch(() => {}); // 忽略錯誤
 
         return {
           content: [{ type: "text", text: `已發送通知至 ${data.platform}` }],

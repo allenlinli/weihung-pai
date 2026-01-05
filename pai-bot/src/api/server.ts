@@ -16,7 +16,9 @@ import {
   handleMessage,
   handleClose,
   initEventBroadcast,
+  broadcast,
 } from "./websocket";
+import type { PaiEvents } from "../events";
 
 /**
  * 驗證 API Key
@@ -652,6 +654,30 @@ export function startApiServer(port = 3000) {
               { status: 404, headers: corsHeaders }
             );
           }
+        }
+
+        // === Internal API (for MCP process to broadcast events) ===
+        if (path === "/internal/broadcast" && method === "POST") {
+          // 只允許本地連線
+          const host = req.headers.get("host") || "";
+          if (!host.includes("127.0.0.1") && !host.includes("localhost")) {
+            return Response.json({ error: "Forbidden" }, { status: 403 });
+          }
+
+          const body = await req.json();
+          const { event, data } = body as {
+            event: keyof PaiEvents;
+            data: PaiEvents[keyof PaiEvents];
+          };
+
+          if (!event || !data) {
+            return Response.json({ error: "event and data required" }, { status: 400 });
+          }
+
+          // 廣播事件到所有 WebSocket 客戶端
+          broadcast(event, data);
+
+          return Response.json({ success: true });
         }
 
         // 404
