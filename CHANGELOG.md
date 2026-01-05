@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.32.0 (2026-01-05)
+
+### Features
+
+- **hooks**: Add Gemini Flash 2.5 classification for Stop hook
+  ([`3292df4`](https://github.com/wayne930242/weihung-pai/commit/3292df4b962783ca3dbb67d5d427d71f935d2c3e))
+
+
 ## v1.31.0 (2026-01-05)
 
 ### Features
