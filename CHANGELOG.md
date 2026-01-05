@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.38.0 (2026-01-05)
+
+### Features
+
+- **pai-web**: Add Memory and History views with React Query
+  ([`66ccd30`](https://github.com/wayne930242/weihung-pai/commit/66ccd30e874700d588a6897cc6533503fc8b5085))
+
+
 ## v1.37.0 (2026-01-05)
 
 ### Features
