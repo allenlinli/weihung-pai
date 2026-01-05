@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.37.0 (2026-01-05)
+
+### Features
+
+- Add API auth, mobile-first UI, and stable WebSocket
+  ([`258547f`](https://github.com/wayne930242/weihung-pai/commit/258547f5f84a0ddcd50f391e0f084351b131244d))
+
+
 ## v1.36.0 (2026-01-05)
 
 ### Features
