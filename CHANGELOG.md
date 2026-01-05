@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.44.0 (2026-01-05)
+
+### Bug Fixes
+
+- MCP notify broadcast to web via internal API
+  ([`884027a`](https://github.com/wayne930242/weihung-pai/commit/884027a8589b7cdb0bcfe3f29d255b001ed7c370))
+
+### Features
+
+- **pai-web**: Add TOON format support for chat export
+  ([`db1a4f3`](https://github.com/wayne930242/weihung-pai/commit/db1a4f3395fd5be9c2bc6c131a3b5ebbac9f93ed))
+
+
 ## v1.43.4 (2026-01-05)
 
 ### Bug Fixes
