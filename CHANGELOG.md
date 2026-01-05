@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.34.0 (2026-01-05)
+
+### Features
+
+- **hooks**: Check memory config in session start hook
+  ([`8e54a89`](https://github.com/wayne930242/weihung-pai/commit/8e54a8974f3561c1f99bc84de32b250ae250147a))
+
+
 ## v1.33.0 (2026-01-05)
 
 ### Features
