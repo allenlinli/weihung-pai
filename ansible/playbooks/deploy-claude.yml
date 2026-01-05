@@ -72,12 +72,22 @@
         recurse: true
 
     - name: Ensure workspace directories exist
-      ansible.builtin.shell: |
-        mkdir -p ~/merlin/workspace/{site,projects,scripts,tools,data,downloads}
-      args:
-        creates: "/home/{{ ansible_user }}/merlin/workspace/downloads"
-      become: true
-      become_user: "{{ ansible_user }}"
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user }}/merlin/workspace/{{ item }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0755"
+      loop:
+        - site
+        - projects
+        - scripts
+        - tools
+        - data
+        - downloads
+        - history/sessions
+        - history/learnings
+        - history/decisions
 
     - name: Fix site files permissions for Caddy
       ansible.builtin.shell:
