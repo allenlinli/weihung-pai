@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card'
 import { Avatar } from '@/components/ui/avatar'
 import { Send, User, Sparkles, Loader2, Paperclip, X, FileIcon } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
+import { encode as toonEncode } from '@toon-format/toon'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github-dark.css'
@@ -31,7 +32,7 @@ const LOCAL_COMMANDS = [
   { name: '/clear', description: '清除對話紀錄' },
   { name: '/help', description: '顯示可用指令' },
   { name: '/new', description: '開始新對話' },
-  { name: '/export', description: '匯出對話紀錄' },
+  { name: '/export', description: '匯出對話 (json/toon)' },
 ] as const
 
 // 幫助訊息
@@ -42,7 +43,8 @@ const HELP_MESSAGE = `## 可用指令
 | \`/clear\` | 清除對話紀錄 |
 | \`/new\` | 開始新對話（同 /clear） |
 | \`/help\` | 顯示此幫助訊息 |
-| \`/export\` | 匯出對話為 JSON |
+| \`/export\` | 匯出對話為 JSON（預設） |
+| \`/export toon\` | 匯出對話為 TOON 格式（省 30-60% tokens） |
 
 ## 功能
 
@@ -92,7 +94,7 @@ export function ChatView({ messages, isLoading, currentResponse, onSendMessage, 
   }, [])
 
   // 匯出對話
-  const exportChat = useCallback(() => {
+  const exportChat = useCallback((format: 'json' | 'toon' = 'json') => {
     const data = {
       exported_at: new Date().toISOString(),
       messages: messages.map(m => ({
@@ -101,11 +103,23 @@ export function ChatView({ messages, isLoading, currentResponse, onSendMessage, 
         timestamp: new Date(m.timestamp).toISOString(),
       })),
     }
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+
+    let blob: Blob
+    let filename: string
+
+    if (format === 'toon') {
+      const toonData = toonEncode(data)
+      blob = new Blob([toonData], { type: 'text/plain' })
+      filename = `chat-export-${Date.now()}.toon`
+    } else {
+      blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      filename = `chat-export-${Date.now()}.json`
+    }
+
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `chat-export-${Date.now()}.json`
+    a.download = filename
     a.click()
     URL.revokeObjectURL(url)
   }, [messages])
@@ -123,12 +137,20 @@ export function ChatView({ messages, isLoading, currentResponse, onSendMessage, 
       return { handled: true, response: HELP_MESSAGE }
     }
 
-    if (cmd === '/export') {
+    if (cmd === '/export' || cmd === '/export json') {
       if (messages.length === 0) {
         return { handled: true, response: '⚠️ 沒有對話可匯出' }
       }
-      exportChat()
-      return { handled: true, response: `✅ 已匯出 ${messages.length} 則訊息` }
+      exportChat('json')
+      return { handled: true, response: `✅ 已匯出 ${messages.length} 則訊息 (JSON)` }
+    }
+
+    if (cmd === '/export toon') {
+      if (messages.length === 0) {
+        return { handled: true, response: '⚠️ 沒有對話可匯出' }
+      }
+      exportChat('toon')
+      return { handled: true, response: `✅ 已匯出 ${messages.length} 則訊息 (TOON)` }
     }
 
     return { handled: false } // 非本地指令，交給後端處理
