@@ -1,0 +1,107 @@
+---
+- name: Deploy PAI Web Frontend
+  hosts: pai-server
+  vars_files:
+    - ../inventory/group_vars/all/vault.yml
+  vars:
+    web_dir: "/home/{{ ansible_user }}/pai-web"
+    caddy_conf: "/etc/caddy/conf.d/pai-web.caddy"
+
+  tasks:
+    - name: Create production .env.local
+      delegate_to: localhost
+      ansible.builtin.template:
+        src: templates/pai-web.env.j2
+        dest: "{{ playbook_dir }}/../../pai-web/.env.production.local"
+        mode: "0600"
+
+    - name: Build web locally
+      delegate_to: localhost
+      ansible.builtin.shell: |
+        cd {{ playbook_dir }}/../../pai-web
+        bun install
+        bun run build
+      args:
+        executable: /bin/bash
+      environment:
+        NODE_ENV: production
+      register: build_result
+      changed_when: true
+
+    - name: Ensure web directory exists
+      ansible.builtin.file:
+        path: "{{ web_dir }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0755"
+
+    - name: Sync built files to server
+      ansible.posix.synchronize:
+        src: "{{ playbook_dir }}/../../pai-web/dist/"
+        dest: "{{ web_dir }}/"
+        delete: true
+      register: web_sync
+
+    - name: Fix ownership of synced files
+      ansible.builtin.file:
+        path: "{{ web_dir }}"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        recurse: true
+
+    - name: Install Caddy
+      ansible.builtin.apt:
+        name: caddy
+        state: present
+        update_cache: true
+      become: true
+
+    - name: Ensure Caddy conf.d directory exists
+      ansible.builtin.file:
+        path: /etc/caddy/conf.d
+        state: directory
+        mode: "0755"
+      become: true
+
+    - name: Create Caddy config
+      ansible.builtin.template:
+        src: templates/pai-web.Caddyfile.j2
+        dest: "{{ caddy_conf }}"
+        mode: "0644"
+      become: true
+      register: caddy_config
+
+    - name: Update main Caddyfile to import conf.d
+      ansible.builtin.lineinfile:
+        path: /etc/caddy/Caddyfile
+        line: "import /etc/caddy/conf.d/*.caddy"
+        create: true
+        mode: "0644"
+      become: true
+      register: caddy_main
+
+    - name: Validate Caddy config
+      ansible.builtin.command: caddy validate --config /etc/caddy/Caddyfile
+      become: true
+      changed_when: false
+
+    - name: Reload Caddy
+      ansible.builtin.systemd:
+        name: caddy
+        state: reloaded
+        enabled: true
+      become: true
+      when: caddy_config.changed or caddy_main.changed or web_sync.changed
+
+    - name: Open firewall port 8080
+      community.general.ufw:
+        rule: allow
+        port: "8080"
+        proto: tcp
+      become: true
+      ignore_errors: true
+
+    - name: Print deployment info
+      ansible.builtin.debug:
+        msg: "PAI Web deployed to http://{{ ansible_host }}:8080"
