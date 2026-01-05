@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.35.0 (2026-01-05)
+
+### Features
+
+- **mcp**: Add history tools for listing, searching, reading history
+  ([`fa25bec`](https://github.com/wayne930242/weihung-pai/commit/fa25becdaa20940df41d34744df7e1a6ea554063))
+
+
 ## v1.34.0 (2026-01-05)
 
 ### Features
