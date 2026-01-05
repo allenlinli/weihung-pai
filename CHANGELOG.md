@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.42.0 (2026-01-05)
+
+### Features
+
+- **web**: Add router, logs streaming, and fix resizable panels
+  ([`3a9af21`](https://github.com/wayne930242/weihung-pai/commit/3a9af217508b925f7c8a0ddd9a9f14f5e548bbae))
+
+
 ## v1.41.0 (2026-01-05)
 
 ### Features
