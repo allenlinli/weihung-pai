@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v1.30.0 (2026-01-05)
+
+### Features
+
+- Add 1GB swap configuration to VPS setup
+  ([`38b53f7`](https://github.com/wayne930242/weihung-pai/commit/38b53f7a8634db1294f1b0da6dcc7819600975b5))
+
+- **hooks**: Enhance SessionStart and Stop hooks with PAI-style context
+  ([`38ac6e8`](https://github.com/wayne930242/weihung-pai/commit/38ac6e8aa27df1ccb23d5b2d321947352c827c70))
+
+
 ## v1.29.0 (2026-01-04)
 
 ### Features
