@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.36.0 (2026-01-05)
+
+### Features
+
+- Add WebSocket + pai-web frontend for AI Agent UI
+  ([`94e5fe8`](https://github.com/wayne930242/weihung-pai/commit/94e5fe89065e1ec4074cf45b66f5d3b21d070c85))
+
+
 ## v1.35.0 (2026-01-05)
 
 ### Features
