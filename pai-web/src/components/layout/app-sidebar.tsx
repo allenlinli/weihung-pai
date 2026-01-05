@@ -11,19 +11,22 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
 import { Badge } from '@/components/ui/badge'
-import { Brain, History, MessageSquare, Settings, Sparkles } from 'lucide-react'
+import { Brain, FolderOpen, History, MessageSquare, Settings, Sparkles } from 'lucide-react'
+
+type ViewType = 'chat' | 'memory' | 'history' | 'workspace' | 'settings'
 
 interface AppSidebarProps {
   isConnected: boolean
-  currentView: 'chat' | 'memory' | 'history' | 'settings'
-  onViewChange: (view: 'chat' | 'memory' | 'history' | 'settings') => void
+  currentView: ViewType
+  onViewChange: (view: ViewType) => void
 }
 
-const menuItems = [
-  { id: 'chat' as const, label: 'Chat', icon: MessageSquare },
-  { id: 'memory' as const, label: 'Memory', icon: Brain },
-  { id: 'history' as const, label: 'History', icon: History },
-  { id: 'settings' as const, label: 'Settings', icon: Settings },
+const menuItems: { id: ViewType; label: string; icon: typeof MessageSquare }[] = [
+  { id: 'chat', label: 'Chat', icon: MessageSquare },
+  { id: 'memory', label: 'Memory', icon: Brain },
+  { id: 'history', label: 'History', icon: History },
+  { id: 'workspace', label: 'Workspace', icon: FolderOpen },
+  { id: 'settings', label: 'Settings', icon: Settings },
 ]
 
 export function AppSidebar({ isConnected, currentView, onViewChange }: AppSidebarProps) {

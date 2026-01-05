@@ -5,6 +5,7 @@ import { AppSidebar } from '@/components/layout/app-sidebar'
 import { ChatView } from '@/components/chat/chat-view'
 import { MemoryView } from '@/components/memory/memory-view'
 import { HistoryView } from '@/components/history/history-view'
+import { WorkspaceView } from '@/components/workspace/workspace-view'
 import { useWs, type WsEvent } from '@/hooks/use-websocket'
 import { Separator } from '@/components/ui/separator'
 
@@ -30,7 +31,7 @@ const API_KEY = import.meta.env.VITE_API_KEY || ''
 const WS_URL = API_KEY ? `${WS_BASE_URL}?key=${API_KEY}` : WS_BASE_URL
 
 function App() {
-  const [currentView, setCurrentView] = useState<'chat' | 'memory' | 'history' | 'settings'>('chat')
+  const [currentView, setCurrentView] = useState<'chat' | 'memory' | 'history' | 'workspace' | 'settings'>('chat')
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [currentResponse, setCurrentResponse] = useState('')
@@ -137,6 +138,8 @@ function App() {
             {currentView === 'memory' && <MemoryView />}
 
             {currentView === 'history' && <HistoryView />}
+
+            {currentView === 'workspace' && <WorkspaceView />}
 
             {currentView === 'settings' && (
               <div className="p-4 text-center text-muted-foreground">

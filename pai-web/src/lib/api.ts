@@ -105,3 +105,32 @@ export const historyApi = {
   read: (type: HistoryType, filename: string) =>
     apiFetch<{ content: string }>(`/api/history/read/${type}/${filename}`),
 }
+
+// Workspace API types
+export interface WorkspaceEntry {
+  name: string
+  path: string
+  isDirectory: boolean
+  size: number
+  modified: string | null
+}
+
+export interface WorkspaceFile {
+  content: string
+  path: string
+  size: number
+  modified: string
+}
+
+// Workspace API functions
+export const workspaceApi = {
+  list: (path: string = '') =>
+    apiFetch<{ items: WorkspaceEntry[]; currentPath: string }>('/api/workspace/list', {
+      params: path ? { path } : {},
+    }),
+
+  read: (path: string) =>
+    apiFetch<WorkspaceFile>('/api/workspace/read', {
+      params: { path },
+    }),
+}

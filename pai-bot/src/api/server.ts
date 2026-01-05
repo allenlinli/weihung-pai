@@ -475,6 +475,125 @@ export function startApiServer(port = 3000) {
           return Response.json({ content }, { headers: corsHeaders });
         }
 
+        // === Workspace File Browser APIs ===
+        const WORKSPACE_ROOT =
+          process.env.WORKSPACE_ROOT ||
+          (await import("node:path")).join(
+            process.env.HOME || "",
+            "merlin",
+            "workspace"
+          );
+
+        // Workspace - list directory
+        if (path === "/api/workspace/list" && method === "GET") {
+          const { readdir, stat } = await import("node:fs/promises");
+          const { join, relative } = await import("node:path");
+
+          const dirPath = url.searchParams.get("path") || "";
+          const fullPath = join(WORKSPACE_ROOT, dirPath);
+
+          // 安全檢查：確保路徑在 workspace 內
+          if (!fullPath.startsWith(WORKSPACE_ROOT)) {
+            return Response.json(
+              { error: "Access denied" },
+              { status: 403, headers: corsHeaders }
+            );
+          }
+
+          try {
+            const entries = await readdir(fullPath, { withFileTypes: true });
+            const items = await Promise.all(
+              entries.map(async (entry) => {
+                const entryPath = join(fullPath, entry.name);
+                const stats = await stat(entryPath).catch(() => null);
+                return {
+                  name: entry.name,
+                  path: relative(WORKSPACE_ROOT, entryPath),
+                  isDirectory: entry.isDirectory(),
+                  size: stats?.size || 0,
+                  modified: stats?.mtime?.toISOString() || null,
+                };
+              })
+            );
+
+            // 排序：目錄在前，然後按名稱
+            items.sort((a, b) => {
+              if (a.isDirectory !== b.isDirectory) {
+                return a.isDirectory ? -1 : 1;
+              }
+              return a.name.localeCompare(b.name);
+            });
+
+            return Response.json(
+              { items, currentPath: dirPath || "/" },
+              { headers: corsHeaders }
+            );
+          } catch (err) {
+            return Response.json(
+              { error: "Directory not found" },
+              { status: 404, headers: corsHeaders }
+            );
+          }
+        }
+
+        // Workspace - read file
+        if (path === "/api/workspace/read" && method === "GET") {
+          const { readFile, stat } = await import("node:fs/promises");
+          const { join } = await import("node:path");
+
+          const filePath = url.searchParams.get("path");
+          if (!filePath) {
+            return Response.json(
+              { error: "path required" },
+              { status: 400, headers: corsHeaders }
+            );
+          }
+
+          const fullPath = join(WORKSPACE_ROOT, filePath);
+
+          // 安全檢查
+          if (!fullPath.startsWith(WORKSPACE_ROOT)) {
+            return Response.json(
+              { error: "Access denied" },
+              { status: 403, headers: corsHeaders }
+            );
+          }
+
+          try {
+            const stats = await stat(fullPath);
+            if (stats.isDirectory()) {
+              return Response.json(
+                { error: "Cannot read directory" },
+                { status: 400, headers: corsHeaders }
+              );
+            }
+
+            // 限制檔案大小（1MB）
+            if (stats.size > 1024 * 1024) {
+              return Response.json(
+                { error: "File too large (max 1MB)" },
+                { status: 400, headers: corsHeaders }
+              );
+            }
+
+            const content = await readFile(fullPath, "utf-8");
+            return Response.json(
+              {
+                content,
+                path: filePath,
+                size: stats.size,
+                modified: stats.mtime.toISOString(),
+              },
+              { headers: corsHeaders }
+            );
+          } catch (err) {
+            return Response.json(
+              { error: "File not found" },
+              { status: 404, headers: corsHeaders }
+            );
+          }
+        }
+
         // 404
         return Response.json({ error: "Not found" }, { status: 404, headers: corsHeaders });
       } catch (error) {
