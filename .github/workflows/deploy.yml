@@ -29,6 +29,11 @@ jobs:
           else
             echo "claude=false" >> $GITHUB_OUTPUT
           fi
+          if git diff --name-only HEAD~1 HEAD | grep -q '^pai-web/'; then
+            echo "web=true" >> $GITHUB_OUTPUT
+          else
+            echo "web=false" >> $GITHUB_OUTPUT
+          fi
           if git diff --name-only HEAD~1 HEAD | grep -q '^ansible/'; then
             echo "ansible=true" >> $GITHUB_OUTPUT
           else
@@ -75,6 +80,16 @@ jobs:
         env:
           PAI_SSH_KEY_FILE: ~/.ssh_key
         run: uv run ansible-playbook ansible/playbooks/deploy-bot.yml
+
+      - name: Setup Bun
+        if: steps.changes.outputs.web == 'true' || steps.changes.outputs.ansible == 'true'
+        uses: oven-sh/setup-bun@v2
+
+      - name: Deploy Web
+        if: steps.changes.outputs.web == 'true' || steps.changes.outputs.ansible == 'true'
+        env:
+          PAI_SSH_KEY_FILE: ~/.ssh_key
+        run: uv run ansible-playbook ansible/playbooks/deploy-web.yml
 
       - name: Cleanup
         if: always()
