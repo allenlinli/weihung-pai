@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.40.0 (2026-01-05)
+
+### Features
+
+- VS Code-style file browser, Caddy deploy, CodeMirror viewer
+  ([`f5f057d`](https://github.com/wayne930242/weihung-pai/commit/f5f057dd64fd4d3f1b53abe86638ba50533a42c6))
+
+
 ## v1.39.0 (2026-01-05)
 
 ### Features
