@@ -1,6 +1,17 @@
 # CHANGELOG
 
 
+## v1.46.0 (2026-01-05)
+
+### Features
+
+- **api**: Add chat history endpoint
+  ([`d6e885d`](https://github.com/wayne930242/weihung-pai/commit/d6e885d636ddfa8daf882bef21cb7ec077038f9e))
+
+- **pai-web**: Load chat history on mount
+  ([`adf2fb5`](https://github.com/wayne930242/weihung-pai/commit/adf2fb5b7cfe9da22a9a1b55310e6ac1d27593d8))
+
+
 ## v1.45.0 (2026-01-05)
 
 ### Bug Fixes
