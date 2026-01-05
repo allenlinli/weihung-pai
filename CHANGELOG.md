@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.39.0 (2026-01-05)
+
+### Features
+
+- Add workspace file browser
+  ([`47a27f8`](https://github.com/wayne930242/weihung-pai/commit/47a27f8fee93a27f6d639656260d8f144e908883))
+
+
 ## v1.38.1 (2026-01-05)
 
 ### Bug Fixes
