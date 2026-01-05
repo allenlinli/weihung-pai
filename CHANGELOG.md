@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.41.0 (2026-01-05)
+
+### Features
+
+- Add pai-web to CI/CD pipeline
+  ([`e9af7ff`](https://github.com/wayne930242/weihung-pai/commit/e9af7ff71df463573bbcad2eacc315d4a6c16666))
+
+
 ## v1.40.0 (2026-01-05)
 
 ### Features
