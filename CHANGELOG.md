@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.43.1 (2026-01-05)
+
+### Bug Fixes
+
+- **ansible**: Update web deploy config with vault variables
+  ([`19c57f6`](https://github.com/wayne930242/weihung-pai/commit/19c57f69ede73e3d7bd1de963c356f1fb1560526))
+
+
 ## v1.43.0 (2026-01-05)
 
 ### Features
