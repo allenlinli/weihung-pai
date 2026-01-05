@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.43.0 (2026-01-05)
+
+### Features
+
+- **web**: Add markdown, commands, and file upload
+  ([`8d2815c`](https://github.com/wayne930242/weihung-pai/commit/8d2815c214738fe666b3b31b1cb74b011d71a434))
+
+
 ## v1.42.0 (2026-01-05)
 
 ### Features
