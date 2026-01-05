@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.31.0 (2026-01-05)
+
+### Features
+
+- **deploy**: Add history directories for Stop hook
+  ([`d5319ea`](https://github.com/wayne930242/weihung-pai/commit/d5319ea83bd26fcee076cd501f3c203384f31c1f))
+
+
 ## v1.30.0 (2026-01-05)
 
 ### Features
