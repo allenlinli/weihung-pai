@@ -85,6 +85,17 @@ jobs:
         if: steps.changes.outputs.web == 'true' || steps.changes.outputs.ansible == 'true'
         uses: oven-sh/setup-bun@v2
 
+      - name: Cache Bun dependencies
+        if: steps.changes.outputs.web == 'true' || steps.changes.outputs.ansible == 'true'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            pai-web/node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('pai-web/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - name: Deploy Web
         if: steps.changes.outputs.web == 'true' || steps.changes.outputs.ansible == 'true'
         env:
