@@ -10,13 +10,15 @@
   tasks:
     - name: Create production .env.local
       delegate_to: localhost
+      become: false
       ansible.builtin.template:
         src: templates/pai-web.env.j2
         dest: "{{ playbook_dir }}/../../pai-web/.env.production.local"
-        mode: "0600"
+        mode: "0644"
 
     - name: Build web locally
       delegate_to: localhost
+      become: false
       ansible.builtin.shell: |
         cd {{ playbook_dir }}/../../pai-web
         bun install
@@ -86,10 +88,10 @@
       become: true
       changed_when: false
 
-    - name: Reload Caddy
+    - name: Restart Caddy
       ansible.builtin.systemd:
         name: caddy
-        state: reloaded
+        state: restarted
         enabled: true
       become: true
       when: caddy_config.changed or caddy_main.changed or web_sync.changed
