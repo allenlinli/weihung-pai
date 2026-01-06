@@ -22,6 +22,10 @@ vault_local_ssh_key_path: "~/.ssh/id_ed25519"
 
 # === 網站設定 ===
 vault_site_domain: "YOUR_DOMAIN"
+# Web 前端域名（用於 API/WS URL）
+vault_web_domain: "pai.example.com"
+# API 認證金鑰（產生方式: openssl rand -hex 32）
+vault_pai_api_key: "YOUR_API_KEY"
 
 # === SSH Key（用於 Ansible 部署）===
 # 產生方式: ssh-keygen -t ed25519 -C "pai-agent"
