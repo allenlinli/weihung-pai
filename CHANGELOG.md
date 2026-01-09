@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.49.1 (2026-01-09)
+
+### Bug Fixes
+
+- **web**: Add missing tabs component
+  ([`9a66d9f`](https://github.com/wayne930242/weihung-pai/commit/9a66d9fbe5ac7b5c74f77fab51a923849de1ae47))
+
+
 ## v1.49.0 (2026-01-09)
 
 ### Features
