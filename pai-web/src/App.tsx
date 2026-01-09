@@ -10,6 +10,7 @@ import { LogsView, type LogEntry, type Notification } from '@/components/logs/lo
 import { SettingsView } from '@/components/settings/settings-view'
 import { RagView } from '@/components/rag/rag-view'
 import { useWs, type WsEvent } from '@/hooks/use-websocket'
+import { useSettings } from '@/hooks/use-settings'
 import { Separator } from '@/components/ui/separator'
 
 interface Message {
@@ -64,6 +65,9 @@ function showBrowserNotification(title: string, body: string) {
 function App() {
   const navigate = useNavigate()
   const location = useLocation()
+
+  // Initialize theme on app start
+  useSettings()
 
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)

@@ -10,6 +10,7 @@ WorkingDirectory=/home/{{ ansible_user }}/pai-bot
 ExecStart=/home/{{ ansible_user }}/.bun/bin/bun run src/index.ts
 Restart=always
 RestartSec=5
+EnvironmentFile=/home/{{ ansible_user }}/pai-bot/.env
 Environment=NODE_ENV=production
 Environment=BUN_RUNTIME_TRANSPILER_CACHE=1
 Environment=PATH=/home/{{ ansible_user }}/.local/bin:/home/{{ ansible_user }}/.bun/bin:/usr/local/bin:/usr/bin:/bin
