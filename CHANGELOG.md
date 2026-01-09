@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.49.2 (2026-01-09)
+
+### Bug Fixes
+
+- **rag**: Use timezone.utc for Python 3.10 compatibility
+  ([`67f27a0`](https://github.com/wayne930242/weihung-pai/commit/67f27a0c1a647bb72c30b2d64caa801ee041b054))
+
+### Refactoring
+
+- **rag**: Switch to hybrid Gemini model routing
+  ([`c3d6fdb`](https://github.com/wayne930242/weihung-pai/commit/c3d6fdbbfb21b803e90ef9fc433fd57a370044b7))
+
+
 ## v1.49.1 (2026-01-09)
 
 ### Bug Fixes
