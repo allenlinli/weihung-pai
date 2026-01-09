@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.49.6 (2026-01-09)
+
+### Bug Fixes
+
+- **rag**: Use Bun.spawn instead of shell template for Python calls
+  ([`618a4db`](https://github.com/wayne930242/weihung-pai/commit/618a4dbb098870e2ffd4e3f844c3a811692bdb7f))
+
+### Refactoring
+
+- Unify GEMINI_API_KEY to GOOGLE_API_KEY
+  ([`3a3f430`](https://github.com/wayne930242/weihung-pai/commit/3a3f43080a9525c881faf7dd53af4233a2cdeae0))
+
+
 ## v1.49.5 (2026-01-09)
 
 ### Bug Fixes
