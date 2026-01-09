@@ -15,9 +15,9 @@ export function registerObsidianTools(server: McpServer): void {
   server.registerTool(
     "obsidian_agent_query",
     {
-      title: "Query Obsidian with AI Agent",
+      title: "查詢我的個人知識庫",
       description:
-        "使用 AI Agent 智能查詢 Obsidian 知識庫，支援多步推理、查詢重寫、相關性評估",
+        "【重要】這是 Wei-Hung 的個人知識庫（Obsidian），包含學習筆記、研究文獻、專案紀錄等。當用戶詢問個人相關問題、學習內容、過去的筆記或研究時，應優先使用此工具搜尋。支援多步推理和智能查詢重寫。",
       inputSchema: {
         question: z.string().describe("要查詢的問題（自然語言）"),
         max_retries: z.number().optional().describe("最大重試次數（預設 2）"),
@@ -47,8 +47,9 @@ export function registerObsidianTools(server: McpServer): void {
   server.registerTool(
     "obsidian_search",
     {
-      title: "Search Obsidian Notes (Simple)",
-      description: "在 Obsidian 知識庫中進行簡單語意搜尋（不經過 Agent）",
+      title: "快速搜尋知識庫",
+      description:
+        "在個人知識庫中進行快速語意搜尋。適合簡單查詢或需要快速取得原始片段時使用。如需更智能的回答，請用 obsidian_agent_query。",
       inputSchema: {
         query: z.string().describe("搜尋查詢（自然語言）"),
         top_k: z.number().optional().describe("返回結果數量（預設 5）"),
@@ -75,8 +76,8 @@ export function registerObsidianTools(server: McpServer): void {
   server.registerTool(
     "obsidian_stats",
     {
-      title: "Obsidian Stats",
-      description: "查看 Obsidian RAG 索引統計",
+      title: "知識庫統計",
+      description: "查看個人知識庫的索引統計（檔案數、chunk 數等）",
       inputSchema: {},
     },
     async () => {
@@ -94,8 +95,8 @@ export function registerObsidianTools(server: McpServer): void {
   server.registerTool(
     "obsidian_sync",
     {
-      title: "Sync Obsidian Index",
-      description: "同步 Obsidian RAG 索引（更新有變更的檔案）",
+      title: "同步知識庫索引",
+      description: "同步個人知識庫索引（更新有變更的檔案）。通常不需要手動執行，系統會自動同步。",
       inputSchema: {},
     },
     async () => {

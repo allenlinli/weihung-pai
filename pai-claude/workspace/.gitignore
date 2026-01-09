@@ -48,6 +48,8 @@
 !.claude/skills/reflection/**
 !.claude/skills/proactive/
 !.claude/skills/proactive/**
+!.claude/skills/knowledge-base/
+!.claude/skills/knowledge-base/**
 
 # ===== Hook Scripts =====
 !scripts/
