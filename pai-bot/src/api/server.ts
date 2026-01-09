@@ -498,6 +498,53 @@ export function startApiServer(port = 3000) {
           return Response.json({ content }, { headers: corsHeaders });
         }
 
+        // === RAG APIs ===
+        const VAULT_PATH = process.env.OBSIDIAN_VAULT || "~/obsidian";
+
+        // RAG - stats
+        if (path === "/api/rag/stats" && method === "GET") {
+          const { $ } = await import("bun");
+          const ragScript = new URL("../rag/obsidian_rag.py", import.meta.url).pathname;
+          const result = await $`python ${ragScript} stats --vault ${VAULT_PATH} --json`.json();
+          return Response.json(result, { headers: corsHeaders });
+        }
+
+        // RAG - query (agentic)
+        if (path === "/api/rag/query" && method === "POST") {
+          const body = await req.json();
+          const { question, max_retries = 2 } = body;
+          if (!question) {
+            return Response.json({ error: "question required" }, { status: 400, headers: corsHeaders });
+          }
+
+          const { $ } = await import("bun");
+          const ragScript = new URL("../rag/agentic_rag.py", import.meta.url).pathname;
+          const result = await $`python ${ragScript} query -q ${question} --vault ${VAULT_PATH} -r ${max_retries} --json`.json();
+          return Response.json(result, { headers: corsHeaders });
+        }
+
+        // RAG - search (simple)
+        if (path === "/api/rag/search" && method === "POST") {
+          const body = await req.json();
+          const { query, top_k = 5 } = body;
+          if (!query) {
+            return Response.json({ error: "query required" }, { status: 400, headers: corsHeaders });
+          }
+
+          const { $ } = await import("bun");
+          const ragScript = new URL("../rag/obsidian_rag.py", import.meta.url).pathname;
+          const result = await $`python ${ragScript} search -q ${query} --vault ${VAULT_PATH} -k ${top_k} --json`.json();
+          return Response.json({ results: result }, { headers: corsHeaders });
+        }
+
+        // RAG - sync
+        if (path === "/api/rag/sync" && method === "POST") {
+          const { $ } = await import("bun");
+          const ragScript = new URL("../rag/obsidian_rag.py", import.meta.url).pathname;
+          const result = await $`python ${ragScript} sync --vault ${VAULT_PATH} --json`.json();
+          return Response.json(result, { headers: corsHeaders });
+        }
+
         // === File Upload API ===
         if (path === "/api/upload" && method === "POST") {
           // 驗證 API Key

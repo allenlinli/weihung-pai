@@ -55,7 +55,7 @@ def get_llm() -> ChatAnthropic:
         raise ValueError("ANTHROPIC_API_KEY 環境變數未設定")
 
     return ChatAnthropic(
-        model_name="claude-3-5-haiku-20241022",
+        model_name="claude-haiku-4-5",
         api_key=SecretStr(api_key),
         temperature=0,
         timeout=None,
@@ -302,13 +302,16 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.command == "query":
-        print(f"Agentic RAG 查詢: {args.question}")
-        print("-" * 50)
+        import sys
+
+        if not args.json:
+            print(f"Agentic RAG 查詢: {args.question}", file=sys.stderr)
+            print("-" * 50, file=sys.stderr)
 
         result = query(args.question, args.vault, args.max_retries)
 
         if args.json:
-            print(json.dumps(result, ensure_ascii=False, indent=2))
+            print(json.dumps(result, ensure_ascii=False))
         else:
             print(f"\n回答:\n{result['answer']}")
             if result["documents"]:

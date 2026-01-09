@@ -240,6 +240,8 @@ class ObsidianRAG:
 
 def main() -> None:
     import argparse
+    import json
+    import sys
 
     parser = argparse.ArgumentParser(description="Obsidian RAG 索引工具")
     parser.add_argument("command", choices=["sync", "search", "stats"], help="執行的命令")
@@ -247,34 +249,48 @@ def main() -> None:
     parser.add_argument("--db", default=None, help="ChromaDB 路徑")
     parser.add_argument("--query", "-q", help="搜尋查詢")
     parser.add_argument("--top-k", "-k", type=int, default=5, help="回傳數量")
+    parser.add_argument("--json", action="store_true", help="JSON 輸出")
 
     args = parser.parse_args()
 
     rag = ObsidianRAG(args.vault, args.db)
 
     if args.command == "sync":
-        print(f"同步 {args.vault} (embedding: text-embedding-3-small) ...")
+        if not args.json:
+            print(f"同步 {args.vault} (embedding: text-embedding-3-small) ...", file=sys.stderr)
         stats = rag.sync()
-        print(
-            f"\n完成: +{stats['added']} *{stats['updated']} "
-            f"-{stats['deleted']} ={stats['unchanged']}"
-        )
+        if args.json:
+            print(json.dumps(stats))
+        else:
+            print(
+                f"\n完成: +{stats['added']} *{stats['updated']} "
+                f"-{stats['deleted']} ={stats['unchanged']}"
+            )
 
     elif args.command == "search":
         if not args.query:
-            print("請提供 --query 參數")
+            if args.json:
+                print(json.dumps({"error": "query required"}))
+            else:
+                print("請提供 --query 參數")
             return
         results = rag.search(args.query, args.top_k)
-        for i, r in enumerate(results, 1):
-            print(f"\n--- {i}. {r['file_path']} (distance: {r['distance']:.4f}) ---")
-            print(r["chunk"][:200] + "..." if len(r["chunk"]) > 200 else r["chunk"])
+        if args.json:
+            print(json.dumps(results))
+        else:
+            for i, r in enumerate(results, 1):
+                print(f"\n--- {i}. {r['file_path']} (distance: {r['distance']:.4f}) ---")
+                print(r["chunk"][:200] + "..." if len(r["chunk"]) > 200 else r["chunk"])
 
     elif args.command == "stats":
         s = rag.stats()
-        print(f"檔案數: {s['total_files']}")
-        print(f"Chunks: {s['total_chunks']}")
-        print(f"DB 路徑: {s['db_path']}")
-        print(f"Embedding: {s['embedding']}")
+        if args.json:
+            print(json.dumps(s))
+        else:
+            print(f"檔案數: {s['total_files']}")
+            print(f"Chunks: {s['total_chunks']}")
+            print(f"DB 路徑: {s['db_path']}")
+            print(f"Embedding: {s['embedding']}")
 
 
 if __name__ == "__main__":

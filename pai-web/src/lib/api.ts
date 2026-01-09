@@ -134,3 +134,53 @@ export const workspaceApi = {
       params: { path },
     }),
 }
+
+// RAG API types
+export interface RagStats {
+  total_chunks: number
+  total_files: number
+  db_path: string
+  embedding: string
+}
+
+export interface RagDocument {
+  file_path: string
+  chunk?: string
+  distance: number
+}
+
+export interface RagQueryResult {
+  question: string
+  answer: string
+  documents: RagDocument[]
+  retry_count: number
+}
+
+export interface RagSyncResult {
+  added: number
+  updated: number
+  deleted: number
+  unchanged: number
+}
+
+// RAG API functions
+export const ragApi = {
+  stats: () => apiFetch<RagStats>('/api/rag/stats'),
+
+  query: (question: string, maxRetries = 2) =>
+    apiFetch<RagQueryResult>('/api/rag/query', {
+      method: 'POST',
+      body: JSON.stringify({ question, max_retries: maxRetries }),
+    }),
+
+  search: (query: string, topK = 5) =>
+    apiFetch<{ results: RagDocument[] }>('/api/rag/search', {
+      method: 'POST',
+      body: JSON.stringify({ query, top_k: topK }),
+    }),
+
+  sync: () =>
+    apiFetch<RagSyncResult>('/api/rag/sync', {
+      method: 'POST',
+    }),
+}

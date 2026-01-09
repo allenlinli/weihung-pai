@@ -8,6 +8,7 @@ import { HistoryView } from '@/components/history/history-view'
 import { WorkspaceView } from '@/components/workspace/workspace-view'
 import { LogsView, type LogEntry, type Notification } from '@/components/logs/logs-view'
 import { SettingsView } from '@/components/settings/settings-view'
+import { RagView } from '@/components/rag/rag-view'
 import { useWs, type WsEvent } from '@/hooks/use-websocket'
 import { Separator } from '@/components/ui/separator'
 
@@ -35,6 +36,7 @@ const routeTitles: Record<string, string> = {
   '/memory': 'Memory',
   '/history': 'History',
   '/workspace': 'Workspace',
+  '/rag': 'RAG',
   '/logs': 'Logs',
   '/settings': 'Settings',
 }
@@ -311,6 +313,7 @@ function App() {
             <Route path="/memory" element={<MemoryView />} />
             <Route path="/history" element={<HistoryView />} />
             <Route path="/workspace" element={<WorkspaceView />} />
+            <Route path="/rag" element={<RagView />} />
             <Route
               path="/logs"
               element={
