@@ -8,14 +8,14 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Literal, TypedDict
 
-from langchain_anthropic import ChatAnthropic
 from langchain_core.documents import Document
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from obsidian_rag import ObsidianRAG
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
     from langgraph.graph.state import CompiledStateGraph
@@ -48,30 +48,45 @@ class RewrittenQuery(BaseModel):
     query: str = Field(description="重寫後的搜尋查詢")
 
 
-def get_llm() -> ChatAnthropic:
-    """取得 LLM 實例"""
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise ValueError("ANTHROPIC_API_KEY 環境變數未設定")
+def _check_api_key() -> None:
+    """檢查 API key"""
+    if not os.environ.get("GOOGLE_API_KEY"):
+        raise ValueError("GOOGLE_API_KEY 環境變數未設定")
 
-    return ChatAnthropic(
-        model_name="claude-haiku-4-5",
-        api_key=SecretStr(api_key),
+
+def get_lite_llm() -> ChatGoogleGenerativeAI:
+    """取得輕量 LLM（用於 grading 等簡單任務）"""
+    _check_api_key()
+    return ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash-lite",
         temperature=0,
-        timeout=None,
-        stop=None,
+    )
+
+
+def get_main_llm() -> ChatGoogleGenerativeAI:
+    """取得主要 LLM（用於 rewrite、generate 等複雜任務）"""
+    _check_api_key()
+    return ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash",
+        temperature=0,
     )
 
 
 def create_rag_graph(
     vault_path: str | Path, max_retries: int = MAX_RETRIES
 ) -> CompiledStateGraph[AgentState]:
-    """建立 Agentic RAG 圖"""
+    """建立 Agentic RAG 圖
+
+    使用混合模型策略：
+    - lite_llm (gemini-2.5-flash-lite): grading 等簡單任務
+    - main_llm (gemini-2.5-flash): rewrite、generate 等複雜任務
+    """
 
     rag = ObsidianRAG(vault_path)
-    llm = get_llm()
+    lite_llm = get_lite_llm()
+    main_llm = get_main_llm()
 
-    # Grader prompt
+    # Grader prompt (uses lite_llm)
     grade_prompt = ChatPromptTemplate.from_messages(
         [
             (
@@ -87,9 +102,9 @@ def create_rag_graph(
             ),
         ]
     )
-    grader_chain = grade_prompt | llm.with_structured_output(RelevanceGrade)
+    grader_chain = grade_prompt | lite_llm.with_structured_output(RelevanceGrade)
 
-    # Rewriter prompt
+    # Rewriter prompt (uses main_llm)
     rewrite_prompt = ChatPromptTemplate.from_messages(
         [
             (
@@ -105,9 +120,9 @@ def create_rag_graph(
             ),
         ]
     )
-    rewriter_chain = rewrite_prompt | llm.with_structured_output(RewrittenQuery)
+    rewriter_chain = rewrite_prompt | main_llm.with_structured_output(RewrittenQuery)
 
-    # Generator prompt
+    # Generator prompt (uses main_llm)
     generate_prompt = ChatPromptTemplate.from_messages(
         [
             (
@@ -219,7 +234,7 @@ def create_rag_graph(
 
         context = "\n\n---\n\n".join(context_parts)
 
-        response = llm.invoke(generate_prompt.format(question=question, context=context))
+        response = main_llm.invoke(generate_prompt.format(question=question, context=context))
         answer = response.content
 
         print("  [generate] 生成完成")
