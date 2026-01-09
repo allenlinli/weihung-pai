@@ -17,14 +17,26 @@ CREATE INDEX IF NOT EXISTS idx_conv_message_id ON conversations(message_id);
 CREATE TABLE IF NOT EXISTS memories (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL,
-  key TEXT NOT NULL,
   content TEXT NOT NULL,
+  category TEXT DEFAULT 'general',
   importance INTEGER DEFAULT 0,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  last_accessed DATETIME
+  created_at TEXT NOT NULL,
+  last_accessed TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_mem_user ON memories(user_id);
+CREATE INDEX IF NOT EXISTS idx_mem_category ON memories(user_id, category);
+
+-- Soft delete archive table
+CREATE TABLE IF NOT EXISTS deleted_memories (
+  id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  content TEXT NOT NULL,
+  category TEXT,
+  importance INTEGER,
+  created_at TEXT,
+  deleted_at TEXT NOT NULL
+);
 
 -- File records
 CREATE TABLE IF NOT EXISTS files (
