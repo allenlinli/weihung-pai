@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.49.0 (2026-01-09)
+
+### Features
+
+- **web**: Add RAG panel for vector DB status and testing
+  ([`7b23c49`](https://github.com/wayne930242/weihung-pai/commit/7b23c49c862dd7f797139a535b6967fd5fbe7cc4))
+
+
 ## v1.48.0 (2026-01-09)
 
 ### Chores
