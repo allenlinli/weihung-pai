@@ -34,6 +34,7 @@ class AgentState(TypedDict):
     documents: list[Document]
     generation: str | None
     retry_count: int
+    grade_decision: str | None
 
 
 class RelevanceGrade(BaseModel):
@@ -169,7 +170,7 @@ def create_rag_graph(
         print(f"  [retrieve] 找到 {len(documents)} 個文件")
         return {"documents": documents}
 
-    def grade_documents(state: AgentState) -> Literal["generate", "rewrite"]:
+    def grade_documents(state: AgentState) -> dict[str, str]:
         """評估文件相關性"""
         documents = state["documents"]
         question = state["question"]
@@ -178,9 +179,9 @@ def create_rag_graph(
         if not documents:
             if retry_count < max_retries:
                 print("  [grade] 無文件，重寫查詢")
-                return "rewrite"
+                return {"grade_decision": "rewrite"}
             print("  [grade] 無文件，直接生成")
-            return "generate"
+            return {"grade_decision": "generate"}
 
         doc = documents[0]
         result = grader_chain.invoke({"document": doc.page_content, "question": question})
@@ -193,13 +194,13 @@ def create_rag_graph(
 
         if score == "yes":
             print("  [grade] 文件相關，進入生成")
-            return "generate"
+            return {"grade_decision": "generate"}
         elif retry_count < max_retries:
             print(f"  [grade] 文件不相關，重寫查詢 (retry {retry_count + 1}/{max_retries})")
-            return "rewrite"
+            return {"grade_decision": "rewrite"}
         else:
             print("  [grade] 達到重試上限，使用現有文件生成")
-            return "generate"
+            return {"grade_decision": "generate"}
 
     def rewrite_question(state: AgentState) -> dict[str, Any]:
         """重寫查詢"""
@@ -264,7 +265,7 @@ def create_rag_graph(
     workflow.add_edge("retrieve", "grade")
     workflow.add_conditional_edges(
         "grade",
-        lambda x: x,  # grade_documents already returns the decision
+        lambda state: state["grade_decision"],
         {"generate": "generate", "rewrite": "rewrite"},
     )
     workflow.add_edge("rewrite", "retrieve")
@@ -289,6 +290,7 @@ def query(
         "documents": [],
         "generation": None,
         "retry_count": 0,
+        "grade_decision": None,
     }
 
     result = graph.invoke(initial_state)
