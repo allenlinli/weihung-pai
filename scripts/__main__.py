@@ -33,8 +33,8 @@ def main() -> None:
         run_google_command(args)
     elif command == "discord":
         run_discord_command(args)
-    elif command == "spotify":
-        run_spotify_command(args)
+    # elif command == "spotify":
+    #     run_spotify_command(args)
     elif command == "git":
         run_git_command(args)
     elif command == "web":
@@ -134,26 +134,26 @@ def run_discord_command(args: list[str]) -> None:
         sys.exit(1)
 
 
-def run_spotify_command(args: list[str]) -> None:
-    from .spotify import do_auth, do_run, do_test
-
-    if not args:
-        print("用法: uv run pai spotify <subcommand>")
-        print("  auth   執行 Spotify OAuth 認證（首次使用需要）")
-        print("  test   測試 librespot 和認證狀態")
-        print("  run    手動啟動 librespot（測試用）")
-        sys.exit(1)
-
-    subcommand = args[0]
-    if subcommand == "auth":
-        sys.exit(do_auth())
-    elif subcommand == "test":
-        sys.exit(do_test())
-    elif subcommand == "run":
-        sys.exit(do_run())
-    else:
-        print(f"未知子命令: {subcommand}")
-        sys.exit(1)
+# def run_spotify_command(args: list[str]) -> None:
+#     from .spotify import do_auth, do_run, do_test
+#
+#     if not args:
+#         print("用法: uv run pai spotify <subcommand>")
+#         print("  auth   執行 Spotify OAuth 認證（首次使用需要）")
+#         print("  test   測試 librespot 和認證狀態")
+#         print("  run    手動啟動 librespot（測試用）")
+#         sys.exit(1)
+#
+#     subcommand = args[0]
+#     if subcommand == "auth":
+#         sys.exit(do_auth())
+#     elif subcommand == "test":
+#         sys.exit(do_test())
+#     elif subcommand == "run":
+#         sys.exit(do_run())
+#     else:
+#         print(f"未知子命令: {subcommand}")
+#         sys.exit(1)
 
 
 def run_web_command(args: list[str]) -> None:
@@ -232,8 +232,8 @@ def print_help() -> None:
     print("  google auth           執行 Google OAuth2 授權")
     print("  google token          取得 Google access token")
     print("  discord invite        生成 Discord Bot 邀請連結")
-    print("  spotify auth          執行 Spotify 認證")
-    print("  spotify test          測試 Spotify 認證狀態")
+    # print("  spotify auth          執行 Spotify 認證")
+    # print("  spotify test          測試 Spotify 認證狀態")
     print("  git skip list         列出被忽略的檔案")
     print("  git skip commit       互動式 commit 被忽略的檔案")
     print("  web dev               同時啟動 pai-bot + pai-web 開發伺服器")

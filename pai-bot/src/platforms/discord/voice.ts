@@ -18,10 +18,10 @@ import {
 import type { VoiceBasedChannel } from "discord.js";
 import { logger } from "../../utils/logger";
 
-// Spotify Connect 設定
-const LIBRESPOT_PATH = "/home/pai/.cargo/bin/librespot";
-const LIBRESPOT_CACHE = "/home/pai/.cache/librespot";
-const SPOTIFY_DEVICE_NAME = "Merlin DJ";
+// Spotify Connect 設定 (disabled)
+// const LIBRESPOT_PATH = "/home/pai/.cargo/bin/librespot";
+// const LIBRESPOT_CACHE = "/home/pai/.cache/librespot";
+// const SPOTIFY_DEVICE_NAME = "Merlin DJ";
 
 // TTS 設定
 const TTS_VOICE = "zh-TW-HsiaoChenNeural"; // 台灣女聲（曉臻）
@@ -32,8 +32,8 @@ interface GuildQueue {
   player: AudioPlayer;
   playing: boolean;
   channelId: string;
-  librespotProc: ReturnType<typeof Bun.spawn> | null;
-  spotifyConnected: boolean;
+  // librespotProc: ReturnType<typeof Bun.spawn> | null;
+  // spotifyConnected: boolean;
   volume: number; // 0-100
   muted: boolean;
   volumeResource: { setVolume: (v: number) => void } | null;
@@ -87,13 +87,13 @@ export async function joinChannel(
     // 監聽連接狀態變化，自動重連（最多 3 次）
     connection.on(VoiceConnectionStatus.Disconnected, async () => {
       const guildId = channel.guild.id;
-      const guildQueue = guildQueues.get(guildId);
-      const wasSpotifyConnected = guildQueue?.spotifyConnected ?? false;
+      // const guildQueue = guildQueues.get(guildId);
+      // const wasSpotifyConnected = guildQueue?.spotifyConnected ?? false;
 
       // Record current session to detect if a new join happens during reconnect
       const mySession = reconnectSessions.get(guildId) ?? 0;
 
-      logger.warn({ guildId, wasSpotifyConnected }, "Voice connection disconnected");
+      logger.warn({ guildId }, "Voice connection disconnected");
 
       const MAX_RETRIES = 3;
       for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -116,17 +116,17 @@ export async function joinChannel(
           await entersState(connection, VoiceConnectionStatus.Ready, 10_000);
           logger.info({ guildId, attempt }, "Voice connection ready after reconnect");
 
-          // 如果之前有 Spotify Connect，自動重啟
-          if (wasSpotifyConnected) {
-            logger.info({ guildId }, "Auto-restarting Spotify Connect after reconnect");
-            const result = await startSpotifyConnect(guildId);
-            if (!result.ok) {
-              logger.error(
-                { guildId, error: result.error },
-                "Failed to auto-restart Spotify Connect",
-              );
-            }
-          }
+          // Spotify Connect auto-restart disabled
+          // if (wasSpotifyConnected) {
+          //   logger.info({ guildId }, "Auto-restarting Spotify Connect after reconnect");
+          //   const result = await startSpotifyConnect(guildId);
+          //   if (!result.ok) {
+          //     logger.error(
+          //       { guildId, error: result.error },
+          //       "Failed to auto-restart Spotify Connect",
+          //     );
+          //   }
+          // }
           return; // 成功，退出
         } catch {
           logger.warn({ guildId, attempt, maxRetries: MAX_RETRIES }, "Reconnect attempt failed");
@@ -160,8 +160,8 @@ export async function joinChannel(
       player,
       playing: false,
       channelId: channel.id,
-      librespotProc: null,
-      spotifyConnected: false,
+      // librespotProc: null,
+      // spotifyConnected: false,
       volume: DEFAULT_VOLUME,
       muted: false,
       volumeResource: null,
@@ -182,12 +182,12 @@ export async function joinChannel(
 export function leaveChannel(guildId: string): boolean {
   const guildQueue = guildQueues.get(guildId);
   if (guildQueue) {
-    // Stop Spotify Connect if running
-    if (guildQueue.librespotProc) {
-      guildQueue.librespotProc.kill();
-      guildQueue.librespotProc = null;
-      guildQueue.spotifyConnected = false;
-    }
+    // Stop Spotify Connect if running (disabled)
+    // if (guildQueue.librespotProc) {
+    //   guildQueue.librespotProc.kill();
+    //   guildQueue.librespotProc = null;
+    //   guildQueue.spotifyConnected = false;
+    // }
     guildQueue.player.stop();
     guildQueue.connection.destroy();
     guildQueues.delete(guildId);
@@ -204,174 +204,174 @@ export function leaveChannel(guildId: string): boolean {
   return false;
 }
 
-/**
- * 啟動 Spotify Connect (librespot)
- */
-export async function startSpotifyConnect(
-  guildId: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const guildQueue = guildQueues.get(guildId);
-  if (!guildQueue) {
-    return { ok: false, error: "Bot 不在語音頻道中，請先使用 /join" };
-  }
-
-  // 如果已經在運行，先停止
-  if (guildQueue.librespotProc) {
-    guildQueue.librespotProc.kill();
-    guildQueue.librespotProc = null;
-  }
-
-  try {
-    // 先殺掉所有舊的 librespot 進程，避免累積
-    try {
-      Bun.spawnSync(["pkill", "-9", "librespot"]);
-    } catch {
-      // ignore
-    }
-
-    // 啟動 librespot，使用 cached credentials
-    const proc = Bun.spawn(
-      [
-        LIBRESPOT_PATH,
-        "--name",
-        SPOTIFY_DEVICE_NAME,
-        "--cache",
-        LIBRESPOT_CACHE,
-        "--backend",
-        "pipe",
-        "--initial-volume",
-        "100",
-        "--enable-volume-normalisation",
-        "--normalisation-pregain",
-        "1",
-        "--format",
-        "S16",
-        "--bitrate",
-        "160",
-      ],
-      {
-        stdout: "pipe",
-        stderr: "pipe",
-      },
-    );
-
-    guildQueue.librespotProc = proc;
-    guildQueue.spotifyConnected = true;
-
-    // 將 librespot 輸出串流到 Discord
-    const nodeStream = await import("node:stream");
-    const readable = nodeStream.Readable.fromWeb(proc.stdout as any);
-
-    const resource = createAudioResource(readable, {
-      inputType: StreamType.Raw,
-      inlineVolume: true,
-    });
-
-    // 保存音量控制引用
-    if (resource.volume) {
-      guildQueue.volumeResource = resource.volume;
-      const vol = guildQueue.muted ? 0 : guildQueue.volume / 100;
-      resource.volume.setVolume(vol);
-      logger.info({ volume: guildQueue.volume, actualVolume: vol }, "Volume resource initialized");
-    } else {
-      logger.warn("Volume resource not available - inlineVolume may not be working");
-    }
-
-    guildQueue.player.play(resource);
-    guildQueue.playing = true;
-
-    logger.info({ deviceName: SPOTIFY_DEVICE_NAME }, "Spotify Connect started");
-
-    // 監聽 librespot stderr（狀態訊息）
-    (async () => {
-      if (!proc.stderr) return;
-      const reader = proc.stderr.getReader();
-      const decoder = new TextDecoder();
-      let errorCount = 0;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const line = decoder.decode(value);
-        // 解析 librespot 日誌
-        if (line.includes("now playing")) {
-          logger.info({ line: line.trim() }, "Spotify now playing");
-          errorCount = 0; // Reset on successful playback
-        } else if (line.includes("audio key error") || line.includes("Service unavailable")) {
-          errorCount++;
-          logger.warn({ line: line.trim(), errorCount }, "Librespot auth error");
-
-          // Auto-recover: clear audio cache (not credentials) and restart after 3 consecutive errors
-          if (errorCount >= 3) {
-            logger.info({ guildId }, "Too many auth errors, clearing audio cache and restarting");
-            proc.kill();
-
-            // Clear only audio cache (files/), keep credentials.json
-            const fs = await import("node:fs/promises");
-            try {
-              await fs.rm(`${LIBRESPOT_CACHE}/files`, { recursive: true, force: true });
-            } catch {
-              // ignore
-            }
-
-            // Restart after a short delay
-            setTimeout(() => {
-              if (guildQueues.has(guildId)) {
-                startSpotifyConnect(guildId);
-              }
-            }, 2000);
-            return;
-          }
-        } else if (line.includes("ERROR") || line.includes("error")) {
-          logger.warn({ line: line.trim() }, "Librespot warning");
-        }
-      }
-    })();
-
-    // 監聽進程結束
-    proc.exited.then((code) => {
-      logger.info({ code }, "Librespot process ended");
-      if (guildQueue.librespotProc === proc) {
-        guildQueue.librespotProc = null;
-        guildQueue.spotifyConnected = false;
-        guildQueue.playing = false;
-      }
-    });
-
-    return { ok: true };
-  } catch (error) {
-    logger.error({ error }, "Failed to start Spotify Connect");
-    return { ok: false, error: String(error) };
-  }
-}
-
-/**
- * 停止 Spotify Connect
- */
-export function stopSpotifyConnect(guildId: string): boolean {
-  const guildQueue = guildQueues.get(guildId);
-  if (!guildQueue || !guildQueue.librespotProc) {
-    return false;
-  }
-
-  guildQueue.librespotProc.kill();
-  guildQueue.librespotProc = null;
-  guildQueue.spotifyConnected = false;
-  guildQueue.player.stop();
-  guildQueue.playing = false;
-
-  logger.info({ guildId }, "Spotify Connect stopped");
-  return true;
-}
-
-/**
- * 檢查 Spotify Connect 狀態
- */
-export function isSpotifyConnected(guildId: string): boolean {
-  const guildQueue = guildQueues.get(guildId);
-  return guildQueue?.spotifyConnected ?? false;
-}
+// /**
+//  * 啟動 Spotify Connect (librespot) - DISABLED
+//  */
+// export async function startSpotifyConnect(
+//   guildId: string,
+// ): Promise<{ ok: true } | { ok: false; error: string }> {
+//   const guildQueue = guildQueues.get(guildId);
+//   if (!guildQueue) {
+//     return { ok: false, error: "Bot 不在語音頻道中，請先使用 /join" };
+//   }
+//
+//   // 如果已經在運行，先停止
+//   if (guildQueue.librespotProc) {
+//     guildQueue.librespotProc.kill();
+//     guildQueue.librespotProc = null;
+//   }
+//
+//   try {
+//     // 先殺掉所有舊的 librespot 進程，避免累積
+//     try {
+//       Bun.spawnSync(["pkill", "-9", "librespot"]);
+//     } catch {
+//       // ignore
+//     }
+//
+//     // 啟動 librespot，使用 cached credentials
+//     const proc = Bun.spawn(
+//       [
+//         LIBRESPOT_PATH,
+//         "--name",
+//         SPOTIFY_DEVICE_NAME,
+//         "--cache",
+//         LIBRESPOT_CACHE,
+//         "--backend",
+//         "pipe",
+//         "--initial-volume",
+//         "100",
+//         "--enable-volume-normalisation",
+//         "--normalisation-pregain",
+//         "1",
+//         "--format",
+//         "S16",
+//         "--bitrate",
+//         "160",
+//       ],
+//       {
+//         stdout: "pipe",
+//         stderr: "pipe",
+//       },
+//     );
+//
+//     guildQueue.librespotProc = proc;
+//     guildQueue.spotifyConnected = true;
+//
+//     // 將 librespot 輸出串流到 Discord
+//     const nodeStream = await import("node:stream");
+//     const readable = nodeStream.Readable.fromWeb(proc.stdout as any);
+//
+//     const resource = createAudioResource(readable, {
+//       inputType: StreamType.Raw,
+//       inlineVolume: true,
+//     });
+//
+//     // 保存音量控制引用
+//     if (resource.volume) {
+//       guildQueue.volumeResource = resource.volume;
+//       const vol = guildQueue.muted ? 0 : guildQueue.volume / 100;
+//       resource.volume.setVolume(vol);
+//       logger.info({ volume: guildQueue.volume, actualVolume: vol }, "Volume resource initialized");
+//     } else {
+//       logger.warn("Volume resource not available - inlineVolume may not be working");
+//     }
+//
+//     guildQueue.player.play(resource);
+//     guildQueue.playing = true;
+//
+//     logger.info({ deviceName: SPOTIFY_DEVICE_NAME }, "Spotify Connect started");
+//
+//     // 監聽 librespot stderr（狀態訊息）
+//     (async () => {
+//       if (!proc.stderr) return;
+//       const reader = proc.stderr.getReader();
+//       const decoder = new TextDecoder();
+//       let errorCount = 0;
+//
+//       while (true) {
+//         const { done, value } = await reader.read();
+//         if (done) break;
+//
+//         const line = decoder.decode(value);
+//         // 解析 librespot 日誌
+//         if (line.includes("now playing")) {
+//           logger.info({ line: line.trim() }, "Spotify now playing");
+//           errorCount = 0; // Reset on successful playback
+//         } else if (line.includes("audio key error") || line.includes("Service unavailable")) {
+//           errorCount++;
+//           logger.warn({ line: line.trim(), errorCount }, "Librespot auth error");
+//
+//           // Auto-recover: clear audio cache (not credentials) and restart after 3 consecutive errors
+//           if (errorCount >= 3) {
+//             logger.info({ guildId }, "Too many auth errors, clearing audio cache and restarting");
+//             proc.kill();
+//
+//             // Clear only audio cache (files/), keep credentials.json
+//             const fs = await import("node:fs/promises");
+//             try {
+//               await fs.rm(`${LIBRESPOT_CACHE}/files`, { recursive: true, force: true });
+//             } catch {
+//               // ignore
+//             }
+//
+//             // Restart after a short delay
+//             setTimeout(() => {
+//               if (guildQueues.has(guildId)) {
+//                 startSpotifyConnect(guildId);
+//               }
+//             }, 2000);
+//             return;
+//           }
+//         } else if (line.includes("ERROR") || line.includes("error")) {
+//           logger.warn({ line: line.trim() }, "Librespot warning");
+//         }
+//       }
+//     })();
+//
+//     // 監聽進程結束
+//     proc.exited.then((code) => {
+//       logger.info({ code }, "Librespot process ended");
+//       if (guildQueue.librespotProc === proc) {
+//         guildQueue.librespotProc = null;
+//         guildQueue.spotifyConnected = false;
+//         guildQueue.playing = false;
+//       }
+//     });
+//
+//     return { ok: true };
+//   } catch (error) {
+//     logger.error({ error }, "Failed to start Spotify Connect");
+//     return { ok: false, error: String(error) };
+//   }
+// }
+//
+// /**
+//  * 停止 Spotify Connect
+//  */
+// export function stopSpotifyConnect(guildId: string): boolean {
+//   const guildQueue = guildQueues.get(guildId);
+//   if (!guildQueue || !guildQueue.librespotProc) {
+//     return false;
+//   }
+//
+//   guildQueue.librespotProc.kill();
+//   guildQueue.librespotProc = null;
+//   guildQueue.spotifyConnected = false;
+//   guildQueue.player.stop();
+//   guildQueue.playing = false;
+//
+//   logger.info({ guildId }, "Spotify Connect stopped");
+//   return true;
+// }
+//
+// /**
+//  * 檢查 Spotify Connect 狀態
+//  */
+// export function isSpotifyConnected(guildId: string): boolean {
+//   const guildQueue = guildQueues.get(guildId);
+//   return guildQueue?.spotifyConnected ?? false;
+// }
 
 /**
  * 檢查 bot 是否在語音頻道中（驗證連接狀態）

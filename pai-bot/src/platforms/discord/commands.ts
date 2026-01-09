@@ -23,7 +23,7 @@ const slashCommands = [
     .setName("join")
     .setDescription("加入語音頻道"),
   new SlashCommandBuilder().setName("leave").setDescription("離開語音頻道"),
-  new SlashCommandBuilder().setName("spotify").setDescription("啟動/停止 Spotify Connect"),
+  // new SlashCommandBuilder().setName("spotify").setDescription("啟動/停止 Spotify Connect"),
   new SlashCommandBuilder()
     .setName("say")
     .setDescription("讓 Bot 在語音頻道說話（TTS）")

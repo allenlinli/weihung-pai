@@ -40,10 +40,10 @@ export const config = {
   database: {
     path: process.env.DATABASE_PATH || "./data/pai.db",
   },
-  spotify: {
-    username: process.env.SPOTIFY_USERNAME || "",
-    password: process.env.SPOTIFY_PASSWORD || "",
-  },
+  // spotify: {
+  //   username: process.env.SPOTIFY_USERNAME || "",
+  //   password: process.env.SPOTIFY_PASSWORD || "",
+  // },
   logging: {
     level: process.env.LOG_LEVEL || "info",
   },

@@ -26,7 +26,7 @@ import {
   handlePanel,
   handleRoll,
   handleSay,
-  handleSpotify,
+  // handleSpotify,
 } from "./voice";
 
 /**
@@ -94,9 +94,9 @@ export async function handleSlashCommand(interaction: ChatInputCommandInteractio
       await handleLeave(interaction);
       break;
 
-    case "spotify":
-      await handleSpotify(interaction, discordUserId);
-      break;
+    // case "spotify":
+    //   await handleSpotify(interaction, discordUserId);
+    //   break;
 
     case "say":
       await handleSay(interaction);
