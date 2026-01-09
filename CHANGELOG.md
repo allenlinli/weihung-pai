@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.50.0 (2026-01-09)
+
+### Features
+
+- **knowledge-base**: Add skill for obsidian vault management
+  ([`1304eb4`](https://github.com/wayne930242/weihung-pai/commit/1304eb4e56082b592b25595f984eb11fe2423c53))
+
+
 ## v1.49.8 (2026-01-09)
 
 ### Bug Fixes
