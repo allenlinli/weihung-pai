@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.56.0 (2026-01-10)
+
+### Bug Fixes
+
+- Threshold back to 6, add interesting/original criteria
+  ([`925d34b`](https://github.com/wayne930242/weihung-pai/commit/925d34be8644996f64cb91ddfb46d521043b018f))
+
+### Features
+
+- Add /mode command to toggle queue/interrupt mode
+  ([`ea79ff5`](https://github.com/wayne930242/weihung-pai/commit/ea79ff5529e233e909930d20875291118c9dc991))
+
+
 ## v1.55.1 (2026-01-10)
 
 ### Bug Fixes
