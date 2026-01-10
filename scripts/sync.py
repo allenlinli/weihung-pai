@@ -6,18 +6,7 @@ import sys
 import time
 from pathlib import Path
 
-import yaml
-
-PROJECT_DIR = Path(__file__).parent.resolve()
-LOCAL_CONFIG_FILE = PROJECT_DIR / "local.yml"
-
-
-def load_local_config() -> dict | None:
-    """讀取個人同步設定"""
-    if not LOCAL_CONFIG_FILE.exists():
-        return None
-    with LOCAL_CONFIG_FILE.open() as f:
-        return yaml.safe_load(f)
+PROJECT_DIR = Path(__file__).parent.parent.resolve()
 
 
 def run_cmd(
@@ -64,146 +53,62 @@ def check_ssh_config() -> bool:
     return True
 
 
-def generate_obsidian_index(vault_path: str) -> None:
-    """產生 Obsidian vault 的索引檔"""
-    from scripts.obsidian_index import generate_index
-
-    try:
-        print(f"產生 Obsidian 索引: {vault_path}")
-        generate_index(vault_path)
-    except Exception as e:
-        print(f"警告: 無法產生索引: {e}")
-
-
-def start_obsidian_sync(config: dict) -> None:
-    """啟動 Obsidian vault 同步"""
-    sync_config = config.get("sync", {})
-    obs_config = sync_config.get("obsidian")
-    if not obs_config:
-        return
-
-    local_path = obs_config.get("local_path")
-    if not local_path:
-        print("警告: obsidian.local_path 未設定，跳過 Obsidian 同步")
-        return
-
-    # 展開 ~
-    local_path = str(Path(local_path).expanduser())
-    if not Path(local_path).exists():
-        print(f"警告: Obsidian vault 不存在: {local_path}")
-        return
-
-    # 產生索引
-    generate_obsidian_index(local_path)
-
-    remote_path = obs_config.get("remote_path", "~/obsidian")
-    mode = obs_config.get("mode", "one-way-replica")
-
-    print(f"啟動 Obsidian 同步: {local_path} → pai-server:{remote_path}")
-
-    # 先終止舊的 session（如果存在）
-    run_cmd(["mutagen", "sync", "terminate", "obsidian"], check=False, capture=True)
-
-    # 建立新的 sync session
-    run_cmd(
-        [
-            "mutagen",
-            "sync",
-            "create",
-            "--name",
-            "obsidian",
-            "--mode",
-            mode,
-            "--ignore-vcs",
-            local_path,
-            f"pai-server:{remote_path}",
-        ]
-    )
-
-
-def stop_obsidian_sync() -> None:
-    """停止 Obsidian vault 同步"""
-    result = run_cmd(
-        ["mutagen", "sync", "terminate", "obsidian"],
-        check=False,
-        capture=True,
-    )
-    if result.returncode == 0:
-        print("已停止 Obsidian 同步")
-
-
-def do_start():
+def do_start() -> None:
     """啟動同步"""
     print("啟動 mutagen daemon...")
     run_cmd(["mutagen", "daemon", "start"], check=False)
     print("啟動同步...")
     run_cmd(["mutagen", "project", "start"])
-
-    # 啟動個人同步
-    config = load_local_config()
-    if config:
-        print()
-        start_obsidian_sync(config)
-
     print()
     run_cmd(["mutagen", "sync", "list"])
 
 
-def do_stop():
+def do_stop() -> None:
     """停止同步"""
-    stop_obsidian_sync()
     print("停止同步...")
     run_cmd(["mutagen", "project", "terminate"])
 
 
-def do_status():
+def do_status() -> None:
     """查看狀態"""
     run_cmd(["mutagen", "sync", "list"])
 
 
-def do_flush():
+def do_flush() -> None:
     """強制同步"""
     print("強制同步...")
     run_cmd(["mutagen", "sync", "flush", "pai-claude"])
-
-    # 也 flush obsidian（如果存在）
-    run_cmd(["mutagen", "sync", "flush", "obsidian"], check=False, capture=True)
-
     time.sleep(2)
     run_cmd(["mutagen", "sync", "list"])
 
 
-def do_reset():
+def do_reset() -> None:
     """重置 session"""
     print("重置同步 session...")
-    stop_obsidian_sync()
     run_cmd(["mutagen", "project", "terminate"], check=False)
     run_cmd(["mutagen", "project", "start"])
 
-    # 重新啟動個人同步
-    config = load_local_config()
-    if config:
-        start_obsidian_sync(config)
 
-
-def show_help():
+def show_help() -> None:
     """顯示說明"""
-    print("Mutagen 同步工具")
+    print("Mutagen 同步工具 (pai-claude)")
     print()
-    print("用法: ./sync.py [command]")
+    print("用法: uv run pai sync [command]")
     print()
     print("Commands:")
-    print("  start   啟動同步")
-    print("  stop    停止同步")
-    print("  status  查看狀態")
-    print("  flush   強制同步")
-    print("  reset   重置 session")
-    print("  help    顯示此說明")
+    print("  start    啟動 pai-claude 同步")
+    print("  stop     停止同步")
+    print("  status   查看狀態")
+    print("  flush    強制同步")
+    print("  reset    重置 session")
+    print("  help     顯示此說明")
     print()
     print("無參數時進入互動模式")
+    print()
+    print("注意: Obsidian vault 已改用 LiveSync 即時同步")
 
 
-def interactive_menu():
+def interactive_menu() -> None:
     """互動選單"""
     print("╭─────────────────────────────╮")
     print("│   Mutagen 同步工具         │")
@@ -241,7 +146,7 @@ def interactive_menu():
         print("無效選項，請輸入 1-6")
 
 
-def main():
+def main() -> None:
     if not check_mutagen():
         sys.exit(1)
     if not check_ssh_config():

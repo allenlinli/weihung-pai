@@ -39,6 +39,8 @@ def main() -> None:
         run_git_command(args)
     elif command == "web":
         run_web_command(args)
+    elif command == "sync":
+        run_sync_command(args)
     else:
         print(f"未知命令: {command}")
         print()
@@ -178,6 +180,18 @@ def run_web_command(args: list[str]) -> None:
         sys.exit(1)
 
 
+def run_sync_command(args: list[str]) -> None:
+    from .sync import main as sync_main
+
+    # 將 args 設定到 sys.argv 以便 sync 模組使用
+    original_argv = sys.argv
+    sys.argv = ["sync"] + args
+    try:
+        sync_main()
+    finally:
+        sys.argv = original_argv
+
+
 def run_git_command(args: list[str]) -> None:
     from .git import commit_with_restore, list_skipped, track, untrack
 
@@ -239,6 +253,11 @@ def print_help() -> None:
     print("  web dev               同時啟動 pai-bot + pai-web 開發伺服器")
     print("  web bot               只啟動 pai-bot API 伺服器")
     print("  web frontend          只啟動 pai-web 前端伺服器")
+    print("  sync start            啟動 pai-claude 同步")
+    print("  sync stop             停止同步")
+    print("  sync status           查看同步狀態")
+    print("  sync obsidian push    Obsidian: 本地 → VPS")
+    print("  sync obsidian pull    Obsidian: VPS → 本地")
     print()
     print("範例:")
     print("  uv run pai ansible ansible-playbook ansible/playbooks/deploy-bot.yml")

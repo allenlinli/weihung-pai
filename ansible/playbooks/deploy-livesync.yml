@@ -1,0 +1,112 @@
+---
+- name: Deploy Obsidian LiveSync (CouchDB)
+  hosts: pai-server
+  vars_files:
+    - ../inventory/group_vars/all/vault.yml
+
+  tasks:
+    - name: Ensure livesync directory exists
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user }}/livesync"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0755"
+
+    - name: Create docker-compose.yml
+      ansible.builtin.template:
+        src: templates/livesync-couchdb.docker-compose.yml.j2
+        dest: "/home/{{ ansible_user }}/livesync/docker-compose.yml"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0600"
+
+    - name: Ensure couchdb-data directory exists
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user }}/livesync/couchdb-data"
+        state: directory
+        owner: "5984"
+        group: "5984"
+        mode: "0755"
+
+    - name: Start CouchDB container
+      ansible.builtin.shell: |
+        cd /home/{{ ansible_user }}/livesync
+        docker compose up -d
+      become: true
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Wait for CouchDB to be ready
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:5984/"
+        method: GET
+        url_username: "{{ vault_livesync_user }}"
+        url_password: "{{ vault_livesync_password }}"
+        force_basic_auth: true
+        status_code: 200
+      register: couchdb_status
+      until: couchdb_status.status == 200
+      retries: 10
+      delay: 3
+
+    - name: Check if LiveSync config exists in Caddyfile
+      ansible.builtin.shell: grep -q "{{ vault_livesync_domain }}" /etc/caddy/Caddyfile
+      register: livesync_in_caddyfile
+      changed_when: false
+      failed_when: false
+
+    - name: Append LiveSync config to Caddyfile
+      ansible.builtin.blockinfile:
+        path: /etc/caddy/Caddyfile
+        marker: "# {mark} LIVESYNC MANAGED BLOCK"
+        block: |
+          {{ vault_livesync_domain }} {
+              encode gzip
+              reverse_proxy localhost:5984 {
+                  header_up Host {host}
+                  header_up X-Real-IP {remote}
+                  header_up X-Forwarded-For {remote}
+                  header_up X-Forwarded-Proto {scheme}
+              }
+          }
+      when: livesync_in_caddyfile.rc != 0
+
+    - name: Reload Caddy
+      ansible.builtin.systemd:
+        name: caddy
+        state: reloaded
+
+    - name: Print setup info
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          LiveSync CouchDB 部署完成！
+          ========================================
+
+          CouchDB URL: https://{{ vault_livesync_domain }}
+          用戶名: {{ vault_livesync_user }}
+          密碼: (見 vault)
+          資料庫: {{ vault_livesync_database }}
+
+          ----------------------------------------
+          Obsidian 插件設定步驟：
+          ----------------------------------------
+          1. 安裝插件：Settings → Community plugins → Browse
+             搜尋 "Self-hosted LiveSync" → Install → Enable
+
+          2. 設定連線：
+             - URI: https://{{ vault_livesync_domain }}
+             - Username: {{ vault_livesync_user }}
+             - Password: (你設定的密碼)
+             - Database name: {{ vault_livesync_database }}
+
+          3. 點擊 "Test" 確認連線成功
+
+          4. 啟用同步：
+             - Sync Mode: LiveSync 或 Periodic Sync
+             - 選擇要同步的項目（包括 Hidden files 以同步插件設定）
+
+          5. 其他裝置（手機）重複步驟 1-4
+          ========================================

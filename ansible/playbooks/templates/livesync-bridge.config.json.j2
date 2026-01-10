@@ -1,0 +1,24 @@
+{
+  "peers": [
+    {
+      "type": "couchdb",
+      "name": "obsidian-db",
+      "url": "http://localhost:5984",
+      "database": "{{ vault_livesync_database }}",
+      "username": "{{ vault_livesync_user }}",
+      "password": "{{ vault_livesync_password }}",
+      "passphrase": "{{ vault_livesync_password }}",
+      "obfuscatePassphrase": "",
+      "baseDir": "",
+      "customChunkSize": 100,
+      "minimumChunkSize": 20
+    },
+    {
+      "type": "storage",
+      "name": "vps-vault",
+      "baseDir": "/home/{{ ansible_user }}/obsidian-vault/",
+      "scanOfflineChanges": true,
+      "useChokidar": true
+    }
+  ]
+}

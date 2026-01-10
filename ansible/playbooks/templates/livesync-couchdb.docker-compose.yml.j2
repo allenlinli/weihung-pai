@@ -1,0 +1,14 @@
+services:
+  couchdb:
+    image: docker.io/oleduc/docker-obsidian-livesync-couchdb:latest
+    container_name: livesync-couchdb
+    restart: always
+    environment:
+      SERVER_URL: "https://{{ vault_livesync_domain }}"
+      COUCHDB_USER: "{{ vault_livesync_user }}"
+      COUCHDB_PASSWORD: "{{ vault_livesync_password }}"
+      COUCHDB_DATABASE: "{{ vault_livesync_database }}"
+    ports:
+      - "127.0.0.1:5984:5984"
+    volumes:
+      - ./couchdb-data:/opt/couchdb/data

@@ -1,0 +1,16 @@
+[Unit]
+Description=LiveSync Bridge for Obsidian
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User={{ ansible_user }}
+WorkingDirectory=/home/{{ ansible_user }}/livesync-bridge
+ExecStart=/home/{{ ansible_user }}/.deno/bin/deno task run
+Restart=always
+RestartSec=10
+Environment=DENO_DIR=/home/{{ ansible_user }}/.cache/deno
+
+[Install]
+WantedBy=multi-user.target

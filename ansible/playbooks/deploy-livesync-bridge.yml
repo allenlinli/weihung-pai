@@ -1,0 +1,128 @@
+---
+- name: Deploy LiveSync Bridge
+  hosts: pai-server
+  vars_files:
+    - ../inventory/group_vars/all/vault.yml
+
+  tasks:
+    - name: Check if Deno is installed
+      ansible.builtin.stat:
+        path: "/home/{{ ansible_user }}/.deno/bin/deno"
+      register: deno_installed
+
+    - name: Install Deno
+      ansible.builtin.shell: |
+        set -o pipefail
+        curl -fsSL https://deno.land/install.sh | sh
+      args:
+        executable: /bin/bash
+        creates: "/home/{{ ansible_user }}/.deno/bin/deno"
+      when: not deno_installed.stat.exists
+
+    - name: Add Deno to PATH in .bashrc
+      ansible.builtin.lineinfile:
+        path: "/home/{{ ansible_user }}/.bashrc"
+        line: 'export PATH="$HOME/.deno/bin:$PATH"'
+        state: present
+
+    - name: Ensure obsidian-vault directory exists
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user }}/obsidian-vault"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0755"
+
+    - name: Check if livesync-bridge is cloned
+      ansible.builtin.stat:
+        path: "/home/{{ ansible_user }}/livesync-bridge"
+      register: lsb_dir
+
+    - name: Clone livesync-bridge
+      ansible.builtin.git:
+        repo: https://github.com/vrtmrz/livesync-bridge.git
+        dest: "/home/{{ ansible_user }}/livesync-bridge"
+        recursive: true
+      when: not lsb_dir.stat.exists
+
+    - name: Fix livesync-bridge ownership
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user }}/livesync-bridge"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        recurse: true
+
+    - name: Ensure dat directory exists
+      ansible.builtin.file:
+        path: "/home/{{ ansible_user }}/livesync-bridge/dat"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0755"
+
+    - name: Create config.json
+      ansible.builtin.template:
+        src: templates/livesync-bridge.config.json.j2
+        dest: "/home/{{ ansible_user }}/livesync-bridge/dat/config.json"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: "0600"
+
+    - name: Install Deno dependencies
+      ansible.builtin.shell: |
+        export PATH="$HOME/.deno/bin:$PATH"
+        deno install --allow-import
+      args:
+        executable: /bin/bash
+        chdir: "/home/{{ ansible_user }}/livesync-bridge"
+      changed_when: true
+
+    - name: Create systemd service
+      ansible.builtin.template:
+        src: templates/livesync-bridge.service.j2
+        dest: /etc/systemd/system/livesync-bridge.service
+        mode: "0644"
+      become: true
+
+    - name: Stop old filesystem-livesync if running
+      ansible.builtin.systemd:
+        name: filesystem-livesync
+        state: stopped
+        enabled: false
+      become: true
+      failed_when: false
+
+    - name: Enable and start livesync-bridge service
+      ansible.builtin.systemd:
+        name: livesync-bridge
+        enabled: true
+        state: restarted
+        daemon_reload: true
+      become: true
+
+    - name: Wait for initial sync
+      ansible.builtin.pause:
+        seconds: 10
+
+    - name: Check service status
+      ansible.builtin.command: systemctl status livesync-bridge
+      register: service_status
+      changed_when: false
+      failed_when: false
+
+    - name: Print setup info
+      ansible.builtin.debug:
+        msg: |
+          ========================================
+          LiveSync Bridge 部署完成！
+          ========================================
+
+          Vault 目錄: /home/{{ ansible_user }}/obsidian-vault
+          服務狀態: {{ 'running' if 'active (running)' in service_status.stdout else 'check logs' }}
+
+          常用命令:
+          - 查看狀態: systemctl status livesync-bridge
+          - 查看日誌: journalctl -u livesync-bridge -f
+          - 重啟服務: sudo systemctl restart livesync-bridge
+          - 重新掃描: cd ~/livesync-bridge && deno task run --reset
+          ========================================

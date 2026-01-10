@@ -29,7 +29,6 @@ dependencies = [
 ]
 
 [project.scripts]
-sync = "sync:main"
 pai-setup = "setup.__main__:main"
 pai = "scripts.__main__:main"
 
@@ -37,7 +36,7 @@ pai = "scripts.__main__:main"
 package = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["setup", "scripts", "sync.py"]
+packages = ["setup", "scripts"]
 
 [tool.ruff]
 line-length = 100

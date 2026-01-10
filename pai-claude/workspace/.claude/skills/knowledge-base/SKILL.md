@@ -2,7 +2,9 @@
 
 ## 概述
 
-Wei-Hung 的個人知識庫位於 `~/obsidian/`，使用 Obsidian 格式（Markdown）。這是他累積的學習筆記、研究文獻、專案紀錄等重要資產。
+Wei-Hung 的個人知識庫位於 `~/obsidian-vault/`，使用 Obsidian 格式（Markdown）。這是他累積的學習筆記、研究文獻、專案紀錄等重要資產。
+
+**雙向同步**：知識庫透過 LiveSync Bridge 與 CouchDB 即時同步，任何修改都會自動同步到所有裝置（桌面、手機、VPS）。
 
 ## 何時使用
 
@@ -20,7 +22,7 @@ Wei-Hung 的個人知識庫位於 `~/obsidian/`，使用 Obsidian 格式（Markd
 - 討論重要的技術決策或架構
 - 用戶說「幫我記下來」、「這個很重要」
 
-**直接寫入 Inbox**：新筆記放到 `~/obsidian/Inbox/`，用戶會自己整理
+**直接寫入 Inbox**：新筆記放到 `~/obsidian-vault/Inbox/`，會自動同步到用戶的所有裝置
 
 **需要確認的情況**：
 - 要整合/重構現有筆記時
@@ -29,16 +31,16 @@ Wei-Hung 的個人知識庫位於 `~/obsidian/`，使用 Obsidian 格式（Markd
 ## 知識庫結構
 
 ```
-~/obsidian/
+~/obsidian-vault/
 ├── Inbox/              # 【主要寫入位置】新筆記暫存區
 ├── Projects/           # 專案相關筆記
 │   ├── Philosophy/     # 哲學研究
 │   │   └── LLM and grounding/  # LLM 與 grounding 研究
 │   └── {其他專案}/
-├── Learning/           # 學習筆記
+├── Literature/         # 文獻筆記
 │   └── {主題}/
-├── Daily/              # 每日記錄
-└── Templates/          # 筆記模板
+├── Templates/          # 筆記模板
+└── copilot-conversations/  # AI 對話記錄
 ```
 
 ## 筆記格式規範
@@ -65,8 +67,8 @@ source: merlin
 ### 協助用戶學習後（主動寫入）
 ```
 1. 整理學習內容成筆記格式
-2. 直接寫入 ~/obsidian/Inbox/{適當檔名}.md
-3. 告知用戶：「已將筆記存到 Inbox，你可以之後整理」
+2. 直接寫入 ~/obsidian-vault/Inbox/{適當檔名}.md
+3. 告知用戶：「已將筆記存到 Inbox，會自動同步到你的裝置」
 ```
 
 ### 用戶要求查詢過去筆記
