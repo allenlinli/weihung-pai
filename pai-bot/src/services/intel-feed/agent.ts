@@ -214,7 +214,7 @@ export class IntelFeedAgent {
       const response = await this.ai.models.generateContent({
         model: MAIN_MODEL,
         contents: prompt,
-        config: { maxOutputTokens: 2000 },
+        config: { maxOutputTokens: 4000 },
       });
 
       const formatted = response.text?.trim() || "";
@@ -279,13 +279,15 @@ export class IntelFeedAgent {
     for (const digest of digests) {
       const messages: string[] = [];
 
-      // 1. Category overview (titles only)
+      // 1. Category overview (titles + links)
       const overviewLines: string[] = [
         `${digest.emoji} ${digest.label}（${digest.items.length} 則精選）`,
         "",
       ];
       for (let i = 0; i < digest.items.length; i++) {
-        overviewLines.push(`${i + 1}. ${digest.items[i].title}`);
+        const item = digest.items[i];
+        overviewLines.push(`${i + 1}. ${item.title}`);
+        overviewLines.push(`   ${item.url}`);
       }
       messages.push(overviewLines.join("\n"));
 

@@ -3,6 +3,8 @@
  * Aggregates news from Reddit and RSS, analyzes with Gemini, sends to Telegram
  */
 
+import { config } from "../../config";
+import { contextManager } from "../../context/manager";
 import { getDb } from "../../storage/db";
 import { logger } from "../../utils/logger";
 import { IntelFeedAgent } from "./agent";
@@ -130,6 +132,7 @@ export async function generateDigest(): Promise<{
     // 4. Send notifications (overview + individual articles per category)
     const notifications = agent.formatNotifications(digests);
     const sentCategories: Category[] = [];
+    const userId = config.telegram.allowedUserIds[0]; // Primary user for memory
 
     for (const [category, messages] of notifications) {
       let categorySuccess = true;
@@ -139,6 +142,12 @@ export async function generateDigest(): Promise<{
         if (!sent) {
           logger.warn({ category, messageIndex: i }, "Failed to send notification");
           categorySuccess = false;
+        }
+
+        // Save overview (first message) to conversation memory
+        if (i === 0 && sent) {
+          contextManager.saveMessage(userId, "assistant", `[Intel Feed 每日推送]\n${messages[i]}`);
+          logger.info({ category }, "Overview saved to memory");
         }
 
         // Small delay between notifications (avoid rate limiting)
