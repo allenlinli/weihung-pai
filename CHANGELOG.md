@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.54.0 (2026-01-10)
+
+### Features
+
+- Intel-feed two-stage AI (lite→flash) + individual notifications
+  ([`bc04cd2`](https://github.com/wayne930242/weihung-pai/commit/bc04cd29a64d02e25121989c1efcc098c65625da))
+
+
 ## v1.53.0 (2026-01-10)
 
 ### Bug Fixes
