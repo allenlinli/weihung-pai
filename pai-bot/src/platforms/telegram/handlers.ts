@@ -23,9 +23,6 @@ import { logger } from "../../utils/logger";
 import { escapeMarkdownV2, fmt } from "../../utils/telegram";
 import { setTaskExecutor } from "./callbacks";
 
-// 超時時間（毫秒）
-const DECISION_TIMEOUT_MS = 10000;
-
 // Bot API 參考
 let botApi: Context["api"] | null = null;
 
@@ -59,18 +56,22 @@ export async function handleStart(ctx: Context): Promise<void> {
   const userId = ctx.from?.id;
   if (!userId) return;
 
+  const mode = queueManager.getMode(userId);
+  const modeText = mode === "queue" ? "📋 排隊" : "🛑 打斷";
+
   await ctx.reply(
     `Merlin 已甦醒
 
 可用指令：
-• \`/clear\` \\- 清除對話歷史
-• \`/memory\` \\- 查看長期記憶
-• \`/forget\` \\- 清除長期記憶
+• \`/mode\` \\- 切換排隊/打斷模式
 • \`/status\` \\- 查看狀態
 • \`/stop\` \\- 中斷當前任務
-• \`/cc:<command>\` \\- 執行 Claude slash command
+• \`/clear\` \\- 清除對話歷史
+• \`/memory\` \\- 查看長期記憶
+• \`/hq\` \\- 設定管理中心
+• \`/cc:<cmd>\` \\- 執行 Claude 指令
 
-發送新訊息時可選擇打斷或排隊。`,
+當前模式：${modeText}`,
     { parse_mode: "MarkdownV2" },
   );
 }
@@ -89,11 +90,14 @@ export async function handleStatus(ctx: Context): Promise<void> {
 
   const messageCount = contextManager.getMessageCount(userId);
   const { queueSize, isProcessing } = queueManager.getStatus(userId);
+  const mode = queueManager.getMode(userId);
+  const modeText = mode === "queue" ? "📋 排隊" : "🛑 打斷";
 
   await ctx.reply(
     `狀態
 
 • User ID: \`${userId}\`
+• 模式: ${modeText}
 • 對話訊息數: ${messageCount}
 • 處理中: ${isProcessing ? "是" : "否"}
 • 佇列中: ${queueSize} 個任務`,
@@ -157,6 +161,18 @@ export async function handleForget(ctx: Context): Promise<void> {
 
   const archived = memoryManager.archiveByUser(userId);
   await ctx.reply(`已封存 ${archived} 條長期記憶（可透過 MCP 工具恢復）`);
+}
+
+export async function handleMode(ctx: Context): Promise<void> {
+  const userId = ctx.from?.id;
+  if (!userId) return;
+
+  const newMode = queueManager.toggleMode(userId);
+  const modeText = newMode === "queue" ? "📋 排隊模式" : "🛑 打斷模式";
+  const description =
+    newMode === "queue" ? "新訊息會自動排入佇列等待執行" : "新訊息會打斷當前任務並立即執行";
+
+  await ctx.reply(`已切換至 ${modeText}\n${description}`);
 }
 
 export async function handleHQ(ctx: Context): Promise<void> {
@@ -228,37 +244,32 @@ export async function handleMessage(ctx: Context): Promise<void> {
   const isProcessing = queueManager.isProcessing(userId) || hasActiveProcess(userId);
 
   if (isProcessing) {
-    // 有任務進行中，顯示選擇按鈕
-    const queueSize = queueManager.getQueueLength(userId);
-    const queueInfo = queueSize > 0 ? `（佇列中有 ${queueSize} 個任務）` : "";
+    const mode = queueManager.getMode(userId);
 
-    const msg = await ctx.reply(`目前有任務進行中${queueInfo}，請選擇：`, {
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: "🛑 打斷並執行", callback_data: `abort:${task.id}` },
-            { text: "📋 排入佇列", callback_data: `queue:${task.id}` },
-          ],
-        ],
-      },
-    });
+    if (mode === "interrupt") {
+      // 打斷模式：中止當前任務並立即執行
+      abortUserProcess(userId);
+      const clearedCount = queueManager.clearQueue(userId);
 
-    // 暫存任務
-    queueManager.storePendingTask(task);
-
-    // 設定超時自動排隊
-    const timeoutId = setTimeout(async () => {
-      if (!queueManager.getPendingTask(task.id)) return;
-
-      logger.info({ userId, taskId: task.id }, "Auto-queuing due to timeout");
-
-      try {
-        await ctx.api.deleteMessage(chatId, msg.message_id);
-      } catch {
-        // 忽略
+      if (clearedCount > 0) {
+        logger.info({ userId, clearedCount }, "Queue cleared for interrupt mode");
       }
 
-      await ctx.api.sendMessage(chatId, "已自動排入佇列");
+      try {
+        await queueManager.executeImmediately(task, async (t) => {
+          await executeClaudeTask(t, chatId, sender);
+        });
+      } catch (error) {
+        logger.error({ error, userId }, "Failed to process message");
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const shortError =
+          errorMessage.length > 100 ? `${errorMessage.substring(0, 100)}...` : errorMessage;
+        await ctx.reply(`❌ 發生錯誤：${shortError}`);
+      }
+    } else {
+      // 排隊模式：加入佇列
+      const queueSize = queueManager.getQueueLength(userId) + 1;
+      await ctx.reply(`📋 已排入佇列（第 ${queueSize} 位）`);
 
       queueManager
         .enqueue(task, async (t) => {
@@ -268,13 +279,7 @@ export async function handleMessage(ctx: Context): Promise<void> {
           logger.error({ error, taskId: task.id }, "Queued task failed");
           ctx.api.sendMessage(chatId, `❌ 任務執行失敗：${error.message}`).catch(() => {});
         });
-    }, DECISION_TIMEOUT_MS);
-
-    queueManager.setPendingDecision(userId, {
-      taskId: task.id,
-      messageId: msg.message_id,
-      timeoutId,
-    });
+    }
 
     return;
   }
@@ -457,37 +462,20 @@ export async function handleVoice(ctx: Context): Promise<void> {
     const isProcessing = queueManager.isProcessing(userId) || hasActiveProcess(userId);
 
     if (isProcessing) {
-      // 有任務進行中，顯示選擇按鈕
-      const queueSize = queueManager.getQueueLength(userId);
-      const queueInfo = queueSize > 0 ? `（佇列中有 ${queueSize} 個任務）` : "";
+      const mode = queueManager.getMode(userId);
 
-      const msg = await ctx.reply(`目前有任務進行中${queueInfo}，請選擇：`, {
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: "🛑 打斷並執行", callback_data: `abort:${task.id}` },
-              { text: "📋 排入佇列", callback_data: `queue:${task.id}` },
-            ],
-          ],
-        },
-      });
+      if (mode === "interrupt") {
+        // 打斷模式：中止當前任務並立即執行
+        abortUserProcess(userId);
+        queueManager.clearQueue(userId);
 
-      // 暫存任務
-      queueManager.storePendingTask(task);
-
-      // 設定超時自動排隊
-      const timeoutId = setTimeout(async () => {
-        if (!queueManager.getPendingTask(task.id)) return;
-
-        logger.info({ userId, taskId: task.id }, "Auto-queuing due to timeout");
-
-        try {
-          await ctx.api.deleteMessage(chatId, msg.message_id);
-        } catch {
-          // 忽略
-        }
-
-        await ctx.api.sendMessage(chatId, "已自動排入佇列");
+        await queueManager.executeImmediately(task, async (t) => {
+          await executeClaudeTask(t, chatId, sender);
+        });
+      } else {
+        // 排隊模式：加入佇列
+        const queueSize = queueManager.getQueueLength(userId) + 1;
+        await ctx.reply(`📋 已排入佇列（第 ${queueSize} 位）`);
 
         queueManager
           .enqueue(task, async (t) => {
@@ -497,13 +485,7 @@ export async function handleVoice(ctx: Context): Promise<void> {
             logger.error({ error, taskId: task.id }, "Queued task failed");
             ctx.api.sendMessage(chatId, `❌ 任務執行失敗：${error.message}`).catch(() => {});
           });
-      }, DECISION_TIMEOUT_MS);
-
-      queueManager.setPendingDecision(userId, {
-        taskId: task.id,
-        messageId: msg.message_id,
-        timeoutId,
-      });
+      }
 
       return;
     }

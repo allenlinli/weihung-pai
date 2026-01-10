@@ -6,10 +6,10 @@ import { handleCallbackQuery } from "./callbacks";
 import {
   handleClear,
   handleDocument,
-  handleForget,
   handleHQ,
   handleMemory,
   handleMessage,
+  handleMode,
   handlePhoto,
   handleStart,
   handleStatus,
@@ -20,11 +20,11 @@ import {
 export async function setupBotCommands(bot: Bot): Promise<void> {
   await bot.api.setMyCommands([
     { command: "start", description: "啟動 Merlin" },
-    { command: "clear", description: "清除對話歷史" },
-    { command: "memory", description: "查看長期記憶" },
-    { command: "forget", description: "清除長期記憶" },
+    { command: "mode", description: "切換排隊/打斷模式" },
     { command: "status", description: "查看狀態" },
     { command: "stop", description: "中斷當前任務" },
+    { command: "clear", description: "清除對話歷史" },
+    { command: "memory", description: "查看長期記憶" },
     { command: "hq", description: "設定為管理中心" },
   ]);
   logger.info("Bot commands registered");
@@ -52,11 +52,11 @@ export function createTelegramBot(): Bot {
 
   // Command handlers (using / prefix)
   bot.command("start", handleStart);
-  bot.command("clear", handleClear);
-  bot.command("memory", handleMemory);
-  bot.command("forget", handleForget);
+  bot.command("mode", handleMode);
   bot.command("status", handleStatus);
   bot.command("stop", handleStop);
+  bot.command("clear", handleClear);
+  bot.command("memory", handleMemory);
   bot.command("hq", handleHQ);
 
   // Message handler (for non-command messages)

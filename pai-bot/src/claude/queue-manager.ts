@@ -220,6 +220,31 @@ class QueueManager {
       isProcessing: queue ? queue.pending > 0 : false,
     };
   }
+
+  /**
+   * 取得用戶模式
+   */
+  getMode(userId: number): QueueMode {
+    return this.userModes.get(userId) ?? DEFAULT_MODE;
+  }
+
+  /**
+   * 設定用戶模式
+   */
+  setMode(userId: number, mode: QueueMode): void {
+    this.userModes.set(userId, mode);
+    logger.info({ userId, mode }, "User mode updated");
+  }
+
+  /**
+   * 切換用戶模式
+   */
+  toggleMode(userId: number): QueueMode {
+    const current = this.getMode(userId);
+    const newMode: QueueMode = current === "queue" ? "interrupt" : "queue";
+    this.setMode(userId, newMode);
+    return newMode;
+  }
 }
 
 export const queueManager = new QueueManager();
