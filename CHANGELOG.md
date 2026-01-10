@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.55.0 (2026-01-10)
+
+### Bug Fixes
+
+- Increase summary length to 150-250 chars
+  ([`a69f125`](https://github.com/wayne930242/weihung-pai/commit/a69f1255dd45ed9a567de51b1ae44831b4f56f46))
+
+### Features
+
+- Intel-feed overview with links + save to memory
+  ([`3b8716b`](https://github.com/wayne930242/weihung-pai/commit/3b8716b8ee24134f124d5dd0acbc94f7e2298c10))
+
+
 ## v1.54.0 (2026-01-10)
 
 ### Features
