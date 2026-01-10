@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.53.0 (2026-01-10)
+
+### Bug Fixes
+
+- Remove unused ActivityType import
+  ([`2eb3162`](https://github.com/wayne930242/weihung-pai/commit/2eb3162111cea9685a2ae3d4d7c7757610c34842))
+
+### Features
+
+- Add /api/intel/trigger endpoint for manual digest
+  ([`f16f2ac`](https://github.com/wayne930242/weihung-pai/commit/f16f2acdb8634db6ccff0bbc29a3720f3b8de79e))
+
+
 ## v1.52.0 (2026-01-10)
 
 ### Bug Fixes
