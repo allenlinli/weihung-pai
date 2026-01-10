@@ -127,21 +127,28 @@ export async function generateDigest(): Promise<{
       return { ok: true, itemCount: 0, categories: [] };
     }
 
-    // 4. Send notifications (one per category)
+    // 4. Send notifications (overview + individual articles per category)
     const notifications = agent.formatNotifications(digests);
     const sentCategories: Category[] = [];
 
-    for (const [category, message] of notifications) {
-      const sent = await notify(message);
-      if (sent) {
-        sentCategories.push(category);
-        logger.info({ category }, "Notification sent");
-      } else {
-        logger.warn({ category }, "Failed to send notification");
+    for (const [category, messages] of notifications) {
+      let categorySuccess = true;
+
+      for (let i = 0; i < messages.length; i++) {
+        const sent = await notify(messages[i]);
+        if (!sent) {
+          logger.warn({ category, messageIndex: i }, "Failed to send notification");
+          categorySuccess = false;
+        }
+
+        // Small delay between notifications (avoid rate limiting)
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
-      // Small delay between notifications
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (categorySuccess) {
+        sentCategories.push(category);
+        logger.info({ category, messageCount: messages.length }, "Category notifications sent");
+      }
     }
 
     // 5. Record digest
