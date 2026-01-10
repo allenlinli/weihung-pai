@@ -22,6 +22,12 @@ interface PendingDecision {
   timeoutId: Timer;
 }
 
+// 用戶處理模式：queue = 自動排隊, interrupt = 自動打斷
+export type QueueMode = "queue" | "interrupt";
+
+// 預設模式
+const DEFAULT_MODE: QueueMode = "queue";
+
 class QueueManager {
   // 每個用戶一個獨立的佇列
   private queues: Map<number, PQueue> = new Map();
@@ -34,6 +40,9 @@ class QueueManager {
 
   // 已開始執行的任務 ID（用於判斷過時請求）
   private startedTasks: Set<string> = new Set();
+
+  // 用戶處理模式
+  private userModes: Map<number, QueueMode> = new Map();
 
   /**
    * 取得或建立用戶的佇列

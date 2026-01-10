@@ -14,32 +14,32 @@ const LITE_MODEL = "gemini-2.5-flash-lite"; // Simple tasks: scoring, outline
 const MAIN_MODEL = "gemini-2.5-flash"; // Complex tasks: final formatting
 
 // Prompts
-const SCORE_PROMPT = `你是一個內容評分助手。評估以下文章對一個關注 AI/技術、創業、生產力工具和 TRPG 的開發者的相關性。
+const SCORE_PROMPT = `You are a content scoring assistant. Rate the relevance of this article for a developer interested in AI/tech, startups, productivity tools, and TRPG.
 
-評分標準（1-10）：
-- 1-3: 不相關或低品質（廣告、重複、無實質內容）
-- 4-5: 一般內容，沒有特別價值
-- 6-7: 有價值的內容，值得了解
-- 8-10: 高價值內容，必讀
+Scoring criteria (1-10):
+- 1-3: Irrelevant or low quality (ads, duplicates, no substance)
+- 4-5: Generic content, no special value
+- 6-7: Valuable content, worth knowing
+- 8-10: High value content, must read
 
-只回覆一個數字（1-10），不要其他文字。
+Reply with only a number (1-10), nothing else.
 
-標題：{title}
-來源：{source}
-類別：{category}`;
+Title: {title}
+Source: {source}
+Category: {category}`;
 
-const OUTLINE_PROMPT = `你是一位資深科技編輯。請為以下文章列表撰寫一份詳細綱要，幫助讀者快速了解今日重點。
+const OUTLINE_PROMPT = `You are a senior tech editor. Create a detailed outline for the following articles to help readers quickly understand today's highlights.
 
-要求：
-1. 每篇文章寫 2-3 句話，說明核心觀點和為什麼值得關注
-2. 如果文章之間有關聯，請指出
-3. 用繁體中文
-4. 總長度約 800-1000 字
+Requirements:
+1. Write 2-3 sentences per article explaining the core idea and why it matters
+2. Point out connections between articles if any
+3. Use English
+4. Total length: 800-1000 words
 
-文章列表：
+Articles:
 {articles}
 
-請直接輸出綱要，不要前綴。`;
+Output the outline directly, no prefix.`;
 
 const FORMAT_PROMPT = `你是一位 Telegram 推送編輯。請將以下綱要整理成適合 Telegram 推送的格式。
 
@@ -48,7 +48,7 @@ const FORMAT_PROMPT = `你是一位 Telegram 推送編輯。請將以下綱要�
 2. 包含：核心觀點、關鍵發現、為什麼值得關注
 3. 可用 • 條列重點
 4. 語氣專業但易讀
-5. 使用繁體中文
+5. **必須使用繁體中文**（不可使用簡體中文或英文，所有內容都要翻譯成繁體中文）
 
 原始綱要：
 {outline}
