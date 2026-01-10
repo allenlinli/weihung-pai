@@ -1,6 +1,19 @@
 # CHANGELOG
 
 
+## v1.51.0 (2026-01-10)
+
+### Chores
+
+- Remove workspace symlink
+  ([`ee8788b`](https://github.com/wayne930242/weihung-pai/commit/ee8788ba9b51f89d1c5e4435b8ab4c7d1978adb3))
+
+### Features
+
+- Add Obsidian LiveSync with CouchDB for bidirectional sync
+  ([`ba590da`](https://github.com/wayne930242/weihung-pai/commit/ba590dac393d6142617af4cf40409658593b3b26))
+
+
 ## v1.50.0 (2026-01-09)
 
 ### Features
