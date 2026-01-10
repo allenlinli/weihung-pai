@@ -2,11 +2,7 @@
  * Voice Slash Commands (join, leave, spotify, say, panel, roll)
  */
 
-import {
-  type ChatInputCommandInteraction,
-  type Client,
-  MessageFlags,
-} from "discord.js";
+import { type ChatInputCommandInteraction, type Client, MessageFlags } from "discord.js";
 import {
   isInVoiceChannel,
   // isSpotifyConnected,
