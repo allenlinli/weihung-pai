@@ -2,7 +2,7 @@
  * Intel Feed Types
  */
 
-export type Category = "ai" | "startup" | "productivity" | "trpg";
+export type Category = "ai" | "startup" | "productivity" | "trpg" | "gamedev";
 
 export interface FeedItem {
   id: string;

@@ -8,7 +8,8 @@ export const SUBREDDITS: Record<Category, string[]> = {
   ai: ["programming", "LocalLLaMA", "MachineLearning", "ClaudeAI", "SideProject"],
   startup: ["startups", "Entrepreneur", "SaaS", "indiehackers"],
   productivity: ["productivity", "selfhosted", "ObsidianMD"],
-  trpg: ["rpg", "DMAcademy", "Solo_Roleplaying", "RPGdesign", "osr"],
+  trpg: ["rpg", "DMAcademy", "Solo_Roleplaying", "RPGdesign", "osr", "PBtA"],
+  gamedev: ["Unity3D", "unity2d", "gamedev", "IndieDev", "gamedesign"],
 };
 
 export const RSS_FEEDS = [
@@ -48,6 +49,11 @@ export const RSS_FEEDS = [
   "https://slyflourish.com/index.xml", // Sly Flourish - DM Tips
   "https://gnomestew.com/feed/", // Gnome Stew - GM Tips
   "https://thealexandrian.net/feed", // The Alexandrian - Game Design
+
+  // Game Dev
+  "https://www.gamedeveloper.com/rss.xml", // Game Developer (Gamasutra)
+  "https://indiegamesplus.com/feed", // IndieGamesPlus
+  "https://game-wisdom.com/feed", // Game Wisdom - Game Design Analysis
 ];
 
 export const CATEGORY_META: Record<Category, { label: string; emoji: string }> = {
@@ -55,6 +61,7 @@ export const CATEGORY_META: Record<Category, { label: string; emoji: string }> =
   startup: { label: "創業/產品", emoji: "💼" },
   productivity: { label: "生產力", emoji: "🎯" },
   trpg: { label: "TRPG", emoji: "🎲" },
+  gamedev: { label: "遊戲開發", emoji: "🎮" },
 };
 
 // Items per subreddit
