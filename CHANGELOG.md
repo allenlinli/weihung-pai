@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.60.0 (2026-01-11)
+
+### Features
+
+- **intel-feed**: Add score filter and adjust Reddit time window
+  ([`7291694`](https://github.com/wayne930242/Merlin-My-Pai/commit/72916940aea37fcc642b502d71df7ed216b2c763))
+
+
 ## v1.59.0 (2026-01-11)
 
 ### Features
