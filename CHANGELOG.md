@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.56.2 (2026-01-11)
+
+### Bug Fixes
+
+- Remove CORS from Caddy, let CouchDB handle it; fix vault path
+  ([`5de8f33`](https://github.com/wayne930242/weihung-pai/commit/5de8f335eb351f2137c692477b16eb7df6bb22bc))
+
+
 ## v1.56.1 (2026-01-11)
 
 ### Bug Fixes
