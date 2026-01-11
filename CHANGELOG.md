@@ -1,6 +1,9 @@
 # CHANGELOG
 
 
+## v1.58.0 (2026-01-11)
+
+
 ## v1.57.0 (2026-01-11)
 
 ### Bug Fixes
@@ -13,7 +16,13 @@
 - Add Obsidian LiveSync setup guide
   ([`3f6f6db`](https://github.com/wayne930242/Merlin-My-Pai/commit/3f6f6dbcc4ec948503b240668ca887bee2f980c9))
 
+- Update README with Intel Feed, remove music features
+  ([`e50dc82`](https://github.com/wayne930242/Merlin-My-Pai/commit/e50dc82fe955988bbbb1fe5b9563784879c6fc63))
+
 ### Features
+
+- **intel-feed**: Expand RSS feeds and add 24h filter
+  ([`26d6d35`](https://github.com/wayne930242/Merlin-My-Pai/commit/26d6d3508b027d9e9b4e7b392740f4d07e60c6ea))
 
 - **intel-feed**: Use flash model for outline generation
   ([`ce2088b`](https://github.com/wayne930242/Merlin-My-Pai/commit/ce2088b7f78949a4eab6f8ecfcb33e5b00c9b759))
