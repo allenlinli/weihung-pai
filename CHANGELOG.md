@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.61.0 (2026-01-11)
+
+### Features
+
+- **merlin**: Add deny rules to block .env file access
+  ([`1937fc2`](https://github.com/wayne930242/Merlin-My-Pai/commit/1937fc26f632b3e2e33c588efbbc56f42949f975))
+
+
 ## v1.60.0 (2026-01-11)
 
 ### Features
