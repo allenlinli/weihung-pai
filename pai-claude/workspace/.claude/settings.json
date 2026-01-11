@@ -82,6 +82,22 @@
       "Read",
       "Write",
       "Edit"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Bash(cat *.env*)",
+      "Bash(cat .env*)",
+      "Bash(head *.env*)",
+      "Bash(head .env*)",
+      "Bash(tail *.env*)",
+      "Bash(tail .env*)",
+      "Bash(less *.env*)",
+      "Bash(less .env*)",
+      "Bash(more *.env*)",
+      "Bash(more .env*)"
     ]
   }
 }
