@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.56.3 (2026-01-11)
+
+### Bug Fixes
+
+- Add conf.d import to Caddyfile setup
+  ([`dbad153`](https://github.com/wayne930242/weihung-pai/commit/dbad153c2b34c544446df20d616aca098daa7671))
+
+
 ## v1.56.2 (2026-01-11)
 
 ### Bug Fixes
