@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.56.1 (2026-01-11)
+
+### Bug Fixes
+
+- Add CORS headers for Obsidian LiveSync
+  ([`5e81fb4`](https://github.com/wayne930242/weihung-pai/commit/5e81fb4bc336e5cc71c7345827891496d61a28da))
+
+
 ## v1.56.0 (2026-01-10)
 
 ### Bug Fixes
