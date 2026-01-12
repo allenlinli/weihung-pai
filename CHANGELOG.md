@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.62.1 (2026-01-12)
+
+### Bug Fixes
+
+- **ansible**: Use caddy conf.d to avoid overwriting other configs
+  ([`52ed00e`](https://github.com/wayne930242/Merlin-My-Pai/commit/52ed00ee6ea757bf23fa4464f76ec7befcc04ebf))
+
+
 ## v1.62.0 (2026-01-12)
 
 ### Features
