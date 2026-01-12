@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.62.0 (2026-01-12)
+
+### Features
+
+- **intel-feed**: Refactor to LangGraph agent architecture
+  ([`edf4582`](https://github.com/wayne930242/Merlin-My-Pai/commit/edf45825eb3eff645d23803692434dac0b3914ad))
+
+
 ## v1.61.0 (2026-01-11)
 
 ### Features
