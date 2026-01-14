@@ -1,6 +1,14 @@
 # CHANGELOG
 
 
+## v1.63.0 (2026-01-14)
+
+### Features
+
+- **merlin**: Add obsidian livesync tools with secure credential injection
+  ([`aa6d7cb`](https://github.com/wayne930242/Merlin-My-Pai/commit/aa6d7cbfda0a4e2edf00ea56b42d9798861b3475))
+
+
 ## v1.62.1 (2026-01-12)
 
 ### Bug Fixes
